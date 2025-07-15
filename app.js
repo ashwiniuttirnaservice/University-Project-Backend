@@ -12,6 +12,7 @@ dotenv.config();
 connectDB();
 
 const app = express();
+app.use(express.urlencoded({ extended: true }));
 
 app.use(cors());
 app.use(express.json({ limit: "100mb" }));
