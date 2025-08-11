@@ -1,31 +1,47 @@
-import multer from "multer";
-import path from "path";
-import fs from "fs";
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
+// Return folder path based on fieldname
 const getFolderPath = (fieldname) => {
   switch (fieldname) {
-    case "profilePhoto":
-      return "uploads/trainerProfile/";
-    case "idProof":
-      return "uploads/trainerIdProof/";
+    case "profilePhotoTrainer":
+      return "uploads/trainer/trainer-profilephoto/";
+    case "idProofTrainer":
+      return "uploads/trainer/trainer-idproof/";
     case "resume":
-      return "uploads/trainerResume/";
+      return "uploads/trainer/trainer-resume/";
+    case "profilePhotoStudent":
+      return "uploads/student/student-profilephoto/";
+    case "idProofStudent":
+      return "uploads/student/student-idproof/";
+    case "notes":
+    case "files":
+      return "uploads/course-notes/";
+    case "testExcel":
+      return "uploads/test-excel/";
     default:
-      return "uploads/";
+      throw new Error(`Invalid file field: ${fieldname}`);
   }
 };
 
+// Ensure directory exists
 const ensureDirExists = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 };
 
+// Multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    const folder = getFolderPath(file.fieldname);
-    ensureDirExists(folder);
-    cb(null, folder);
+    try {
+      const folder = getFolderPath(file.fieldname);
+      ensureDirExists(folder);
+      cb(null, folder);
+    } catch (err) {
+      cb(new Error("Invalid file field: " + file.fieldname));
+    }
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "_" + Math.round(Math.random() * 1e9);
@@ -34,17 +50,36 @@ const storage = multer.diskStorage({
   },
 });
 
+// Allowed MIME types
+const allowedMimeTypes = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/zip",
+  "application/x-zip-compressed",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+
+// File filter
 const fileFilter = (req, file, cb) => {
-  const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
-  const isValid = allowedTypes.test(file.mimetype.toLowerCase());
-  if (isValid) cb(null, true);
-  else cb(new Error("Only image and document files are allowed"));
+  if (allowedMimeTypes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image, document, zip, and Excel files are allowed"));
+  }
 };
 
+// Multer upload
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });
 
-export default upload;
+module.exports = upload;

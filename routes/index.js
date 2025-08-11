@@ -1,5 +1,32 @@
-import express from "express";
-import trainerRouter from "./trainerRouter.js";
+const express = require("express");
+
+const authRoutes = require("./authRoutes");
+const branchRoutes = require("./branchRoutes");
+const courseRoutes = require("./courseRouter.js");
+const enrollmentRoutes = require("./enrollmentRoutes");
+const adminRoutes = require("./adminRoutes");
+const testRoutes = require("./testRoutes");
+const userRoutes = require("./userRoutes");
+const feedbackRoutes = require("./feedbackRoutes");
+const batcheRouter = require("./batchRoutes");
+const trainerRouter = require("./trainerRouter");
+const studentRouter = require("./studentRouter");
+const contactRouter = require("./contactRouter.js");
 const indexRouter = express.Router();
+
+// All routes grouped here
+indexRouter.use("/auth", authRoutes);
+indexRouter.use("/branches", branchRoutes);
+indexRouter.use("/courses", courseRoutes);
+indexRouter.use("/enrollments", enrollmentRoutes);
+indexRouter.use("/admin", adminRoutes);
+indexRouter.use("/tests", testRoutes);
+indexRouter.use("/users", userRoutes);
+indexRouter.use("/feedback", feedbackRoutes);
+indexRouter.use("/batches", batcheRouter);
+indexRouter.use("/contact", contactRouter);
+// Trainer & Student routes/contact
 indexRouter.use("/trainer", trainerRouter);
-export default indexRouter;
+indexRouter.use("/student", studentRouter);
+
+module.exports = indexRouter;
