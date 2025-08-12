@@ -20,6 +20,12 @@ const getFolderPath = (fieldname) => {
       return "uploads/course-notes/";
     case "testExcel":
       return "uploads/test-excel/";
+    case "bannerImage":
+      return "uploads/events/banner/";
+    case "gallery":
+      return "uploads/events/gallery/";
+    case "speakerPhoto":
+      return "uploads/webinar/speakers/";
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }

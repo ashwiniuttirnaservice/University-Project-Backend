@@ -235,6 +235,27 @@ const deleteTrainer = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Trainer deleted successfully");
 });
 
+// @desc Get Trainer by ID
+const getTrainerById = asyncHandler(async (req, res) => {
+  const { trainerId } = req.params;
+
+  // Check if ID is valid
+  if (!mongoose.Types.ObjectId.isValid(trainerId)) {
+    return sendError(res, 400, false, "Invalid trainer ID");
+  }
+
+  const trainer = await Trainer.findById(trainerId)
+    .populate("courses")
+    .populate("batches")
+    .populate("branches");
+
+  if (!trainer) {
+    return sendError(res, 404, false, "Trainer not found");
+  }
+
+  return sendResponse(res, 200, true, "Trainer fetched successfully", trainer);
+});
+
 module.exports = {
   registerTrainer,
   getAllTrainer,
@@ -243,4 +264,5 @@ module.exports = {
   updateTrainer,
   deleteTrainer,
   getTrainerSummary,
+  getTrainerById, // added
 };

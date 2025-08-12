@@ -7,6 +7,7 @@ const {
   updateTrainer,
   deleteTrainer,
   getTrainerSummary,
+  getTrainerById,
 } = require("../controllers/trainerController");
 const upload = require("../utils/multer");
 
@@ -37,6 +38,7 @@ trainerRouter.put(
 );
 
 trainerRouter.get("/summary", getTrainerSummary);
+trainerRouter.get("/:trainerId", getTrainerById);
 
 trainerRouter.delete("/delete/:trainerId", deleteTrainer);
 
