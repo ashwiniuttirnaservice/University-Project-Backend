@@ -32,4 +32,4 @@ const sendError = (
   });
 };
 
-export { sendResponse, sendError };
+module.exports = { sendResponse, sendError };

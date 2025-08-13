@@ -1,0 +1,18 @@
+const mongoose = require("mongoose");
+
+const SessionCategorySchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
+    desc: String,
+    type: {
+      type: String,
+
+      required: true,
+    },
+    isActive: { type: Boolean, default: true },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("SessionCategory", SessionCategorySchema);
