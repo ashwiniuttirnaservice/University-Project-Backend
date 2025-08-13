@@ -4,17 +4,14 @@ const EnrollmentSchema = new mongoose.Schema({
   user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
   },
   studentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Student",
-    required: true,
   },
   course: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Course",
-    required: true,
   },
   enrolledAt: {
     type: Date,
@@ -41,7 +38,7 @@ const EnrollmentSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  mobile: {
+  mobileNo: {
     type: String,
     required: true,
     trim: true,
@@ -54,7 +51,7 @@ const EnrollmentSchema = new mongoose.Schema({
   },
   collegeName: {
     type: String,
-    required: true,
+
     trim: true,
   },
 });

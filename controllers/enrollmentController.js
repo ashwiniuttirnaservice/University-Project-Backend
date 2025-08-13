@@ -3,7 +3,7 @@ const Enrollment = require("../models/Enrollment.js");
 const Course = require("../models/Course");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
+const Student = require("../models/Student");
 // Enroll in a course
 exports.enrollInCourse = asyncHandler(async (req, res) => {
   const { courseId, studentId } = req.body;
@@ -254,22 +254,30 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
 });
 
 exports.createEnrollment = asyncHandler(async (req, res) => {
-  const { firstName, middleName, lastName, mobile, email, collegeName } =
-    req.body;
+  const {
+    firstName,
+    middleName,
+    lastName,
+    mobileNo,
+    email,
+    collegeName,
+    course,
+  } = req.body;
 
-  if (!firstName || !lastName || !mobile || !email || !collegeName) {
+  if (!mobileNo || !email || !collegeName) {
     return res.status(400).json({
       success: false,
       message: "All required fields must be filled.",
     });
   }
 
-  const enrollment = await Enrollment.create({
+  const enrollment = await Student.create({
     firstName,
     middleName,
     lastName,
-    mobile,
+    mobileNo,
     email,
+    course,
   });
 
   res.status(201).json({
