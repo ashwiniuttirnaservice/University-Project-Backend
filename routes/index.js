@@ -12,6 +12,11 @@ const batcheRouter = require("./batchRoutes");
 const trainerRouter = require("./trainerRouter");
 const studentRouter = require("./studentRouter");
 const contactRouter = require("./contactRouter.js");
+const sessionCategoryRouter = require("./sessionCategoryRouter.js");
+const EventSessionRouter = require("./eventRouter.js");
+const webinarRouter = require("./webinarRouter.js");
+const workshopRouter = require("./workshopRouter.js");
+const internshipSessionsRouter = require("./internshipSessionRouter.js");
 const indexRouter = express.Router();
 
 // All routes grouped here
@@ -28,5 +33,9 @@ indexRouter.use("/contact", contactRouter);
 // Trainer & Student routes/contact
 indexRouter.use("/trainer", trainerRouter);
 indexRouter.use("/student", studentRouter);
-
+indexRouter.use("/session-category", sessionCategoryRouter);
+indexRouter.use("/event", EventSessionRouter);
+indexRouter.use("/webinars", webinarRouter);
+indexRouter.use("/workshops", workshopRouter);
+indexRouter.use("/internship-sessions", internshipSessionsRouter);
 module.exports = indexRouter;
