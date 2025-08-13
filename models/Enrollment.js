@@ -24,20 +24,12 @@ const EnrollmentSchema = new mongoose.Schema({
   ],
 
   // ✅ New Fields
-  firstName: {
+  fullName: {
     type: String,
     required: true,
     trim: true,
   },
-  middleName: {
-    type: String,
-    trim: true,
-  },
-  lastName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
+
   mobileNo: {
     type: String,
     required: true,

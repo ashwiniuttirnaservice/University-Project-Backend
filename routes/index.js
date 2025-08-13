@@ -16,6 +16,7 @@ const sessionCategoryRouter = require("./sessionCategoryRouter.js");
 const EventSessionRouter = require("./eventRouter.js");
 const webinarRouter = require("./webinarRouter.js");
 const workshopRouter = require("./workshopRouter.js");
+const OtpRouter = require("./otpRouter.js");
 const internshipSessionsRouter = require("./internshipSessionRouter.js");
 const indexRouter = express.Router();
 
@@ -37,5 +38,6 @@ indexRouter.use("/session-category", sessionCategoryRouter);
 indexRouter.use("/event", EventSessionRouter);
 indexRouter.use("/webinars", webinarRouter);
 indexRouter.use("/workshops", workshopRouter);
+indexRouter.use("/otp", OtpRouter);
 indexRouter.use("/internship-sessions", internshipSessionsRouter);
 module.exports = indexRouter;

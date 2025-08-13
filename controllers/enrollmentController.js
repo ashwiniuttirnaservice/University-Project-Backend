@@ -254,15 +254,7 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
 });
 
 exports.createEnrollment = asyncHandler(async (req, res) => {
-  const {
-    firstName,
-    middleName,
-    lastName,
-    mobileNo,
-    email,
-    collegeName,
-    course,
-  } = req.body;
+  const { fullName, mobileNo, email, collegeName, course } = req.body;
 
   if (!mobileNo || !email || !collegeName) {
     return res.status(400).json({
@@ -272,9 +264,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
   }
 
   const enrollment = await Student.create({
-    firstName,
-    middleName,
-    lastName,
+    fullName,
     mobileNo,
     email,
     course,
