@@ -43,8 +43,6 @@ const workshopSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["upcoming", "ongoing", "completed"],
-      default: "upcoming",
     },
     registeredAt: {
       type: Date,

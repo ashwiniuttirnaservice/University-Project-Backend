@@ -8,14 +8,19 @@ exports.createEvent = asyncHandler(async (req, res) => {
   try {
     const eventData = { ...req.body };
 
+    // Helper to clean path
+    const getFileName = (fullPath) => fullPath.split("\\").pop(); // Windows path split
+
     // Single banner image
     if (req.files && req.files.bannerImage) {
-      eventData.bannerImage = req.files.bannerImage[0].path;
+      eventData.bannerImage = getFileName(req.files.bannerImage[0].path);
     }
 
     // Multiple gallery images
     if (req.files && req.files.gallery) {
-      eventData.gallery = req.files.gallery.map((file) => file.path);
+      eventData.gallery = req.files.gallery.map((file) =>
+        getFileName(file.path)
+      );
     }
 
     const event = new Event(eventData);
