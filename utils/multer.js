@@ -16,7 +16,7 @@ const getFolderPath = (fieldname) => {
     case "idProofStudent":
       return "uploads/student/student-idproof/";
     case "notes":
-    case "files":
+    case "file":
       return "uploads/course-notes/";
     case "testExcel":
       return "uploads/test-excel/";
