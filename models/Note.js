@@ -11,8 +11,6 @@ const NoteSchema = new mongoose.Schema({
   file: { type: String, trim: true }, // PDF/Document file URL
   type: {
     type: String,
-    enum: ["text", "article"],
-    default: "text",
   },
   duration: { type: String, trim: true }, // format: HH:MM:SS or MM:SS
   uploadedAt: { type: Date, default: Date.now },

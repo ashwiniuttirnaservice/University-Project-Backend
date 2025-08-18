@@ -8,7 +8,7 @@ exports.createVideoLecture = asyncHandler(async (req, res) => {
   const { course, type, title, contentUrl, duration, description } = req.body;
 
   if (!course || !type || !title) {
-    return sendError(res, "course, type, and title are required", 400);
+    return sendError(res, 400, false, "course, type, and title are required");
   }
 
   const videoLecture = await VideoLecture.create({
@@ -22,9 +22,10 @@ exports.createVideoLecture = asyncHandler(async (req, res) => {
 
   return sendResponse(
     res,
+    201,
+    true,
     "Video Lecture created successfully",
-    videoLecture,
-    201
+    videoLecture
   );
 });
 
@@ -43,7 +44,7 @@ exports.getAllVideoLectures = asyncHandler(async (req, res) => {
     { $sort: { createdAt: -1 } },
   ]);
 
-  return sendResponse(res, "All Video Lectures fetched", lectures);
+  return sendResponse(res, 200, true, "All Video Lectures fetched", lectures);
 });
 
 // Get Video Lecture by ID (Aggregation)
@@ -51,7 +52,7 @@ exports.getVideoLectureById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, "Invalid Video Lecture ID", 400);
+    return sendError(res, 400, false, "Invalid Video Lecture ID");
   }
 
   const lecture = await VideoLecture.aggregate([
@@ -68,10 +69,16 @@ exports.getVideoLectureById = asyncHandler(async (req, res) => {
   ]);
 
   if (!lecture.length) {
-    return sendError(res, "Video Lecture not found", 404);
+    return sendError(res, 404, false, "Video Lecture not found");
   }
 
-  return sendResponse(res, "Video Lecture fetched successfully", lecture[0]);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Video Lecture fetched successfully",
+    lecture[0]
+  );
 });
 
 // Update Video Lecture
@@ -79,19 +86,22 @@ exports.updateVideoLecture = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, "Invalid Video Lecture ID", 400);
+    return sendError(res, 400, false, "Invalid Video Lecture ID");
   }
 
   const updatedLecture = await VideoLecture.findByIdAndUpdate(id, req.body, {
     new: true,
+    runValidators: true,
   });
 
   if (!updatedLecture) {
-    return sendError(res, "Video Lecture not found", 404);
+    return sendError(res, 404, false, "Video Lecture not found");
   }
 
   return sendResponse(
     res,
+    200,
+    true,
     "Video Lecture updated successfully",
     updatedLecture
   );
@@ -102,14 +112,20 @@ exports.deleteVideoLecture = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, "Invalid Video Lecture ID", 400);
+    return sendError(res, 400, false, "Invalid Video Lecture ID");
   }
 
   const deletedLecture = await VideoLecture.findByIdAndDelete(id);
 
   if (!deletedLecture) {
-    return sendError(res, "Video Lecture not found", 404);
+    return sendError(res, 404, false, "Video Lecture not found");
   }
 
-  return sendResponse(res, "Video Lecture deleted successfully");
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Video Lecture deleted successfully",
+    null
+  );
 });

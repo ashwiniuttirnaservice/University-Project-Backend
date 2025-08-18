@@ -45,6 +45,19 @@ const courseSchema = new mongoose.Schema(
       recordedLectures: { type: Boolean, default: true },
     },
 
+    videolectures: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "VideoLecture",
+      },
+    ],
+    notes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Note",
+      },
+    ],
+
     trainer: [
       {
         type: mongoose.Schema.Types.ObjectId,

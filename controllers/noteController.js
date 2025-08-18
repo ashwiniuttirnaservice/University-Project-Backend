@@ -8,7 +8,7 @@ exports.createNote = asyncHandler(async (req, res) => {
   const { course, title, content, file, type, duration } = req.body;
 
   if (!course || !title) {
-    return sendError(res, "Course and Title are required", 400);
+    return sendError(res, 400, false, "Course and Title are required");
   }
 
   const note = await Note.create({
@@ -20,7 +20,7 @@ exports.createNote = asyncHandler(async (req, res) => {
     duration,
   });
 
-  sendResponse(res, note, "Note created successfully");
+  return sendResponse(res, 201, true, "Note created successfully", note);
 });
 
 // Get All Notes (Aggregation with course details)
@@ -38,7 +38,7 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
     { $sort: { uploadedAt: -1 } },
   ]);
 
-  sendResponse(res, notes, "All notes fetched successfully");
+  return sendResponse(res, 200, true, "All notes fetched successfully", notes);
 });
 
 // Get Note by ID
@@ -46,7 +46,7 @@ exports.getNoteById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, "Invalid note ID", 400);
+    return sendError(res, 400, false, "Invalid note ID");
   }
 
   const note = await Note.aggregate([
@@ -63,10 +63,10 @@ exports.getNoteById = asyncHandler(async (req, res) => {
   ]);
 
   if (!note.length) {
-    return sendError(res, "Note not found", 404);
+    return sendError(res, 404, false, "Note not found");
   }
 
-  sendResponse(res, note[0], "Note fetched successfully");
+  return sendResponse(res, 200, true, "Note fetched successfully", note[0]);
 });
 
 // Update Note
@@ -74,7 +74,7 @@ exports.updateNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, "Invalid note ID", 400);
+    return sendError(res, 400, false, "Invalid note ID");
   }
 
   const updatedNote = await Note.findByIdAndUpdate(id, req.body, {
@@ -83,10 +83,10 @@ exports.updateNote = asyncHandler(async (req, res) => {
   });
 
   if (!updatedNote) {
-    return sendError(res, "Note not found", 404);
+    return sendError(res, 404, false, "Note not found");
   }
 
-  sendResponse(res, updatedNote, "Note updated successfully");
+  return sendResponse(res, 200, true, "Note updated successfully", updatedNote);
 });
 
 // Delete Note
@@ -94,14 +94,14 @@ exports.deleteNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, "Invalid note ID", 400);
+    return sendError(res, 400, false, "Invalid note ID");
   }
 
   const deletedNote = await Note.findByIdAndDelete(id);
 
   if (!deletedNote) {
-    return sendError(res, "Note not found", 404);
+    return sendError(res, 404, false, "Note not found");
   }
 
-  sendResponse(res, null, "Note deleted successfully");
+  return sendResponse(res, 200, true, "Note deleted successfully", null);
 });

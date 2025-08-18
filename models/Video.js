@@ -9,16 +9,18 @@ const VideoLectureSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["video", "lecture"], // video for recorded videos, lecture for live/reading material
+      enum: ["video", "lecture"], // ✅ restricts to only two values
       required: true,
     },
     title: { type: String, required: true, trim: true },
-    contentUrl: { type: String, trim: true }, // for lecture PDF/article link
-    duration: { type: String, trim: true }, // format: HH:MM:SS or MM:SS
+    contentUrl: { type: String, trim: true }, // PDF, link, or video URL
+    duration: { type: String, trim: true }, // HH:MM:SS or MM:SS
     description: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
+// ✅ Correct export with proper model name
 module.exports =
-  mongoose.models.VideoLecture || mongoose.model("Video", VideoLectureSchema);
+  mongoose.models.VideoLecture ||
+  mongoose.model("VideoLecture", VideoLectureSchema);

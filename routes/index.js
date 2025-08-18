@@ -17,8 +17,8 @@ const EventSessionRouter = require("./eventRouter.js");
 const webinarRouter = require("./webinarRouter.js");
 const workshopRouter = require("./workshopRouter.js");
 const OtpRouter = require("./otpRouter.js");
-const VideoRouter = require("./noteRouter.js");
-const NotesRouter = require("./videoRouter.js");
+const VideoRouter = require("./videoRouter.js");
+const NotesRouter = require("./noteRouter.js");
 const internshipSessionsRouter = require("./internshipSessionRouter.js");
 const indexRouter = express.Router();
 
