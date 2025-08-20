@@ -23,7 +23,7 @@ const trainerSchema = new mongoose.Schema(
       match: /^[6-9]\d{9}$/,
     },
     dob: {
-      type: Date,
+      type: String,
       required: true,
     },
     gender: {
@@ -59,7 +59,7 @@ const trainerSchema = new mongoose.Schema(
     },
     idProofTrainer: {
       type: String,
-      required: true,
+      required: false,
     },
 
     // --- Availability ---

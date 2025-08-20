@@ -115,12 +115,11 @@ exports.getCourseById = asyncHandler(async (req, res) => {
       $match: { _id: new mongoose.Types.ObjectId(id) },
     },
 
-    // --- Trainer Lookup ---
     {
       $lookup: {
         from: "trainers",
-        localField: "trainer",
-        foreignField: "_id",
+        localField: "_id",
+        foreignField: "courses",
         as: "trainer",
       },
     },
@@ -157,12 +156,11 @@ exports.getCourseById = asyncHandler(async (req, res) => {
       },
     },
 
-    // --- Video Lectures Lookup ---
     {
       $lookup: {
         from: "videolectures",
-        localField: "_id", // course._id
-        foreignField: "course", // videoLecture.course
+        localField: "_id",
+        foreignField: "course",
         as: "videolectures",
       },
     },
@@ -187,12 +185,11 @@ exports.getCourseById = asyncHandler(async (req, res) => {
       },
     },
 
-    // --- Notes Lookup ---
     {
       $lookup: {
         from: "notes",
-        localField: "_id", // course._id
-        foreignField: "course", // note.course
+        localField: "_id",
+        foreignField: "course",
         as: "notes",
       },
     },
@@ -221,7 +218,6 @@ exports.getCourseById = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "Course not found");
   }
 
-  // ✅ Format trainer: if only one, return as object
   const formattedCourse = {
     ...course[0],
     trainer:
