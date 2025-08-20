@@ -1,4 +1,6 @@
 const express = require("express");
+const router = express.Router();
+const upload = require("../utils/multer");
 const {
   createNote,
   getAllNotes,
@@ -6,26 +8,20 @@ const {
   updateNote,
   deleteNote,
 } = require("../controllers/noteController");
-const upload = require("../utils/multer"); // multer config with getFolderPath
 
-const router = express.Router();
+// Create Note (with file upload)
+router.post("/", upload.single("file"), createNote);
 
-// Upload middleware for notes
-router.post(
-  "/",
-  upload.fields([{ name: "file", maxCount: 1 }]), // PDF/Doc file
-  createNote
-);
-
+// Get All Notes
 router.get("/", getAllNotes);
+
+// Get Note by ID
 router.get("/:id", getNoteById);
 
-router.put(
-  "/:id",
-  upload.fields([{ name: "file", maxCount: 1 }]), // optional file update
-  updateNote
-);
+// Update Note
+router.put("/:id", upload.single("file"), updateNote);
 
+// Delete Note
 router.delete("/:id", deleteNote);
 
 module.exports = router;

@@ -11,10 +11,8 @@ const internshipSessionSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    date: {
-      type: Date,
-      required: true,
-    },
+    startDate: { type: Date, required: true },
+    endDate: { type: Date, required: true },
     duration: {
       type: String,
       required: true,
@@ -29,17 +27,18 @@ const internshipSessionSchema = new mongoose.Schema(
       trim: true,
     },
 
-    resources: [
-      {
-        name: String,
-        link: String,
-      },
-    ],
+    topics: [{ type: String, trim: true }],
 
+    capacity: { type: String, required: true },
+    fees: {
+      amount: { type: Number, default: 0 }, // 0 = free
+      currency: { type: String, default: "INR" },
+      refundPolicy: { type: String, trim: true },
+    },
+
+    certification: { type: Boolean, default: false },
     status: {
       type: String,
-      enum: ["upcoming", "ongoing", "completed"],
-      default: "upcoming",
     },
   },
   { timestamps: true }

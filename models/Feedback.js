@@ -5,12 +5,11 @@ const feedbackSchema = new mongoose.Schema(
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      required: true,
+      required: false,
     },
-    firstName: { type: String, required: true, trim: true },
-    middleName: { type: String, trim: true },
-    lastName: { type: String, required: true, trim: true },
-    phone: {
+    fullName: { type: String, required: true, trim: true },
+
+    mobileNo: {
       type: String,
       required: true,
       trim: true,
@@ -25,13 +24,11 @@ const feedbackSchema = new mongoose.Schema(
     },
     collegeName: { type: String, trim: true },
     message: { type: String, required: true, maxlength: 1000 },
-    ratings: {
-      teaching: { type: Number, min: 1, max: 10, required: true },
-      presentations: { type: Number, min: 1, max: 10, required: true },
-      engagement: { type: Number, min: 1, max: 10, required: true },
-      pacing: { type: Number, min: 1, max: 10, required: true },
-      organization: { type: Number, min: 1, max: 10, required: true },
-    },
+
+    // ⭐ Added field for profile image upload
+    profile: { type: String, trim: true },
+
+    rating: { type: String, trim: true, required: true },
     createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }

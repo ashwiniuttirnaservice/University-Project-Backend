@@ -1,13 +1,21 @@
 const express = require("express");
-const router = express.Router();
 const {
-  registerWorkshop,
+  createWorkshop,
   getAllWorkshops,
   getWorkshopById,
+  updateWorkshop,
+  deleteWorkshop,
 } = require("../controllers/workshopController");
 
-router.post("/register", registerWorkshop);
+const router = express.Router();
+
+// Public Routes
 router.get("/", getAllWorkshops);
 router.get("/:id", getWorkshopById);
+
+// Admin/Trainer Protected Routes (add auth middleware if needed)
+router.post("/", createWorkshop);
+router.put("/:id", updateWorkshop);
+router.delete("/:id", deleteWorkshop);
 
 module.exports = router;

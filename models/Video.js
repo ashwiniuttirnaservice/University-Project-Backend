@@ -21,6 +21,5 @@ const VideoLectureSchema = new mongoose.Schema(
 );
 
 // ✅ Correct export with proper model name
-module.exports =
-  mongoose.models.VideoLecture ||
-  mongoose.model("VideoLecture", VideoLectureSchema);
+
+module.exports = mongoose.model("VideoLecture", VideoLectureSchema);

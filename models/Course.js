@@ -46,17 +46,9 @@ const courseSchema = new mongoose.Schema(
     },
 
     videolectures: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "VideoLecture",
-      },
+      { type: mongoose.Schema.Types.ObjectId, ref: "VideoLecture" },
     ],
-    notes: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Note",
-      },
-    ],
+    notes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Note" }],
 
     trainer: [
       {

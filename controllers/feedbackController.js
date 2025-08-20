@@ -1,46 +1,60 @@
 const Feedback = require("../models/Feedback");
-const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
+const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// @desc    Add new feedback for a course
-// @route   POST /api/feedbacks
-exports.addFeedback = asyncHandler(async (req, res) => {
-  const feedback = new Feedback(req.body);
-  await feedback.save();
-  sendResponse(res, 201, "Feedback added successfully", feedback);
-});
+// 📌 Create Feedback
+exports.createFeedback = asyncHandler(async (req, res) => {
+  try {
+    const {
+      courseId,
+      fullName,
+      mobileNo,
+      email,
+      collegeName,
+      message,
+      rating,
+    } = req.body;
 
-// @desc    Get all feedbacks for a specific course
-// @route   GET /api/feedbacks/course/:courseId
-exports.getFeedbacksByCourse = asyncHandler(async (req, res) => {
-  const { courseId } = req.params;
-  const feedbacks = await Feedback.find({ courseId });
+    const feedback = new Feedback({
+      courseId,
+      fullName,
+      mobileNo,
+      email,
+      collegeName,
+      message,
+      rating,
+      // ✅ फक्त relative path save करायचा
+      profile: req.file ? req.file.filename : null,
+    });
 
-  if (!feedbacks.length) {
-    return sendError(res, 404, "No feedbacks found for this course");
+    await feedback.save();
+    return sendResponse(
+      res,
+      201,
+      true,
+      "Feedback submitted successfully",
+      feedback
+    );
+  } catch (error) {
+    return sendError(res, 400, error.message);
   }
-
-  sendResponse(res, 200, "Feedbacks fetched successfully", {
-    courseId,
-    totalFeedbacks: feedbacks.length,
-    feedbacks,
-  });
 });
 
-// @desc    Get all feedbacks (Admin / Overall view)
-// @route   GET /api/feedbacks
-exports.getAllFeedbacks = asyncHandler(async (req, res) => {
+// 📌 Get all feedback
+exports.getAllFeedback = asyncHandler(async (req, res) => {
   const feedbacks = await Feedback.find().populate(
     "courseId",
     "title description"
   );
+  return sendResponse(res, 200, true, "Feedback fetched", feedbacks);
+});
 
-  if (!feedbacks.length) {
-    return sendError(res, 404, "No feedbacks found");
-  }
-
-  sendResponse(res, 200, "All feedbacks fetched successfully", {
-    total: feedbacks.length,
-    feedbacks,
-  });
+// 📌 Get feedback by course
+exports.getFeedbackByCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  const feedbacks = await Feedback.find({ courseId }).populate(
+    "courseId",
+    "title"
+  );
+  return sendResponse(res, 200, true, "Course feedback fetched", feedbacks);
 });

@@ -1,5 +1,7 @@
 const Course = require("../models/Course");
-
+const Trainer = require("../models/Trainer");
+const Note = require("../models/Note");
+const VideoLecture = require("../models/Video");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
@@ -108,32 +110,124 @@ exports.getAllCourses = asyncHandler(async (req, res) => {
 exports.getCourseById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  let course = await Course.findById(id)
-    .populate({
-      path: "trainer",
-      select: "highestQualification fullName profilePhotoTrainer",
-    })
-    .populate({
-      path: "videolectures",
-      select:
-        "_id course type title contentUrl duration description createdAt updatedAt",
-    })
-    .populate({
-      path: "notes",
-      select: "_id course title content type duration uploadedAt",
-    });
+  const course = await Course.aggregate([
+    {
+      $match: { _id: new mongoose.Types.ObjectId(id) },
+    },
 
-  if (!course) {
+    // --- Trainer Lookup ---
+    {
+      $lookup: {
+        from: "trainers",
+        localField: "trainer",
+        foreignField: "_id",
+        as: "trainer",
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        description: 1,
+        duration: 1,
+        branch: 1,
+        rating: 1,
+        enrolledCount: 1,
+        overview: 1,
+        learningOutcomes: 1,
+        benefits: 1,
+        keyFeatures: 1,
+        features: 1,
+        videolectures: 1,
+        notes: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        trainer: {
+          $map: {
+            input: "$trainer",
+            as: "t",
+            in: {
+              _id: "$$t._id",
+              fullName: "$$t.fullName",
+              highestQualification: "$$t.highestQualification",
+              profilePhotoTrainer: "$$t.profilePhotoTrainer",
+            },
+          },
+        },
+      },
+    },
+
+    // --- Video Lectures Lookup ---
+    {
+      $lookup: {
+        from: "videolectures",
+        localField: "_id", // course._id
+        foreignField: "course", // videoLecture.course
+        as: "videolectures",
+      },
+    },
+    {
+      $addFields: {
+        videolectures: {
+          $map: {
+            input: "$videolectures",
+            as: "v",
+            in: {
+              _id: "$$v._id",
+              type: "$$v.type",
+              title: "$$v.title",
+              contentUrl: "$$v.contentUrl",
+              duration: "$$v.duration",
+              description: "$$v.description",
+              createdAt: "$$v.createdAt",
+              updatedAt: "$$v.updatedAt",
+            },
+          },
+        },
+      },
+    },
+
+    // --- Notes Lookup ---
+    {
+      $lookup: {
+        from: "notes",
+        localField: "_id", // course._id
+        foreignField: "course", // note.course
+        as: "notes",
+      },
+    },
+    {
+      $addFields: {
+        notes: {
+          $map: {
+            input: "$notes",
+            as: "n",
+            in: {
+              _id: "$$n._id",
+              title: "$$n.title",
+              content: "$$n.content",
+              file: "$$n.file",
+              type: "$$n.type",
+              duration: "$$n.duration",
+              uploadedAt: "$$n.uploadedAt",
+            },
+          },
+        },
+      },
+    },
+  ]);
+
+  if (!course || course.length === 0) {
     return sendError(res, 404, false, "Course not found");
   }
 
-  // trainer ला object करून द्यायचं (array नको)
+  // ✅ Format trainer: if only one, return as object
   const formattedCourse = {
-    ...course.toObject(),
+    ...course[0],
     trainer:
-      Array.isArray(course.trainer) && course.trainer.length === 1
-        ? course.trainer[0]
-        : course.trainer,
+      Array.isArray(course[0].trainer) && course[0].trainer.length === 1
+        ? course[0].trainer[0]
+        : course[0].trainer,
   };
 
   return sendResponse(res, 200, true, "Course fetched", formattedCourse);
