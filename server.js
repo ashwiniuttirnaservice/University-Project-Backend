@@ -5,12 +5,8 @@ const path = require("path");
 const connectDB = require("./config/db.js");
 const cookieParser = require("cookie-parser");
 const faceapi = require("face-api.js");
-const canvas = require("canvas");
-const indexRouter = require("./routes/index.js");
 
-// --- Face-API.js ke liye zaroori setup ---
-const { Canvas, Image, ImageData } = canvas;
-faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
+const indexRouter = require("./routes/index.js");
 
 // Load environment variables
 
