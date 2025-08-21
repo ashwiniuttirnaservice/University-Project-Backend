@@ -14,7 +14,7 @@ const {
 router.post('/', createCourse);
 
 // GET /api/courses
-router.get('/', getAllCourses);
+// router.get('/', getAllCourses);
 
 // GET /api/courses/all
 router.get('/all', getAllCourse);
