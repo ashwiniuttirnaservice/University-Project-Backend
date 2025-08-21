@@ -17,6 +17,7 @@ const allowedOrigins = ['http://localhost:6174', 'https://uat.codedrift.co'];
 
 const corsOptions = {
     origin: function (origin, callback) {
+        console.log(origin, '=origin');
         // Allow requests with no origin (like Postman, curl)
         if (!origin) return callback(null, true);
 
@@ -33,7 +34,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions));
+// app.options('*', cors(corsOptions));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const indexRouter = require('./routes/index.js');
