@@ -20,12 +20,12 @@ router.post('/', createCourse);
 router.get('/all', getAllCourse);
 
 // GET /api/courses/:id (only matches valid MongoDB ObjectId)
-router.get('/:id([0-9a-fA-F]{24})', getCourseById);
+router.get('/:id', getCourseById);
 
 // PUT /api/courses/:id
-router.put('/:id([0-9a-fA-F]{24})', updateCourse);
+router.put('/:id', updateCourse);
 
 // DELETE /api/courses/:id
-router.delete('/:id([0-9a-fA-F]{24})', deleteCourse);
+router.delete('/:id', deleteCourse);
 
 module.exports = router;
