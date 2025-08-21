@@ -13,16 +13,14 @@ app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-const allowedOrigins = ['http://localhost:6174', 'https://uat.codedrift.co'];
+const allowedOrigins = ['https://uat.codedrift.co', 'http://localhost:6174'];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        console.log('Request Origin:', origin);
-        // Allow requests with no origin (curl, server-to-server)
-        if (!origin) return callback(null, true);
+        if (!origin) return callback(null, true); // server-side requests
 
         if (allowedOrigins.includes(origin)) {
-            callback(null, true);
+            callback(null, true); // dynamically allow
         } else {
             callback(new Error('Not allowed by CORS'));
         }
@@ -33,10 +31,10 @@ const corsOptions = {
     optionsSuccessStatus: 200,
 };
 
+// Global CORS middleware
 app.use(cors(corsOptions));
-// CORS middleware
 
-// Preflight handler for all routes
+// Preflight middleware for all routes
 app.use((req, res, next) => {
     if (req.method === 'OPTIONS') {
         cors(corsOptions)(req, res, next);
