@@ -32,16 +32,16 @@ const corsOptions = {
 };
 
 // Global CORS middleware
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
 
 // Preflight middleware for all routes
-app.use((req, res, next) => {
-    if (req.method === 'OPTIONS') {
-        cors(corsOptions)(req, res, next);
-    } else {
-        next();
-    }
-});
+// app.use((req, res, next) => {
+//     if (req.method === 'OPTIONS') {
+//         cors(corsOptions)(req, res, next);
+//     } else {
+//         next();
+//     }
+// });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const indexRouter = require('./routes/index.js');
