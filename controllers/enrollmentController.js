@@ -263,7 +263,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     });
   }
 
-  const enrollment = await Student.create({
+  const enrollment = await Enrollment.create({
     fullName,
     mobileNo,
     email,
