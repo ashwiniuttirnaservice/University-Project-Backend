@@ -54,7 +54,6 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     preferredBatchTiming,
     preferredMode,
     password,
-    branch,
     enrolledCourses,
   } = req.body;
 
@@ -94,7 +93,7 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     preferredBatchTiming,
     preferredMode,
     password,
-    branch,
+
     enrolledCourses: parsedCourses,
     idProofStudent: req.files?.idProofStudent?.[0]?.filename || "",
     profilePhotoStudent: req.files?.profilePhotoStudent?.[0]?.filename || "",

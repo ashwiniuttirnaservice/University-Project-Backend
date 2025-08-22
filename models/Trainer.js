@@ -10,6 +10,7 @@ const trainerSchema = new mongoose.Schema(
     title: {
       type: String,
       default: "",
+      default: "",
     },
     email: {
       type: String,

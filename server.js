@@ -35,7 +35,7 @@ const app = express();
 
 // --- CORS Middleware ---
 const corsOptions = {
-  origin: "http://localhost:5174", // Aapka frontend ka URL
+  origin: "http://localhost:5173", // Aapka frontend ka URL
   credentials: true, // Cookies ke liye zaroori
   optionsSuccessStatus: 200,
 };
