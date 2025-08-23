@@ -20,6 +20,8 @@ const OtpRouter = require("./otpRouter.js");
 const VideoRouter = require("./videoRouter.js");
 const NotesRouter = require("./noteRouter.js");
 const internshipSessionsRouter = require("./internshipSessionRouter.js");
+const SponsorshipRouter = require("./sponsorshipRouter.js");
+const HackathonRouter = require("./hackathonRoutes.js");
 const indexRouter = express.Router();
 
 // All routes grouped here
@@ -44,4 +46,6 @@ indexRouter.use("/otp", OtpRouter);
 indexRouter.use("/videos", VideoRouter);
 indexRouter.use("/notes", NotesRouter);
 indexRouter.use("/internship-sessions", internshipSessionsRouter);
+indexRouter.use("/sponsorship", SponsorshipRouter);
+indexRouter.use("/hackathon", HackathonRouter);
 module.exports = indexRouter;

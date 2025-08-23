@@ -10,9 +10,8 @@ const EventSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "SessionCategory",
       required: true,
-    }, // Event/Webinar/Workshop/Course/Internship
+    },
 
-    // Date & Time
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     startTime: { type: String, required: true },
@@ -42,7 +41,6 @@ const EventSchema = new mongoose.Schema(
     maxParticipants: { type: Number },
     registeredCount: { type: Number, default: 0 },
 
-    // Auto status for UI
     status: {
       type: String,
     },

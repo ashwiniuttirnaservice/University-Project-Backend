@@ -9,7 +9,7 @@ const VideoLectureSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["video", "lecture"], // ✅ restricts to only two values
+      enum: ["video", "lecture"],
       required: true,
     },
     title: { type: String, required: true, trim: true },
@@ -19,7 +19,5 @@ const VideoLectureSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// ✅ Correct export with proper model name
 
 module.exports = mongoose.model("VideoLecture", VideoLectureSchema);

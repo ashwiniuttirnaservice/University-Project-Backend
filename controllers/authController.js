@@ -47,7 +47,7 @@ exports.registerUser = asyncHandler(async (req, res) => {
 
   await user.save();
 
-  return sendResponse(res, 201, true, "Admin registration successful!");
+  return sendResponse(res, 201, true, "Admin registration successful!", user);
 });
 
 // --- VERIFY EMAIL ---
@@ -70,7 +70,8 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "Email verified successfully! You can now log in."
+    "Email verified successfully! You can now log in.",
+    user
   );
 });
 

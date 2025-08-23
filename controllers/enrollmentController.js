@@ -6,43 +6,37 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 const Student = require("../models/Student");
 // Enroll in a course
 exports.enrollInCourse = asyncHandler(async (req, res) => {
-  const { courseId, studentId } = req.body;
-  const userId = req.user.id;
+  const { course, studentId } = req.body;
 
-  if (!courseId || !studentId) {
+  if (!course || !studentId) {
     return sendError(res, 400, false, "Course ID and Student ID are required");
   }
 
-  const course = await Course.findById(courseId);
-  if (!course) return sendError(res, 404, false, "Course not found");
+  // Check if course exists
+  const courses = await Course.findById(course);
+  if (!courses) return sendError(res, 404, false, "Course not found");
 
   const existing = await Enrollment.findOne({
-    user: userId,
-    course: courseId,
+    course: courses._id,
     studentId,
   });
   if (existing)
     return sendError(res, 400, false, "Already enrolled in this course");
 
   const enrollment = await Enrollment.create({
-    user: userId,
-    course: courseId,
+    course: courses._id,
     studentId,
   });
 
   const populated = await Enrollment.findById(enrollment._id)
-    .populate("user", "firstName lastName email")
+    .populate("studentId")
     .populate("course", "title description");
 
   return sendResponse(res, 201, true, "Enrolled successfully", populated);
 });
 
-// Get logged-in user's enrollments using aggregation
 exports.getMyEnrollments = asyncHandler(async (req, res) => {
-  const studentId = req.user.studentId;
-
   const enrollments = await Enrollment.aggregate([
-    { $match: { studentId: new mongoose.Types.ObjectId(studentId) } },
     {
       $lookup: {
         from: "courses",
@@ -62,16 +56,40 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
     },
     { $unwind: { path: "$branchDetails", preserveNullAndEmptyArrays: true } },
     {
+      $lookup: {
+        from: "students",
+        localField: "studentId",
+        foreignField: "_id",
+        as: "studentDetails",
+      },
+    },
+    { $unwind: "$studentDetails" },
+    {
       $project: {
         _id: 1,
         enrolledAt: 1,
         completedContent: 1,
+
+        student: {
+          _id: "$studentDetails._id",
+          fullName: "$studentDetails.fullName",
+          mobileNo: "$studentDetails.mobileNo",
+          email: "$studentDetails.email",
+        },
+
         course: {
+          _id: "$courseDetails._id",
           title: "$courseDetails.title",
           description: "$courseDetails.description",
-          instructor: "$courseDetails.instructor",
-          youtubeVideos: "$courseDetails.youtubeVideos",
+          duration: "$courseDetails.duration",
+          overview: "$courseDetails.overview",
+          learningOutcomes: "$courseDetails.learningOutcomes",
+          benefits: "$courseDetails.benefits",
+          keyFeatures: "$courseDetails.keyFeatures",
+          features: "$courseDetails.features",
+          videolectures: "$courseDetails.videolectures",
           notes: "$courseDetails.notes",
+          trainer: "$courseDetails.trainer",
           branch: "$branchDetails.name",
         },
       },
@@ -79,7 +97,7 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
     { $sort: { enrolledAt: -1 } },
   ]);
 
-  return sendResponse(res, 200, true, "My enrollments fetched", enrollments);
+  return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
 });
 
 // Mark content as complete
@@ -254,7 +272,8 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
 });
 
 exports.createEnrollment = asyncHandler(async (req, res) => {
-  const { fullName, mobileNo, email, collegeName, course } = req.body;
+  const { fullName, mobileNo, email, collegeName, course, studentId } =
+    req.body;
 
   if (!mobileNo || !email || !collegeName) {
     return res.status(400).json({
@@ -268,6 +287,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     mobileNo,
     email,
     course,
+    studentId,
   });
 
   res.status(201).json({
