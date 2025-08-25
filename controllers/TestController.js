@@ -164,7 +164,6 @@ const importTestsFromExcel = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Tests imported successfully.", inserted);
 });
 
-// @desc    Update test
 const updateTest = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const updateData = {
@@ -180,14 +179,12 @@ const updateTest = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Test updated.", updated);
 });
 
-// @desc    Delete test
 const deleteTest = asyncHandler(async (req, res) => {
   const test = await Test.findByIdAndDelete(req.params.id);
   if (!test) return sendError(res, 404, false, "Test not found.");
   return sendResponse(res, 200, true, "Test deleted successfully.");
 });
 
-// @desc    Submit test by student
 const submitTest = asyncHandler(async (req, res) => {
   const { testId, answers } = req.body;
   const studentId = req.user._id;

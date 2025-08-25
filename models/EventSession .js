@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 const EventSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true }, // Event name
-    slug: { type: String, required: true, unique: true }, // URL identifier
+    title: { type: String, required: true },
+    slug: { type: String, required: true, unique: true },
     description: { type: String, required: true },
 
     category: {
@@ -17,24 +17,20 @@ const EventSchema = new mongoose.Schema(
     startTime: { type: String, required: true },
     endTime: { type: String, required: true },
 
-    // Location & Mode
     location: { type: String, required: true },
     mode: {
       type: String,
       enum: ["Online", "Offline", "Hybrid"],
       default: "Offline",
     },
-    meetingLink: { type: String }, // If online
+    meetingLink: { type: String },
 
-    // Organizer & Speakers
     organizer: { type: String, required: true },
     speakers: [{ type: String }],
 
-    // Media
     bannerImage: { type: String },
     gallery: [{ type: String }],
 
-    // Registration
     registrationLink: { type: String },
     isFree: { type: Boolean, default: true },
     price: { type: Number, default: 0 },
@@ -45,11 +41,9 @@ const EventSchema = new mongoose.Schema(
       type: String,
     },
 
-    // SEO & Search
     tags: [{ type: String }],
     priority: { type: Number, default: 0 },
 
-    // Agenda & Extras
     agenda: [{ time: String, activity: String }],
     resources: [{ type: String }],
     sponsors: [{ type: String }],
@@ -67,7 +61,6 @@ const EventSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Middleware to auto-set status based on date
 EventSchema.pre("save", function (next) {
   const now = new Date();
   if (this.startDate <= now && this.endDate >= now) {

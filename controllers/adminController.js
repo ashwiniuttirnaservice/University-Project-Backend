@@ -5,7 +5,6 @@ const Enrollment = require("../models/Enrollment.js");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// @desc    Get all users (Admin) using aggregation
 exports.getAllUsers = asyncHandler(async (req, res) => {
   const users = await User.aggregate([
     {
@@ -29,7 +28,6 @@ exports.getAllUsers = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Users fetched successfully", users);
 });
 
-// @desc    Get a single user by ID (Admin) using aggregation
 exports.getUserById = asyncHandler(async (req, res) => {
   const userId = req.params.id;
 
@@ -77,7 +75,6 @@ exports.getUserById = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Update a user's details (Admin)
 exports.updateUserByAdmin = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, role, branchId, isActiveNow } = req.body;
 
@@ -150,7 +147,6 @@ exports.updateUserByAdmin = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Delete a user (Admin)
 exports.deleteUserByAdmin = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) return sendError(res, 404, false, "User not found");

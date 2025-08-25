@@ -2,7 +2,6 @@ const Hackathon = require("../models/Hackathon");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// ✅ Create Hackathon
 exports.createHackathon = asyncHandler(async (req, res) => {
   const {
     title,
@@ -53,7 +52,6 @@ exports.createHackathon = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Get All Hackathons
 exports.getAllHackathons = asyncHandler(async (req, res) => {
   const hackathons = await Hackathon.find().populate("sponsorships");
   return sendResponse(
@@ -65,7 +63,6 @@ exports.getAllHackathons = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Get Hackathon by ID
 exports.getHackathonById = asyncHandler(async (req, res) => {
   const hackathon = await Hackathon.findById(req.params.id).populate(
     "sponsorships"
@@ -84,12 +81,50 @@ exports.getHackathonById = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Update Hackathon
 exports.updateHackathon = asyncHandler(async (req, res) => {
-  const hackathon = await Hackathon.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
+  const {
+    title,
+    theme,
+    description,
+    startDate,
+    endDate,
+    venue,
+    mode,
+    eligibility,
+    maxTeamSize,
+    minTeamSize,
+    registrationDeadline,
+    teams,
+    judges,
+    sponsorships,
+    prizes,
+    rules,
+    isActive,
+  } = req.body;
+
+  const hackathon = await Hackathon.findByIdAndUpdate(
+    req.params.id,
+    {
+      title,
+      theme,
+      description,
+      startDate,
+      endDate,
+      venue,
+      mode,
+      eligibility,
+      maxTeamSize,
+      minTeamSize,
+      registrationDeadline,
+      teams,
+      judges,
+      sponsorships,
+      prizes,
+      rules,
+      isActive,
+    },
+    { new: true, runValidators: true }
+  );
 
   if (!hackathon) {
     return sendError(res, 404, false, "Hackathon not found");
@@ -104,7 +139,6 @@ exports.updateHackathon = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Delete Hackathon
 exports.deleteHackathon = asyncHandler(async (req, res) => {
   const hackathon = await Hackathon.findByIdAndDelete(req.params.id);
 

@@ -1,42 +1,59 @@
 // controllers/sponsorshipController.js
 const Sponsorship = require("../models/Sponsorship");
+const Hackathon = require("../models/Hackathon");
 const SessionCategory = require("../models/SessionCategory");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// @desc    Create Sponsorship (linked with SessionCategory)
+// @desc    Create Sponsorship (linked with Hackathon & SessionCategory)
 // @route   POST /api/sponsorships
 // @access  Public/Private
 exports.createSponsorship = asyncHandler(async (req, res) => {
   const {
     sponsorName,
     sponsorType,
-    logo,
     website,
     contactPerson,
     contribution,
     benefits,
     agreementSigned,
+    hackathonId,
     sessionCategoryId,
+    projectName,
+    description,
+    technologies,
+    startDate,
+    endDate,
+    status,
+    isActive,
   } = req.body;
 
-  // Validate required
-  if (!sponsorName || !sponsorType || !sessionCategoryId) {
+  const logo = req.file ? `${req.file.filename}` : null;
+
+  if (
+    !sponsorName ||
+    !sponsorType ||
+    !sessionCategoryId ||
+    !projectName ||
+    !startDate
+  ) {
     return sendError(
       res,
       400,
       false,
-      "sponsorName, sponsorType & sessionCategoryId are required"
+      "sponsorName, sponsorType, sessionCategoryId, projectName, and startDate are required"
     );
   }
 
-  // Check if SessionCategory exists
+  const hackathon = await Hackathon.findById(hackathonId);
+  if (!hackathon) {
+    return sendError(res, 404, false, "hackathonId not found");
+  }
+
   const sessionCategory = await SessionCategory.findById(sessionCategoryId);
   if (!sessionCategory) {
     return sendError(res, 404, false, "SessionCategory not found");
   }
-
-  // Create Sponsorship
   const sponsorship = await Sponsorship.create({
     sponsorName,
     sponsorType,
@@ -46,7 +63,15 @@ exports.createSponsorship = asyncHandler(async (req, res) => {
     contribution,
     benefits,
     agreementSigned,
+    hackathon: hackathon._id,
     sessionCategory: sessionCategory._id,
+    projectName,
+    description,
+    technologies,
+    startDate,
+    endDate,
+    status,
+    isActive,
   });
 
   return sendResponse(
@@ -58,14 +83,13 @@ exports.createSponsorship = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Get All Sponsorships
-// @route   GET /api/sponsorships
-// @access  Public
 exports.getSponsorships = asyncHandler(async (req, res) => {
-  const sponsorships = await Sponsorship.find().populate(
-    "sessionCategory",
-    "name type desc isActive"
-  );
+  const sponsorships = await Sponsorship.find()
+    .populate("sessionCategory", "name type desc isActive")
+    .populate(
+      "hackathon",
+      "title theme description startDate endDate venue mode eligibility maxTeamSize minTeamSize isActive"
+    );
 
   return sendResponse(
     res,
@@ -76,14 +100,13 @@ exports.getSponsorships = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Get Single Sponsorship by ID
-// @route   GET /api/sponsorships/:id
-// @access  Public
 exports.getSponsorshipById = asyncHandler(async (req, res) => {
-  const sponsorship = await Sponsorship.findById(req.params.id).populate(
-    "sessionCategory",
-    "name type desc isActive"
-  );
+  const sponsorship = await Sponsorship.findById(req.params.id)
+    .populate("sessionCategory", "name type desc isActive")
+    .populate(
+      "hackathon",
+      "title theme description startDate endDate venue mode eligibility maxTeamSize minTeamSize isActive"
+    );
 
   if (!sponsorship) {
     return sendError(res, 404, false, "Sponsorship not found");
@@ -98,33 +121,83 @@ exports.getSponsorshipById = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Update Sponsorship
-// @route   PUT /api/sponsorships/:id
-// @access  Private
 exports.updateSponsorship = asyncHandler(async (req, res) => {
-  const sponsorship = await Sponsorship.findById(req.params.id);
+  const {
+    sponsorName,
+    sponsorType,
+    website,
+    contactPerson,
+    contribution,
+    benefits,
+    agreementSigned,
+    hackathonId,
+    sessionCategoryId,
+    projectName,
+    description,
+    technologies,
+    startDate,
+    endDate,
+    status,
+    isActive,
+  } = req.body;
 
+  const sponsorshipId = req.params.id;
+  const logo = req.file ? `${req.file.filename}` : null;
+
+  const sponsorship = await Sponsorship.findById(sponsorshipId);
   if (!sponsorship) {
     return sendError(res, 404, false, "Sponsorship not found");
   }
 
-  const updates = req.body;
-  Object.assign(sponsorship, updates);
+  if (hackathonId) {
+    const hackathon = await Hackathon.findById(hackathonId);
+    if (!hackathon) {
+      return sendError(res, 404, false, "hackathonId not found");
+    }
+  }
 
-  await sponsorship.save();
+  if (sessionCategoryId) {
+    const sessionCategory = await SessionCategory.findById(sessionCategoryId);
+    if (!sessionCategory) {
+      return sendError(res, 404, false, "SessionCategory not found");
+    }
+  }
+
+  const updateFields = {
+    sponsorName: sponsorName ?? sponsorship.sponsorName,
+    sponsorType: sponsorType ?? sponsorship.sponsorType,
+    logo: logo ?? sponsorship.logo,
+    website: website ?? sponsorship.website,
+    contactPerson: contactPerson ?? sponsorship.contactPerson,
+    contribution: contribution ?? sponsorship.contribution,
+    benefits: benefits ?? sponsorship.benefits,
+    agreementSigned: agreementSigned ?? sponsorship.agreementSigned,
+    hackathon: hackathonId ?? sponsorship.hackathon,
+    sessionCategory: sessionCategoryId ?? sponsorship.sessionCategory,
+    projectName: projectName ?? sponsorship.projectName,
+    description: description ?? sponsorship.description,
+    technologies: technologies ?? sponsorship.technologies,
+    startDate: startDate ?? sponsorship.startDate,
+    endDate: endDate ?? sponsorship.endDate,
+    status: status ?? sponsorship.status,
+    isActive: isActive ?? sponsorship.isActive,
+  };
+
+  const updatedSponsorship = await Sponsorship.findByIdAndUpdate(
+    sponsorshipId,
+    { $set: updateFields },
+    { new: true }
+  );
 
   return sendResponse(
     res,
     200,
     true,
     "Sponsorship updated successfully",
-    sponsorship
+    updatedSponsorship
   );
 });
 
-// @desc    Delete Sponsorship
-// @route   DELETE /api/sponsorships/:id
-// @access  Private
 exports.deleteSponsorship = asyncHandler(async (req, res) => {
   const sponsorship = await Sponsorship.findById(req.params.id);
 

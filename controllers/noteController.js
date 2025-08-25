@@ -48,7 +48,6 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Notes fetched successfully", notes);
 });
 
-// GET Note by ID
 exports.getNoteById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -70,7 +69,6 @@ exports.getNoteById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Note fetched successfully", note[0]);
 });
 
-// UPDATE Note
 exports.updateNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { title, content, duration } = req.body;
@@ -86,7 +84,6 @@ exports.updateNote = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Note updated successfully", note);
 });
 
-// DELETE Note
 exports.deleteNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
 

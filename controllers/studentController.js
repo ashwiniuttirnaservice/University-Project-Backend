@@ -38,7 +38,6 @@ exports.registerCandidate = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc Register a new student
 exports.registerStudent = asyncHandler(async (req, res) => {
   const {
     fullName,
@@ -60,11 +59,9 @@ exports.registerStudent = asyncHandler(async (req, res) => {
   const existing = await Student.findOne({ email });
   if (existing) return sendError(res, 400, false, "Email already registered");
 
-  // parse address if string
   const parsedAddress =
     typeof address === "string" ? JSON.parse(address) : address;
 
-  // parse enrolledCourses properly
   let parsedCourses = [];
   if (Array.isArray(enrolledCourses)) {
     parsedCourses = enrolledCourses;
@@ -73,7 +70,7 @@ exports.registerStudent = asyncHandler(async (req, res) => {
       parsedCourses = JSON.parse(enrolledCourses);
       if (!Array.isArray(parsedCourses)) parsedCourses = [parsedCourses];
     } catch {
-      parsedCourses = [enrolledCourses]; // fallback
+      parsedCourses = [enrolledCourses];
     }
   }
 
@@ -173,7 +170,6 @@ exports.getStudentById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Student found", result[0]);
 });
 
-// @desc    Update student
 exports.updateStudent = asyncHandler(async (req, res) => {
   const student = await Student.findById(req.params.studentId);
   if (!student) return sendError(res, 404, false, "Student not found");
@@ -182,7 +178,6 @@ exports.updateStudent = asyncHandler(async (req, res) => {
     ...req.body,
   };
 
-  // Parse address if sent as string
   if (typeof req.body.address === "string") {
     updateData.address = JSON.parse(req.body.address);
   }
@@ -204,7 +199,6 @@ exports.updateStudent = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Student updated", updatedStudent);
 });
 
-// @desc    Delete student
 exports.deleteStudent = asyncHandler(async (req, res) => {
   const student = await Student.findById(req.params.studentId);
   if (!student) return sendError(res, 404, false, "Student not found");

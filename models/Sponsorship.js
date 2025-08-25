@@ -2,10 +2,9 @@ const mongoose = require("mongoose");
 
 const SponsorshipSchema = new mongoose.Schema(
   {
-    sponsorName: { type: String, required: true },
+    sponsorName: { type: String },
     sponsorType: {
       type: String,
-      enum: ["Platinum", "Gold", "Silver", "Bronze", "Community", "Other"],
       required: true,
     },
     logo: { type: String },
@@ -26,6 +25,16 @@ const SponsorshipSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "SessionCategory",
     },
+    projectName: { type: String, required: true },
+    description: { type: String },
+    technologies: [{ type: String }],
+    startDate: { type: Date, required: true },
+    endDate: { type: Date },
+
+    status: {
+      type: String,
+    },
+
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
