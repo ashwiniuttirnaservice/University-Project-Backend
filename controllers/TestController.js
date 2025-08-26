@@ -7,7 +7,6 @@ const xlsx = require("xlsx");
 const fs = require("fs");
 const path = require("path");
 
-// @desc    Get all tests
 const getAllTests = asyncHandler(async (req, res) => {
   const tests = await Test.aggregate([
     {
@@ -44,7 +43,6 @@ const getAllTests = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All tests fetched.", tests);
 });
 
-// @desc    Get single test by ID
 const getTestById = asyncHandler(async (req, res) => {
   const [test] = await Test.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(req.params.id) } },
@@ -54,7 +52,6 @@ const getTestById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Test found.", test);
 });
 
-// @desc    Get tests for a specific course
 const getTestsForCourse = asyncHandler(async (req, res) => {
   const { courseId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(courseId))
@@ -67,7 +64,6 @@ const getTestsForCourse = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Tests for course fetched.", tests);
 });
 
-// @desc    Create a new test
 const createTest = asyncHandler(async (req, res) => {
   const { title, course, branch, duration, questions } = req.body;
 
@@ -219,7 +215,6 @@ const submitTest = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get results for logged-in student
 const getTestResults = asyncHandler(async (req, res) => {
   const results = await Result.aggregate([
     { $match: { student: new mongoose.Types.ObjectId(req.user._id) } },
@@ -246,7 +241,6 @@ const getTestResults = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Student test results.", results);
 });
 
-// @desc    Get single result by ID
 const getSingleTestResult = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -278,7 +272,6 @@ const getSingleTestResult = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Result fetched.", result);
 });
 
-// @desc    Admin - Get all student results
 const getAllStudentResults = asyncHandler(async (req, res) => {
   const results = await Result.aggregate([
     {

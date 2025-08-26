@@ -4,7 +4,6 @@ const Batch = require("../models/Batch");
 const Student = require("../models/Student");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// ✅ Create a new batch
 exports.createBatch = asyncHandler(async (req, res) => {
   const {
     batchName,
@@ -31,7 +30,6 @@ exports.createBatch = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Batch created successfully", batch);
 });
 
-// ✅ Get all batches with aggregation
 exports.getAllBatches = asyncHandler(async (req, res) => {
   const batches = await Batch.aggregate([
     {
@@ -66,7 +64,6 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Batches fetched successfully", batches);
 });
 
-// ✅ Get batch by ID using aggregation
 exports.getBatchById = asyncHandler(async (req, res) => {
   const batchId = new mongoose.Types.ObjectId(req.params.id);
 
@@ -108,7 +105,6 @@ exports.getBatchById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Batch fetched successfully", batches[0]);
 });
 
-// ✅ Get batches by course and student using aggregation
 exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
   const { courseId, studentId } = req.body;
 
@@ -159,7 +155,6 @@ exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
   });
 });
 
-// ✅ Assign student to batch
 exports.assignStudentToBatch = asyncHandler(async (req, res) => {
   const { courseId, studentId } = req.body;
 
@@ -200,7 +195,6 @@ exports.assignStudentToBatch = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Get batches for a specific student using aggregation
 exports.getBatchesForStudent = asyncHandler(async (req, res) => {
   const { studentId } = req.params;
 
@@ -242,7 +236,6 @@ exports.getBatchesForStudent = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Batches fetched successfully", batches);
 });
 
-// ✅ Update batch
 exports.updateBatch = asyncHandler(async (req, res) => {
   const updated = await Batch.findByIdAndUpdate(req.params.id, req.body, {
     new: true,

@@ -13,7 +13,6 @@ const userSchema = new mongoose.Schema(
     },
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch" },
 
-    // --- NAYA FIELD YAHAN ADD KIYA HAI ---
     enrolledCourses: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -24,7 +23,7 @@ const userSchema = new mongoose.Schema(
     trainerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Trainer",
-    }, // ------------------------------------
+    },
 
     lastLoginTimestamp: { type: Date },
     idCardVerificationStatus: {
@@ -35,7 +34,5 @@ const userSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
-// Password hashing
 
 module.exports = mongoose.model("User", userSchema);

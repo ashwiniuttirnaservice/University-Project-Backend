@@ -8,14 +8,12 @@ const Student = require("../models/Student");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// JWT Token Generator
 const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: "7d",
   });
 };
 
-// Email Transporter Setup
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
@@ -24,7 +22,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// --- REGISTER USER ---
 exports.registerUser = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, password } = req.body;
 
@@ -42,7 +39,7 @@ exports.registerUser = asyncHandler(async (req, res) => {
     lastName,
     email,
     password,
-    role: "admin", // ✅ Forcefully set role as admin
+    role: "admin",
   });
 
   await user.save();
@@ -50,7 +47,6 @@ exports.registerUser = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Admin registration successful!", user);
 });
 
-// --- VERIFY EMAIL ---
 exports.verifyEmail = asyncHandler(async (req, res) => {
   const { token } = req.params;
   if (!token) {
@@ -75,9 +71,6 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   );
 });
 
-// --- LOGIN USER --
-
-// --- LOGIN USER ---
 exports.loginUser = asyncHandler(async (req, res) => {
   const { email, password, role } = req.body;
 
@@ -90,7 +83,6 @@ exports.loginUser = asyncHandler(async (req, res) => {
     );
   }
 
-  // ADMIN LOGIN (Only check in User collection)
   if (role === "admin") {
     const admin = await User.findOne({ email, role: "admin" }).select(
       "+password"
@@ -111,7 +103,6 @@ exports.loginUser = asyncHandler(async (req, res) => {
     return sendError(res, 401, false, "Invalid email or password for admin.");
   }
 
-  // TRAINER LOGIN
   if (role === "trainer") {
     const trainer = await Trainer.findOne({ email }).select("+password");
     if (trainer && trainer.password === password) {
@@ -144,7 +135,6 @@ exports.loginUser = asyncHandler(async (req, res) => {
     return sendError(res, 401, false, "Invalid email or password for trainer.");
   }
 
-  // STUDENT LOGIN
   if (role === "student") {
     const student = await Student.findOne({ email }).select("+password");
 
@@ -185,7 +175,6 @@ exports.loginUser = asyncHandler(async (req, res) => {
   return sendError(res, 400, false, "Invalid role specified.");
 });
 
-// --- GET USER PROFILE ---
 exports.getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user.id).populate(
     "branch",
@@ -198,7 +187,6 @@ exports.getUserProfile = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "User profile fetched", { user });
 });
 
-// --- UPDATE USER PROFILE ---
 exports.updateUserProfile = asyncHandler(async (req, res) => {
   const { firstName, lastName, branchId, password } = req.body;
   const user = await User.findById(req.user.id);

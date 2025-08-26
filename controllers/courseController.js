@@ -5,8 +5,7 @@ const VideoLecture = require("../models/Video");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
-// @desc    Create a new course
-// @route   POST /api/courses
+
 exports.createCourse = asyncHandler(async (req, res) => {
   const {
     title,
@@ -43,69 +42,10 @@ exports.createCourse = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Course created successfully", course);
 });
 
-// @desc    Get all courses
-// @route   GET /api/courses
 exports.getAllCourses = asyncHandler(async (req, res) => {
   const courses = await Course.find().populate("branch").populate("trainer");
   return sendResponse(res, 200, true, "All courses fetched", courses);
 });
-
-// @desc    Get a single course by ID
-// @route   GET /api/courses/:id
-
-// exports.getCourseById = asyncHandler(async (req, res) => {
-//   const courseId = new mongoose.Types.ObjectId(req.params.id);
-
-//   const course = await Course.aggregate([
-//     { $match: { _id: courseId } },
-
-//     // Trainer Info
-//     {
-//       $lookup: {
-//         from: "users", // users collection
-//         localField: "trainer",
-//         foreignField: "_id",
-//         as: "trainer",
-//         pipeline: [
-//           {
-//             $project: {
-//               highestQualification: 1,
-//               fullName: 1,
-//               profilePhotoTrainer: 1,
-//             },
-//           },
-//         ],
-//       },
-//     },
-//     { $unwind: { path: "$trainer", preserveNullAndEmptyArrays: true } },
-
-//     // Video Lectures जोडणे
-//     {
-//       $lookup: {
-//         from: "Video", // ✅ check तुझ्या VideoLecture model ची collection
-//         localField: "_id",
-//         foreignField: "course",
-//         as: "videos",
-//       },
-//     },
-
-//     // Notes जोडणे
-//     {
-//       $lookup: {
-//         from: "notes", // ✅ check तुझ्या Note model ची collection
-//         localField: "_id",
-//         foreignField: "course",
-//         as: "notes",
-//       },
-//     },
-//   ]);
-
-//   if (!course || course.length === 0) {
-//     return sendError(res, 404, false, "Course not found");
-//   }
-
-//   return sendResponse(res, 200, true, "Course fetched", course[0]);
-// });
 
 exports.getCourseById = asyncHandler(async (req, res) => {
   const { id } = req.params;
@@ -229,8 +169,6 @@ exports.getCourseById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Course fetched", formattedCourse);
 });
 
-// @desc    Update course
-// @route   PUT /api/courses/:id
 exports.updateCourse = asyncHandler(async (req, res) => {
   const {
     title,
@@ -275,8 +213,6 @@ exports.updateCourse = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Course updated successfully", course);
 });
 
-// @desc    Delete course
-// @route   DELETE /api/courses/:id
 exports.deleteCourse = asyncHandler(async (req, res) => {
   const course = await Course.findByIdAndDelete(req.params.id);
 

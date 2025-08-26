@@ -1,13 +1,9 @@
-// controllers/sponsorshipController.js
 const Sponsorship = require("../models/Sponsorship");
 const Hackathon = require("../models/Hackathon");
 const SessionCategory = require("../models/SessionCategory");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// @desc    Create Sponsorship (linked with Hackathon & SessionCategory)
-// @route   POST /api/sponsorships
-// @access  Public/Private
 exports.createSponsorship = asyncHandler(async (req, res) => {
   const {
     sponsorName,

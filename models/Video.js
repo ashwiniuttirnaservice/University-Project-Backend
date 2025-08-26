@@ -13,8 +13,8 @@ const VideoLectureSchema = new mongoose.Schema(
       required: true,
     },
     title: { type: String, required: true, trim: true },
-    contentUrl: { type: String, trim: true }, // PDF, link, or video URL
-    duration: { type: String, trim: true }, // HH:MM:SS or MM:SS
+    contentUrl: { type: String, trim: true },
+    duration: { type: String, trim: true },
     description: { type: String, trim: true },
   },
   { timestamps: true }

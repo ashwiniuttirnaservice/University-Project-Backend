@@ -104,7 +104,6 @@ exports.registerStudent = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Get all students
 exports.getAllStudents = asyncHandler(async (req, res) => {
   const students = await Student.aggregate([
     {
@@ -134,7 +133,6 @@ exports.getAllStudents = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All students fetched", students);
 });
 
-// @desc    Get single student
 exports.getStudentById = asyncHandler(async (req, res) => {
   const studentId = req.params.studentId;
 

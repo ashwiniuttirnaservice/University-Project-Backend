@@ -2,7 +2,6 @@ const ContactMessage = require("../models/ContactMessage");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// POST /api/contact - Save contact message
 const sendContactMessage = asyncHandler(async (req, res) => {
   const { name, email, phone, message } = req.body;
 

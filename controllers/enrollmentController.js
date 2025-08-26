@@ -4,7 +4,7 @@ const Course = require("../models/Course");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const Student = require("../models/Student");
-// Enroll in a course
+
 exports.enrollInCourse = asyncHandler(async (req, res) => {
   const { course, studentId } = req.body;
 
@@ -12,7 +12,6 @@ exports.enrollInCourse = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Course ID and Student ID are required");
   }
 
-  // Check if course exists
   const courses = await Course.findById(course);
   if (!courses) return sendError(res, 404, false, "Course not found");
 
@@ -100,7 +99,6 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
 });
 
-// Mark content as complete
 exports.markContentAsComplete = asyncHandler(async (req, res) => {
   const { enrollmentId } = req.params;
   const { contentId } = req.body;
@@ -129,7 +127,6 @@ exports.markContentAsComplete = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Content marked complete", enrollment);
 });
 
-// Mark content as incomplete
 exports.markContentAsIncomplete = asyncHandler(async (req, res) => {
   const { enrollmentId } = req.params;
   const { contentId } = req.body;
@@ -150,7 +147,6 @@ exports.markContentAsIncomplete = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Content marked incomplete", enrollment);
 });
 
-// Admin: Get all enrollments using aggregation
 exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
   const enrollments = await Enrollment.aggregate([
     {
@@ -191,7 +187,6 @@ exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
 });
 
-// Admin: Get single enrollment using aggregation
 exports.getEnrollmentByIdAdmin = asyncHandler(async (req, res) => {
   const enrollmentId = new mongoose.Types.ObjectId(req.params.id);
 
@@ -252,7 +247,6 @@ exports.getEnrollmentByIdAdmin = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Enrollment fetched", enrollment[0]);
 });
 
-// Unenroll from course
 exports.unenrollFromCourse = asyncHandler(async (req, res) => {
   const enrollmentId = req.params.id;
   const currentUser = req.user;

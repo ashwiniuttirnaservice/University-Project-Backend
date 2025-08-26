@@ -3,36 +3,60 @@ const Event = require("../models/EventSession ");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// Create Event
 exports.createEvent = asyncHandler(async (req, res) => {
-  try {
-    const eventData = { ...req.body };
+  const {
+    title,
+    description,
+    startDate,
+    endDate,
+    duration,
+    location,
+    prerequisites,
+    topics,
+    tools,
+    instructors,
+    schedule,
+    registrationLink,
+    fees,
+    certification,
+    contact,
+    status,
+  } = req.body;
 
-    // Helper to clean path
-    const getFileName = (fullPath) => fullPath.split("\\").pop(); // Windows path split
+  let eventData = {
+    title,
+    description,
+    startDate,
+    endDate,
+    duration,
+    location,
+    prerequisites,
+    topics,
+    tools,
+    instructors,
+    schedule,
+    registrationLink,
+    fees,
+    certification,
+    contact,
+    status,
+    bannerImage: null,
+    gallery: [],
+  };
 
-    // Single banner image
-    if (req.files && req.files.bannerImage) {
-      eventData.bannerImage = getFileName(req.files.bannerImage[0].path);
-    }
-
-    // Multiple gallery images
-    if (req.files && req.files.gallery) {
-      eventData.gallery = req.files.gallery.map((file) =>
-        getFileName(file.path)
-      );
-    }
-
-    const event = new Event(eventData);
-    await event.save();
-
-    return sendResponse(res, 201, true, "Event created successfully", event);
-  } catch (error) {
-    return sendError(res, 500, false, error.message);
+  if (req.files && req.files.bannerImage) {
+    eventData.bannerImage = req.files.bannerImage[0].path;
   }
+
+  if (req.files && req.files.gallery) {
+    eventData.gallery = req.files.gallery.map((file) => file.path);
+  }
+
+  const event = await Event.create(eventData);
+
+  return sendResponse(res, 201, true, "Event created successfully", event);
 });
 
-// Get all events
 exports.getAllEvents = asyncHandler(async (req, res) => {
   const events = await Event.find()
     .populate("category", "name slug")
@@ -41,7 +65,6 @@ exports.getAllEvents = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Events fetched successfully", events);
 });
 
-// Get single event by ID
 exports.getEventById = asyncHandler(async (req, res) => {
   const event = await Event.findById(req.params.id).populate(
     "category",
@@ -53,35 +76,68 @@ exports.getEventById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Event fetched successfully", event);
 });
 
-// Update event
 exports.updateEvent = asyncHandler(async (req, res) => {
-  try {
-    const eventData = { ...req.body };
+  const eventId = req.params.id;
 
-    if (req.files && req.files.bannerImage) {
-      eventData.bannerImage = req.files.bannerImage[0].path;
-    }
+  const {
+    title,
+    description,
+    startDate,
+    endDate,
+    duration,
+    location,
+    prerequisites,
+    topics,
+    tools,
+    instructors,
+    schedule,
+    registrationLink,
+    fees,
+    certification,
+    contact,
+    status,
+  } = req.body;
 
-    if (req.files && req.files.gallery) {
-      eventData.gallery = req.files.gallery.map((file) => file.path);
-    }
+  let updatedData = {
+    title,
+    description,
+    startDate,
+    endDate,
+    duration,
+    location,
+    prerequisites,
+    topics,
+    tools,
+    instructors,
+    schedule,
+    registrationLink,
+    fees,
+    certification,
+    contact,
+    status,
+  };
 
-    const event = await Event.findByIdAndUpdate(req.params.id, eventData, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!event) {
-      return sendError(res, 404, false, "Event not found");
-    }
-
-    return sendResponse(res, 200, true, "Event updated successfully", event);
-  } catch (error) {
-    return sendError(res, 500, false, error.message);
+  // Handle file updates
+  if (req.files && req.files.bannerImage) {
+    updatedData.bannerImage = req.files.bannerImage[0].path;
   }
+
+  if (req.files && req.files.gallery) {
+    updatedData.gallery = req.files.gallery.map((file) => file.path);
+  }
+
+  const event = await Event.findByIdAndUpdate(eventId, updatedData, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!event) {
+    return res.status(404).json({ success: false, message: "Event not found" });
+  }
+
+  return sendResponse(res, 200, true, "Event updated successfully", event);
 });
 
-// Delete event
 exports.deleteEvent = asyncHandler(async (req, res) => {
   const event = await Event.findByIdAndDelete(req.params.id);
   if (!event) {

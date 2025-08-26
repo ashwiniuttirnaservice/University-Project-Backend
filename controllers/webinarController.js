@@ -30,7 +30,7 @@ exports.createWebinar = asyncHandler(async (req, res) => {
     endTime,
     speakerName,
     speakerBio,
-    speakerPhoto: req.file ? `/uploads/webinars/${req.file.filename}` : null,
+    speakerPhoto: req.file ? `${req.file.filename}` : null,
     platform,
     meetingLink,
     meetingId,

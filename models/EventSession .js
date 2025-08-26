@@ -2,20 +2,20 @@ const mongoose = require("mongoose");
 
 const EventSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true },
-    slug: { type: String, required: true, unique: true },
-    description: { type: String, required: true },
+    title: { type: String, required: false },
+    slug: { type: String, required: false, unique: true },
+    description: { type: String, required: false },
 
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SessionCategory",
-      required: true,
+      required: false,
     },
 
-    startDate: { type: Date, required: true },
-    endDate: { type: Date, required: true },
-    startTime: { type: String, required: true },
-    endTime: { type: String, required: true },
+    startDate: { type: Date, required: false },
+    endDate: { type: Date, required: false },
+    startTime: { type: String, required: false },
+    endTime: { type: String, required: false },
 
     location: { type: String, required: true },
     mode: {
@@ -25,7 +25,7 @@ const EventSchema = new mongoose.Schema(
     },
     meetingLink: { type: String },
 
-    organizer: { type: String, required: true },
+    organizer: { type: String },
     speakers: [{ type: String }],
 
     bannerImage: { type: String },

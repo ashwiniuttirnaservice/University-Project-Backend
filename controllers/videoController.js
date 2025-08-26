@@ -3,7 +3,6 @@ const VideoLecture = require("../models/Video");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// Create Video Lecture
 exports.createVideoLecture = asyncHandler(async (req, res) => {
   const { course, type, title, contentUrl, duration, description } = req.body;
 
@@ -29,7 +28,6 @@ exports.createVideoLecture = asyncHandler(async (req, res) => {
   );
 });
 
-// Get All Video Lectures (Aggregation)
 exports.getAllVideoLectures = asyncHandler(async (req, res) => {
   const lectures = await VideoLecture.aggregate([
     {
@@ -47,7 +45,6 @@ exports.getAllVideoLectures = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All Video Lectures fetched", lectures);
 });
 
-// Get Video Lecture by ID (Aggregation)
 exports.getVideoLectureById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -81,7 +78,6 @@ exports.getVideoLectureById = asyncHandler(async (req, res) => {
   );
 });
 
-// Update Video Lecture
 exports.updateVideoLecture = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -107,7 +103,6 @@ exports.updateVideoLecture = asyncHandler(async (req, res) => {
   );
 });
 
-// Delete Video Lecture
 exports.deleteVideoLecture = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
