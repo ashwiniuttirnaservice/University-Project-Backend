@@ -25,7 +25,6 @@ const feedbackSchema = new mongoose.Schema(
     collegeName: { type: String, trim: true },
     message: { type: String, required: true, maxlength: 1000 },
 
-    // ⭐ Added field for profile image upload
     profile: { type: String, trim: true },
 
     rating: { type: String, trim: true, required: true },

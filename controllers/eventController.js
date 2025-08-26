@@ -2,54 +2,77 @@ const Event = require("../models/EventSession ");
 
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
+const path = require("path");
 
 exports.createEvent = asyncHandler(async (req, res) => {
   const {
     title,
+    slug,
     description,
+    category,
     startDate,
     endDate,
-    duration,
+    startTime,
+    endTime,
     location,
-    prerequisites,
-    topics,
-    tools,
-    instructors,
-    schedule,
+    mode,
+    meetingLink,
+    organizer,
+    speakers,
     registrationLink,
-    fees,
-    certification,
-    contact,
+    isFree,
+    price,
+    maxParticipants,
+    tags,
+    priority,
+    agenda,
+    resources,
+    sponsors,
+    certificateAvailable,
+    feedbackFormLink,
+    socialLinks,
     status,
   } = req.body;
 
   let eventData = {
     title,
+    slug,
     description,
+    category,
     startDate,
     endDate,
-    duration,
+    startTime,
+    endTime,
     location,
-    prerequisites,
-    topics,
-    tools,
-    instructors,
-    schedule,
+    mode,
+    meetingLink,
+    organizer,
+    speakers,
     registrationLink,
-    fees,
-    certification,
-    contact,
+    isFree,
+    price,
+    maxParticipants,
+    tags,
+    priority,
+    agenda,
+    resources,
+    sponsors,
+    certificateAvailable,
+    feedbackFormLink,
+    socialLinks,
     status,
     bannerImage: null,
     gallery: [],
   };
 
   if (req.files && req.files.bannerImage) {
-    eventData.bannerImage = req.files.bannerImage[0].path;
+    eventData.bannerImage = path.basename(req.files.bannerImage[0].path);
   }
 
   if (req.files && req.files.gallery) {
-    eventData.gallery = req.files.gallery.map((file) => file.path);
+    eventData.gallery = req.files.gallery.map((file) =>
+      path.basename(file.path)
+    );
   }
 
   const event = await Event.create(eventData);
@@ -81,49 +104,70 @@ exports.updateEvent = asyncHandler(async (req, res) => {
 
   const {
     title,
+    slug,
     description,
+    category,
     startDate,
     endDate,
-    duration,
+    startTime,
+    endTime,
     location,
-    prerequisites,
-    topics,
-    tools,
-    instructors,
-    schedule,
+    mode,
+    meetingLink,
+    organizer,
+    speakers,
     registrationLink,
-    fees,
-    certification,
-    contact,
+    isFree,
+    price,
+    maxParticipants,
+    tags,
+    priority,
+    agenda,
+    resources,
+    sponsors,
+    certificateAvailable,
+    feedbackFormLink,
+    socialLinks,
     status,
   } = req.body;
 
   let updatedData = {
     title,
+    slug,
     description,
+    category,
     startDate,
     endDate,
-    duration,
+    startTime,
+    endTime,
     location,
-    prerequisites,
-    topics,
-    tools,
-    instructors,
-    schedule,
+    mode,
+    meetingLink,
+    organizer,
+    speakers,
     registrationLink,
-    fees,
-    certification,
-    contact,
+    isFree,
+    price,
+    maxParticipants,
+    tags,
+    priority,
+    agenda,
+    resources,
+    sponsors,
+    certificateAvailable,
+    feedbackFormLink,
+    socialLinks,
     status,
   };
 
-  // Handle file updates
   if (req.files && req.files.bannerImage) {
-    updatedData.bannerImage = req.files.bannerImage[0].path;
+    updatedData.bannerImage = path.basename(req.files.bannerImage[0].path);
   }
 
   if (req.files && req.files.gallery) {
-    updatedData.gallery = req.files.gallery.map((file) => file.path);
+    updatedData.gallery = req.files.gallery.map((file) =>
+      path.basename(file.path)
+    );
   }
 
   const event = await Event.findByIdAndUpdate(eventId, updatedData, {
