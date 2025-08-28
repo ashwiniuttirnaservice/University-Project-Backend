@@ -2,9 +2,7 @@ const mongoose = require("mongoose");
 const Workshop = require("../models/Workshopsession");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-// controllers/workshopController.js
 
-// Create Workshop
 exports.createWorkshop = async (req, res) => {
   try {
     const {
@@ -55,16 +53,12 @@ exports.createWorkshop = async (req, res) => {
   }
 };
 
-// @desc    Get all Workshops
-// @route   GET /api/workshops
 exports.getAllWorkshops = asyncHandler(async (req, res) => {
   const workshops = await Workshop.aggregate([{ $sort: { createdAt: -1 } }]);
 
   sendResponse(res, 200, true, "Workshops fetched successfully", workshops);
 });
 
-// @desc    Get Workshop by ID
-// @route   GET /api/workshops/:id
 exports.getWorkshopById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -79,8 +73,6 @@ exports.getWorkshopById = asyncHandler(async (req, res) => {
   sendResponse(res, 200, true, "Workshop fetched successfully", workshop[0]);
 });
 
-// @desc    Update Workshop
-// @route   PUT /api/workshops/:id
 exports.updateWorkshop = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -96,8 +88,6 @@ exports.updateWorkshop = asyncHandler(async (req, res) => {
   sendResponse(res, 200, true, "Workshop updated successfully", updated);
 });
 
-// @desc    Delete Workshop
-// @route   DELETE /api/workshops/:id
 exports.deleteWorkshop = asyncHandler(async (req, res) => {
   const { id } = req.params;
 

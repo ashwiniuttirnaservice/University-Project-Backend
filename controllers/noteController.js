@@ -4,7 +4,6 @@ const Course = require("../models/Course");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
-// CREATE Note
 exports.createNote = asyncHandler(async (req, res) => {
   const { course, title, content, duration } = req.body;
 
@@ -12,7 +11,6 @@ exports.createNote = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Course and Title are required");
   }
 
-  // Validate Course existence
   const courseExists = await Course.findById(course);
   if (!courseExists) {
     return sendError(res, 404, false, "Course not found");
@@ -30,7 +28,6 @@ exports.createNote = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Note created successfully", note);
 });
 
-// GET All Notes (with course details)
 exports.getAllNotes = asyncHandler(async (req, res) => {
   const notes = await Note.aggregate([
     {
@@ -48,7 +45,6 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Notes fetched successfully", notes);
 });
 
-// GET Note by ID
 exports.getNoteById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -70,7 +66,6 @@ exports.getNoteById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Note fetched successfully", note[0]);
 });
 
-// UPDATE Note
 exports.updateNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { title, content, duration } = req.body;
@@ -86,7 +81,6 @@ exports.updateNote = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Note updated successfully", note);
 });
 
-// DELETE Note
 exports.deleteNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
 

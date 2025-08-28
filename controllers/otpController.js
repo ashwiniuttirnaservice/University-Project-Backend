@@ -4,24 +4,22 @@ const crypto = require("crypto");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
-const FIXED_OTP = "123456"; // Hardcoded for testing
+const FIXED_OTP = "123456";
 
-// POST /api/otp/send
 exports.sendOtp = asyncHandler(async (req, res) => {
   const { mobileNo } = req.body;
 
   if (!mobileNo) {
-    return sendError(res, 400, "Mobile number is required");
+    return sendError(res, 400, false, "Mobile number is required");
   }
 
-  // Check if mobile number exists in Student DB
   const existingStudent = await Student.findOne({ mobileNo });
   if (!existingStudent) {
-    return sendError(res, 404, "Mobile number not found in our records");
+    return sendError(res, 404, false, "Mobile number not found in our records");
   }
 
   const reference_id = crypto.randomBytes(8).toString("hex");
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 mins expiry
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   await Otp.create({
     mobileNo,
@@ -33,10 +31,10 @@ exports.sendOtp = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "OTP sent successfully", {
     otp: FIXED_OTP,
     reference_id: reference_id,
+    studentId: existingStudent._id,
   });
 });
 
-// POST /api/otp/verify
 exports.verifyOtp = asyncHandler(async (req, res) => {
   const { reference_id, otp } = req.body;
 
@@ -56,12 +54,15 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
   otpRecord.is_verified = true;
   await otpRecord.save();
 
+  const student = await Student.findOne({ mobileNo: otpRecord.mobileNo });
+  if (!student) return sendError(res, 404, "Student not found");
+
   return sendResponse(res, 200, true, "OTP verified successfully", {
     mobileNo: otpRecord.mobileNo,
+    studentId: student._id,
   });
 });
 
-// POST /api/student/register
 exports.registerStudent = asyncHandler(async (req, res) => {
   const { reference_id, ...studentData } = req.body;
 

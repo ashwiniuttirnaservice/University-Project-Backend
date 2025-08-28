@@ -23,7 +23,6 @@ const EnrollmentSchema = new mongoose.Schema({
     },
   ],
 
-  // ✅ New Fields
   fullName: {
     type: String,
     required: true,

@@ -6,9 +6,7 @@ const { sendResponse, sendError } = require("../utils/apiResponse.js");
 const Student = require("../models/Student");
 const Trainer = require("../models/Trainer");
 const Batch = require("../models/Batch");
-// @desc    Get user profile
-// @route   GET /api/users/profile
-// @access  Private
+
 const getUserProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
 
@@ -18,7 +16,6 @@ const getUserProfile = asyncHandler(async (req, res) => {
 
   let studentData = null;
 
-  // If role is student, fetch from Student model
   if (user.role === "student") {
     studentData = await Student.findOne({ email: user.email })
       .populate("branch", "name")
@@ -86,21 +83,15 @@ const getUserProfileTrainer = asyncHandler(async (req, res) => {
     email: user.email,
     role: user.role,
     registeredAt: trainer.registeredAt,
-    batches: formattedBatches, // batches with populated course info
+    batches: formattedBatches,
   });
 });
 
-// @desc    Get all users by Admin
-// @route   GET /api/users
-// @access  Private/Admin
 const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find().select("-password");
   return sendResponse(res, 200, true, "All users fetched successfully", users);
 });
 
-// @desc    Get user by ID by Admin
-// @route   GET /api/users/:id
-// @access  Private/Admin
 const getUserById = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).select("-password");
   if (user) {
@@ -110,9 +101,6 @@ const getUserById = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Delete user by Admin
-// @route   DELETE /api/users/:id
-// @access  Private/Admin
 const deleteUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {
@@ -123,9 +111,6 @@ const deleteUser = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Update user by Admin
-// @route   PUT /api/users/:id
-// @access  Private/Admin
 const updateUser = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (user) {

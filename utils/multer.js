@@ -28,6 +28,8 @@ const getFolderPath = (fieldname) => {
       return "uploads/webinar/speakers/";
     case "profile":
       return "uploads/feedback/profiles/";
+    case "logo":
+      return "uploads/sponsorship/logo/";
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }
