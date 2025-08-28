@@ -1,38 +1,62 @@
-const express = require("express");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const path = require("path");
-const connectDB = require("./config/db.js");
-const cookieParser = require("cookie-parser");
-
-const indexRouter = require("./routes/index.js");
-
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const path = require('path');
+const connectDB = require('./config/db.js');
+const cookieParser = require('cookie-parser');
+const PORT = process.env.PORT || 5001;
 dotenv.config();
 
-connectDB();
-
 const app = express();
-
-const corsOptions = {
-  origin: "http://localhost:5173",
-  credentials: true,
-  optionsSuccessStatus: 200,
-};
-app.use(cors(corsOptions));
-
+connectDB();
 app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-app.use(express.json({ limit: "50mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-app.use("/api", indexRouter);
+const allowedOrigins = [
+    'https://uat.codedrift.co',
+    'http://localhost:6174',
+    'http://localhost:5001',
+    'http://localhost:5005',
+];
 
-app.get("/", (req, res) => {
-  res.send("LMS API is alive and running...");
-});
+const corsOptions = {
+    origin: function (origin, callback) {
+        if (!origin) return callback(null, true); // server-side requests
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true); // dynamically allow
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200,
+};
+// const corsOptions = {
+//   origin: "http://localhost:6174",
+//   credentials: true,
+//   optionsSuccessStatus: 200,
+// };
+app.use(cors(corsOptions));
+
+// Global CORS middleware
+// app.use(cors(corsOptions));
+
+// Preflight middleware for all routes
+// app.use((req, res, next) => {
+//     if (req.method === 'OPTIONS') {
+//         cors(corsOptions)(req, res, next);
+//     } else {
+//         next();
+//     }
+// });
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+const indexRouter = require('./routes/index.js');
+app.use('/api', indexRouter);
 
 app.use((err, req, res, next) => {
     console.error('Global Error Handler:', err.stack);
@@ -42,12 +66,10 @@ app.use((err, req, res, next) => {
     });
 });
 
-const PORT = process.env.PORT || 5001;
+app.listen(PORT, () => console.log(`🚀 LMS API running on http://localhost:${PORT}`));
 
-app.listen(PORT, () => {
-  console.log(`🚀 LMS API running on http://localhost:${PORT}`);
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+    console.error(`Unhandled Rejection: ${err.message}`);
 });
 
-process.on("unhandledRejection", (err, promise) => {
-  console.error(`Unhandled Rejection: ${err.message}`);
-});
