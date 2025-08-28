@@ -13,7 +13,12 @@ app.use(cookieParser());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-const allowedOrigins = ['https://uat.codedrift.co', 'http://localhost:6174'];
+const allowedOrigins = [
+    'https://uat.codedrift.co',
+    'http://localhost:6174',
+    'http://localhost:5001',
+    'http://localhost:5005',
+];
 
 const corsOptions = {
     origin: function (origin, callback) {
@@ -30,6 +35,12 @@ const corsOptions = {
     allowedHeaders: ['Content-Type', 'Authorization'],
     optionsSuccessStatus: 200,
 };
+// const corsOptions = {
+//   origin: "http://localhost:6174",
+//   credentials: true,
+//   optionsSuccessStatus: 200,
+// };
+app.use(cors(corsOptions));
 
 // Global CORS middleware
 // app.use(cors(corsOptions));
