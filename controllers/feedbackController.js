@@ -2,7 +2,6 @@ const Feedback = require("../models/Feedback");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// 📌 Create Feedback
 exports.createFeedback = asyncHandler(async (req, res) => {
   try {
     const {
@@ -23,7 +22,6 @@ exports.createFeedback = asyncHandler(async (req, res) => {
       collegeName,
       message,
       rating,
-      // ✅ फक्त relative path save करायचा
       profile: req.file ? req.file.filename : null,
     });
 
@@ -40,7 +38,6 @@ exports.createFeedback = asyncHandler(async (req, res) => {
   }
 });
 
-// 📌 Get all feedback
 exports.getAllFeedback = asyncHandler(async (req, res) => {
   const feedbacks = await Feedback.find().populate(
     "courseId",
@@ -49,7 +46,6 @@ exports.getAllFeedback = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Feedback fetched", feedbacks);
 });
 
-// 📌 Get feedback by course
 exports.getFeedbackByCourse = asyncHandler(async (req, res) => {
   const { courseId } = req.params;
   const feedbacks = await Feedback.find({ courseId }).populate(

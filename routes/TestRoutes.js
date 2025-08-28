@@ -1,7 +1,7 @@
 const express = require("express");
 const testRouter = express.Router();
 const upload = require("../utils/multer.js");
-// Step 1: Controller se saare zaroori functions import karein
+
 const {
   createTest,
   getAllTests,
@@ -13,15 +13,11 @@ const {
   getTestResults,
   getSingleTestResult,
   getAllStudentResults,
-  importTestsFromExcel, // <-- NAYA ADMIN FUNCTION IMPORT KIYA GAYA
+  importTestsFromExcel,
 } = require("../controllers/TestController");
 
-// Step 2: Security ke liye middleware import karein
 const { protect, admin } = require("../middleware/authMiddleware.js");
 
-// --- Routes ki Final List (Sahi Order Mein) ---
-
-// --- ADMIN ROUTES ---
 testRouter.post(
   "/import-excel",
   protect,
@@ -31,35 +27,23 @@ testRouter.post(
 );
 testRouter
   .route("/")
-  .get(protect, admin, getAllTests) // Sabhi tests laayein (Admin ke liye)
-  .post(protect, admin, createTest); // Naya test banayein (Admin ke liye)
+  .get(protect, admin, getAllTests)
+  .post(protect, admin, createTest);
 
-// --- START: NAYA ADMIN ROUTE ADD KIYA GAYA ---
-// GET -> Admin sabhi students ke results dekhega
 testRouter.route("/all-results").get(protect, admin, getAllStudentResults);
-// --- END: NAYA ADMIN ROUTE ADD KIYA GAYA ---
 
-// --- STUDENT ROUTES ---
-// Specific routes hamesha dynamic routes (jaise /:id) se pehle aane chahiye.
-
-// GET -> Ek course ke saare available tests laayein
 testRouter.route("/course/:courseId").get(protect, getTestsForCourse);
 
-// POST -> Student test submit karega
 testRouter.route("/submit").post(protect, submitTest);
 
-// GET -> Student apne saare purane results dekhega
 testRouter.route("/results").get(protect, getTestResults);
 
-// GET -> Student ek single result ki details dekhega (ID se)
 testRouter.route("/results/:id").get(protect, getSingleTestResult);
 
-// --- DYNAMIC ROUTE (YEH HAMESHA AAKHIR MEIN HONA CHAHIYE) ---
-// Kyunki yeh route bahut general hai, isko sabse neeche rakha jaata hai.
 testRouter
   .route("/:id")
-  .get(protect, getTestById) // Ek specific test laayein ID se
-  .put(protect, admin, updateTest) // Test update karein (Admin ke liye)
-  .delete(protect, admin, deleteTest); // Test delete karein (Admin ke liye)
+  .get(protect, getTestById)
+  .put(protect, admin, updateTest)
+  .delete(protect, admin, deleteTest);
 
 module.exports = testRouter;

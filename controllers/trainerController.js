@@ -3,7 +3,6 @@ const Trainer = require("../models/Trainer");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
-// Helper to parse input to ObjectId array
 const parseObjectIdArray = (input) => {
   try {
     if (typeof input === "string") input = JSON.parse(input);
@@ -15,7 +14,6 @@ const parseObjectIdArray = (input) => {
   return input.map((id) => new mongoose.Types.ObjectId(id));
 };
 
-// @desc Register Trainer
 const registerTrainer = asyncHandler(async (req, res) => {
   const {
     fullName,
@@ -81,7 +79,6 @@ const registerTrainer = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc Get all Trainers
 const getAllTrainers = asyncHandler(async (req, res) => {
   const trainers = await Trainer.find()
     .populate("courses")
@@ -110,7 +107,6 @@ const getAllTrainer = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc Approve/Reject Trainer
 const updateTrainerApproval = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
   const { status, approvedBy } = req.body;
@@ -127,7 +123,6 @@ const updateTrainerApproval = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, `Trainer ${status}`, trainer);
 });
 
-// @desc Update Trainer
 const updateTrainer = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
   const trainer = await Trainer.findById(trainerId);
@@ -135,7 +130,6 @@ const updateTrainer = asyncHandler(async (req, res) => {
 
   let updateData = req.body;
 
-  // Parse JSON strings if needed
   if (updateData.address && typeof updateData.address === "string") {
     updateData.address = JSON.parse(updateData.address);
   }
@@ -151,12 +145,10 @@ const updateTrainer = asyncHandler(async (req, res) => {
     updateData.achievements = JSON.parse(updateData.achievements);
   }
 
-  // Remove old fields if present
   delete updateData.testimonials;
   delete updateData.rating;
   delete updateData.reviews;
 
-  // File uploads
   if (req.files?.resume?.[0]?.filename) {
     updateData.resume = req.files.resume[0].filename;
   }
@@ -169,7 +161,6 @@ const updateTrainer = asyncHandler(async (req, res) => {
     updateData.profilePhotoTrainer = req.files.profilePhotoTrainer[0].filename;
   }
 
-  // Parse relations
   if (updateData.branches) {
     updateData.branches = parseObjectIdArray(updateData.branches)[0] || null;
   }
@@ -197,7 +188,6 @@ const updateTrainer = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc Get Trainer Summary
 const getTrainerSummary = asyncHandler(async (req, res) => {
   const trainers = await Trainer.aggregate([
     {
@@ -235,11 +225,9 @@ const deleteTrainer = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Trainer deleted successfully");
 });
 
-// @desc Get Trainer by ID
 const getTrainerById = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
 
-  // Check if ID is valid
   if (!mongoose.Types.ObjectId.isValid(trainerId)) {
     return sendError(res, 400, false, "Invalid trainer ID");
   }
@@ -264,5 +252,5 @@ module.exports = {
   updateTrainer,
   deleteTrainer,
   getTrainerSummary,
-  getTrainerById, // added
+  getTrainerById,
 };

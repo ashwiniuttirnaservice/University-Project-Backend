@@ -19,12 +19,10 @@ const enrollmentRouter = express.Router();
 // =================================================================
 enrollmentRouter.post("/enroll", createEnrollment);
 // Student enrolls in a course
-enrollmentRouter.route("/").post(protect, authorize("student"), enrollInCourse);
+enrollmentRouter.route("/").post(enrollInCourse);
 
 // Student gets their own list of enrolled courses
-enrollmentRouter
-  .route("/my")
-  .get(protect, authorize("student"), getMyEnrollments);
+enrollmentRouter.route("/").get(getMyEnrollments);
 
 // Student marks content as complete
 enrollmentRouter

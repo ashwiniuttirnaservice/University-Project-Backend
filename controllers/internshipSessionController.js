@@ -2,7 +2,6 @@ const InternshipSession = require("../models/InternshipSession");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// ✅ Create Internship Session
 exports.createSession = asyncHandler(async (req, res) => {
   const {
     title,
@@ -37,7 +36,6 @@ exports.createSession = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Internship session created", session);
 });
 
-// ✅ Get All Sessions
 exports.getAllSessions = asyncHandler(async (req, res) => {
   const sessions = await InternshipSession.find().sort({ createdAt: -1 });
   return sendResponse(
@@ -49,7 +47,6 @@ exports.getAllSessions = asyncHandler(async (req, res) => {
   );
 });
 
-// ✅ Get Session by ID
 exports.getSessionById = asyncHandler(async (req, res) => {
   const session = await InternshipSession.findById(req.params.id);
   if (!session) return sendError(res, 404, "Internship session not found");
@@ -57,7 +54,6 @@ exports.getSessionById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Internship session fetched", session);
 });
 
-// ✅ Update Session
 exports.updateSession = asyncHandler(async (req, res) => {
   const session = await InternshipSession.findByIdAndUpdate(
     req.params.id,
@@ -70,7 +66,6 @@ exports.updateSession = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Internship session updated", session);
 });
 
-// ✅ Delete Session
 exports.deleteSession = asyncHandler(async (req, res) => {
   const session = await InternshipSession.findByIdAndDelete(req.params.id);
   if (!session) return sendError(res, 404, "Internship session not found");

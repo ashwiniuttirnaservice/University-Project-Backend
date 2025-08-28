@@ -2,7 +2,6 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 const Webinar = require("../models/webinarSession");
 const asyncHandler = require("../middleware/asyncHandler");
 
-// Create Webinar
 exports.createWebinar = asyncHandler(async (req, res) => {
   const {
     title,
@@ -31,7 +30,7 @@ exports.createWebinar = asyncHandler(async (req, res) => {
     endTime,
     speakerName,
     speakerBio,
-    speakerPhoto: req.file ? `/uploads/webinars/${req.file.filename}` : null,
+    speakerPhoto: req.file ? `${req.file.filename}` : null,
     platform,
     meetingLink,
     meetingId,
@@ -51,7 +50,6 @@ exports.createWebinar = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Webinar created successfully", webinar);
 });
 
-// Get all webinars
 exports.getAllWebinars = asyncHandler(async (req, res) => {
   const webinars = await Webinar.find().populate("createdBy", "name email");
   return sendResponse(
@@ -63,7 +61,6 @@ exports.getAllWebinars = asyncHandler(async (req, res) => {
   );
 });
 
-// Get single webinar by ID
 exports.getWebinarById = asyncHandler(async (req, res) => {
   const webinar = await Webinar.findById(req.params.id).populate(
     "createdBy",
@@ -73,7 +70,6 @@ exports.getWebinarById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Webinar fetched successfully", webinar);
 });
 
-// Update webinar
 exports.updateWebinar = asyncHandler(async (req, res) => {
   const updateData = { ...req.body };
   if (req.file) {
@@ -87,7 +83,6 @@ exports.updateWebinar = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Webinar updated successfully", webinar);
 });
 
-// Delete webinar
 exports.deleteWebinar = asyncHandler(async (req, res) => {
   const webinar = await Webinar.findByIdAndDelete(req.params.id);
   if (!webinar) return sendError(res, 404, false, "Webinar not found");
