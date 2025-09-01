@@ -1,10 +1,14 @@
 const Otp = require("../models/OtpModel");
+const { v4: uuidv4 } = require("uuid");
+const smsModel = require("../models/smsModel.js");
 const Student = require("../models/Student");
 const crypto = require("crypto");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
-const FIXED_OTP = "123456";
+// Generate random 6-digit OTP
+const generateOtp = () =>
+  Math.floor(100000 + Math.random() * 900000).toString();
 
 exports.sendOtp = asyncHandler(async (req, res) => {
   const { mobileNo } = req.body;
@@ -18,20 +22,31 @@ exports.sendOtp = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "Mobile number not found in our records");
   }
 
+  const otp = generateOtp(); // dynamic OTP
   const reference_id = crypto.randomBytes(8).toString("hex");
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   await Otp.create({
     mobileNo,
-    otp: FIXED_OTP,
+    otp,
     reference_id,
     expiresAt,
   });
 
+  // ✅ Send OTP via SMS
+  try {
+    await smsModel.sendSMS({
+      smsDetails: { mobile: mobileNo, otp },
+      smsType: "OTP_SMS",
+    });
+  } catch (err) {
+    console.error("SMS sending failed:", err.message);
+  }
+
   return sendResponse(res, 200, true, "OTP sent successfully", {
-    otp: FIXED_OTP,
-    reference_id: reference_id,
+    reference_id,
     studentId: existingStudent._id,
+    // otp,   // ❌ Do NOT return OTP in response (for security)
   });
 });
 
@@ -47,7 +62,7 @@ exports.verifyOtp = asyncHandler(async (req, res) => {
     return sendError(res, 400, "OTP expired");
   }
 
-  if (otp !== FIXED_OTP) {
+  if (otp !== otpRecord.otp) {
     return sendError(res, 400, "Invalid OTP");
   }
 
