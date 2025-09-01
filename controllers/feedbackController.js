@@ -1,35 +1,56 @@
 const Feedback = require("../models/Feedback");
-const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
+const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// Submit feedback (student)
-exports.submitFeedback = asyncHandler(async (req, res) => {
-  const { name, email, message } = req.body;
+exports.createFeedback = asyncHandler(async (req, res) => {
+  try {
+    const {
+      courseId,
+      fullName,
+      mobileNo,
+      email,
+      collegeName,
+      message,
+      rating,
+    } = req.body;
 
-  if (!name || !email || !message) {
-    return sendError(res, 400, false, "All fields are required.");
+    const feedback = new Feedback({
+      courseId,
+      fullName,
+      mobileNo,
+      email,
+      collegeName,
+      message,
+      rating,
+      profile: req.file ? req.file.filename : null,
+    });
+
+    await feedback.save();
+    return sendResponse(
+      res,
+      201,
+      true,
+      "Feedback submitted successfully",
+      feedback
+    );
+  } catch (error) {
+    return sendError(res, 400, error.message);
   }
-
-  const feedback = new Feedback({ name, email, message });
-  await feedback.save();
-
-  return sendResponse(
-    res,
-    201,
-    true,
-    "Feedback submitted successfully.",
-    feedback
-  );
 });
 
-// Get all feedback (admin only)
 exports.getAllFeedback = asyncHandler(async (req, res) => {
-  const feedbacks = await Feedback.find().sort({ createdAt: -1 });
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Feedback fetched successfully.",
-    feedbacks
+  const feedbacks = await Feedback.find().populate(
+    "courseId",
+    "title description"
   );
+  return sendResponse(res, 200, true, "Feedback fetched", feedbacks);
+});
+
+exports.getFeedbackByCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  const feedbacks = await Feedback.find({ courseId }).populate(
+    "courseId",
+    "title"
+  );
+  return sendResponse(res, 200, true, "Course feedback fetched", feedbacks);
 });

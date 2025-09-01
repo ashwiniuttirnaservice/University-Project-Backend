@@ -2,7 +2,6 @@ const SessionCategory = require("../models/SessionCategory");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// Create new session category
 exports.createSessionCategory = asyncHandler(async (req, res) => {
   const sessionCategory = new SessionCategory(req.body);
   await sessionCategory.save();
@@ -15,7 +14,6 @@ exports.createSessionCategory = asyncHandler(async (req, res) => {
   );
 });
 
-// Get all session categories
 exports.getAllSessionCategories = asyncHandler(async (req, res) => {
   const categories = await SessionCategory.find().sort({ createdAt: -1 });
   return sendResponse(
@@ -27,7 +25,6 @@ exports.getAllSessionCategories = asyncHandler(async (req, res) => {
   );
 });
 
-// Get single session category by ID
 exports.getSessionCategoryById = asyncHandler(async (req, res) => {
   const category = await SessionCategory.findById(req.params.id);
   if (!category) {
@@ -42,7 +39,6 @@ exports.getSessionCategoryById = asyncHandler(async (req, res) => {
   );
 });
 
-// Update session category
 exports.updateSessionCategory = asyncHandler(async (req, res) => {
   const category = await SessionCategory.findByIdAndUpdate(
     req.params.id,
@@ -64,7 +60,6 @@ exports.updateSessionCategory = asyncHandler(async (req, res) => {
   );
 });
 
-// Delete session category
 exports.deleteSessionCategory = asyncHandler(async (req, res) => {
   const category = await SessionCategory.findByIdAndDelete(req.params.id);
   if (!category) {

@@ -1,9 +1,23 @@
 const mongoose = require("mongoose");
 
-const VideoSchema = new mongoose.Schema({
-  title: { type: String, trim: true },
-  videoUrl: { type: String, trim: true },
-  description: { type: String, trim: true },
-});
+const VideoLectureSchema = new mongoose.Schema(
+  {
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      required: true,
+    },
+    type: {
+      type: String,
+      enum: ["video", "lecture"],
+      required: true,
+    },
+    title: { type: String, required: true, trim: true },
+    contentUrl: { type: String, trim: true },
+    duration: { type: String, trim: true },
+    description: { type: String, trim: true },
+  },
+  { timestamps: true }
+);
 
-module.exports = mongoose.models || mongoose.model("Video", VideoSchema);
+module.exports = mongoose.model("VideoLecture", VideoLectureSchema);

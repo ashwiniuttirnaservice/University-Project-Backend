@@ -63,13 +63,10 @@ const webinarSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["upcoming", "ongoing", "completed"],
-      default: "upcoming",
     },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
   },
   { timestamps: true }

@@ -6,18 +6,12 @@ const NoteSchema = new mongoose.Schema({
     ref: "Course",
     required: true,
   },
-  title: { type: String, required: true },
-  content: { type: String },
-  url: { type: String },
-  fileName: { type: String },
-  fileSize: { type: Number },
-  type: {
-    type: String,
+  title: { type: String, required: true, trim: true },
+  content: { type: String, trim: true },
+  file: { type: String, trim: true },
 
-    default: "text",
-  },
-
+  duration: { type: String, trim: true },
   uploadedAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.models.Note || mongoose.model("Note", NoteSchema);
+module.exports = mongoose.model("Note", NoteSchema);

@@ -4,17 +4,11 @@ const Course = require("../models/Course.js");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// @desc    Get all branches
-// @route   GET /api/branches
-// @access  Public
 exports.getAllBranches = asyncHandler(async (req, res) => {
   const branches = await Branch.find({}).sort({ name: 1 });
   return sendResponse(res, 200, true, "Branches fetched", branches);
 });
 
-// @desc    Get a single branch by ID
-// @route   GET /api/branches/:id
-// @access  Public
 exports.getBranchById = asyncHandler(async (req, res) => {
   const branch = await Branch.findById(req.params.id);
   if (!branch) {
@@ -23,9 +17,6 @@ exports.getBranchById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Branch retrieved", branch);
 });
 
-// @desc    Create a new branch
-// @route   POST /api/branches
-// @access  Private/Admin
 exports.createBranch = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
   if (!name) {
@@ -41,9 +32,6 @@ exports.createBranch = asyncHandler(async (req, res) => {
   return sendResponse(res, 201, true, "Branch created", branch);
 });
 
-// @desc    Update a branch
-// @route   PUT /api/branches/:id
-// @access  Private/Admin
 exports.updateBranch = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
@@ -72,9 +60,6 @@ exports.updateBranch = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Branch updated", updatedBranch);
 });
 
-// @desc    Delete a branch
-// @route   DELETE /api/branches/:id
-// @access  Private/Admin
 exports.deleteBranch = asyncHandler(async (req, res) => {
   const branch = await Branch.findById(req.params.id);
   if (!branch) {

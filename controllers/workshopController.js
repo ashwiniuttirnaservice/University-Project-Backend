@@ -1,80 +1,101 @@
+const mongoose = require("mongoose");
 const Workshop = require("../models/Workshopsession");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
-// 📌 Create a new workshop registration
-exports.registerWorkshop = asyncHandler(async (req, res) => {
-  const {
-    fullName,
-    mobileNo,
-    email,
-    dob,
-    collegeName,
-    selectedProgram,
-    paymentStatus,
-    transactionId,
-    status,
-  } = req.body;
+exports.createWorkshop = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      startDate,
+      endDate,
+      duration,
+      location,
+      prerequisites,
+      topics,
+      tools,
+      instructors,
+      schedule,
+      registrationLink,
+      fees,
+      certification,
+      contact,
+      status,
+    } = req.body;
 
-  // Basic validation
-  if (
-    !fullName ||
-    !mobileNo ||
-    !email ||
-    !dob ||
-    !collegeName ||
-    !selectedProgram
-  ) {
-    return sendError(res, 400, false, "All required fields must be filled");
+    const workshop = await Workshop.create({
+      title,
+      description,
+      startDate,
+      endDate,
+      duration,
+      location,
+      prerequisites,
+      topics,
+      tools,
+      instructors,
+      schedule,
+      registrationLink,
+      fees,
+      certification,
+      contact,
+      status,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Workshop created successfully",
+      data: workshop,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
+};
 
-  const workshop = await Workshop.create({
-    fullName,
-    mobileNo,
-    email,
-    dob,
-    collegeName,
-    selectedProgram,
-    paymentStatus,
-    transactionId,
-    status,
-  });
-
-  return sendResponse(
-    res,
-    201,
-    true,
-    "Workshop registration successful",
-    workshop
-  );
-});
-
-// 📌 Get all workshop registrations
 exports.getAllWorkshops = asyncHandler(async (req, res) => {
-  const workshops = await Workshop.find().sort({ createdAt: -1 });
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Workshops fetched successfully",
-    workshops
-  );
+  const workshops = await Workshop.aggregate([{ $sort: { createdAt: -1 } }]);
+
+  sendResponse(res, 200, true, "Workshops fetched successfully", workshops);
 });
 
-// 📌 Get workshop by ID
 exports.getWorkshopById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const workshop = await Workshop.findById(id);
 
-  if (!workshop) {
+  const workshop = await Workshop.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+  ]);
+
+  if (!workshop.length) {
     return sendError(res, 404, false, "Workshop not found");
   }
 
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Workshop fetched successfully",
-    workshop
-  );
+  sendResponse(res, 200, true, "Workshop fetched successfully", workshop[0]);
+});
+
+exports.updateWorkshop = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const updated = await Workshop.findByIdAndUpdate(id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  if (!updated) {
+    return sendError(res, 404, false, "Workshop not found");
+  }
+
+  sendResponse(res, 200, true, "Workshop updated successfully", updated);
+});
+
+exports.deleteWorkshop = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const deleted = await Workshop.findByIdAndDelete(id);
+
+  if (!deleted) {
+    return sendError(res, 404, false, "Workshop not found");
+  }
+
+  sendResponse(res, 200, true, "Workshop deleted successfully", deleted);
 });

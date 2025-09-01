@@ -3,46 +3,39 @@ const Enrollment = require("../models/Enrollment.js");
 const Course = require("../models/Course");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
+const Student = require("../models/Student");
 
-// Enroll in a course
 exports.enrollInCourse = asyncHandler(async (req, res) => {
-  const { courseId, studentId } = req.body;
-  const userId = req.user.id;
+  const { course, studentId } = req.body;
 
-  if (!courseId || !studentId) {
+  if (!course || !studentId) {
     return sendError(res, 400, false, "Course ID and Student ID are required");
   }
 
-  const course = await Course.findById(courseId);
-  if (!course) return sendError(res, 404, false, "Course not found");
+  const courses = await Course.findById(course);
+  if (!courses) return sendError(res, 404, false, "Course not found");
 
   const existing = await Enrollment.findOne({
-    user: userId,
-    course: courseId,
+    course: courses._id,
     studentId,
   });
   if (existing)
     return sendError(res, 400, false, "Already enrolled in this course");
 
   const enrollment = await Enrollment.create({
-    user: userId,
-    course: courseId,
+    course: courses._id,
     studentId,
   });
 
   const populated = await Enrollment.findById(enrollment._id)
-    .populate("user", "firstName lastName email")
+    .populate("studentId")
     .populate("course", "title description");
 
   return sendResponse(res, 201, true, "Enrolled successfully", populated);
 });
 
-// Get logged-in user's enrollments using aggregation
 exports.getMyEnrollments = asyncHandler(async (req, res) => {
-  const studentId = req.user.studentId;
-
   const enrollments = await Enrollment.aggregate([
-    { $match: { studentId: new mongoose.Types.ObjectId(studentId) } },
     {
       $lookup: {
         from: "courses",
@@ -62,16 +55,40 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
     },
     { $unwind: { path: "$branchDetails", preserveNullAndEmptyArrays: true } },
     {
+      $lookup: {
+        from: "students",
+        localField: "studentId",
+        foreignField: "_id",
+        as: "studentDetails",
+      },
+    },
+    { $unwind: "$studentDetails" },
+    {
       $project: {
         _id: 1,
         enrolledAt: 1,
         completedContent: 1,
+
+        student: {
+          _id: "$studentDetails._id",
+          fullName: "$studentDetails.fullName",
+          mobileNo: "$studentDetails.mobileNo",
+          email: "$studentDetails.email",
+        },
+
         course: {
+          _id: "$courseDetails._id",
           title: "$courseDetails.title",
           description: "$courseDetails.description",
-          instructor: "$courseDetails.instructor",
-          youtubeVideos: "$courseDetails.youtubeVideos",
+          duration: "$courseDetails.duration",
+          overview: "$courseDetails.overview",
+          learningOutcomes: "$courseDetails.learningOutcomes",
+          benefits: "$courseDetails.benefits",
+          keyFeatures: "$courseDetails.keyFeatures",
+          features: "$courseDetails.features",
+          videolectures: "$courseDetails.videolectures",
           notes: "$courseDetails.notes",
+          trainer: "$courseDetails.trainer",
           branch: "$branchDetails.name",
         },
       },
@@ -79,10 +96,9 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
     { $sort: { enrolledAt: -1 } },
   ]);
 
-  return sendResponse(res, 200, true, "My enrollments fetched", enrollments);
+  return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
 });
 
-// Mark content as complete
 exports.markContentAsComplete = asyncHandler(async (req, res) => {
   const { enrollmentId } = req.params;
   const { contentId } = req.body;
@@ -111,7 +127,6 @@ exports.markContentAsComplete = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Content marked complete", enrollment);
 });
 
-// Mark content as incomplete
 exports.markContentAsIncomplete = asyncHandler(async (req, res) => {
   const { enrollmentId } = req.params;
   const { contentId } = req.body;
@@ -132,7 +147,6 @@ exports.markContentAsIncomplete = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Content marked incomplete", enrollment);
 });
 
-// Admin: Get all enrollments using aggregation
 exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
   const enrollments = await Enrollment.aggregate([
     {
@@ -173,7 +187,6 @@ exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
 });
 
-// Admin: Get single enrollment using aggregation
 exports.getEnrollmentByIdAdmin = asyncHandler(async (req, res) => {
   const enrollmentId = new mongoose.Types.ObjectId(req.params.id);
 
@@ -234,7 +247,6 @@ exports.getEnrollmentByIdAdmin = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Enrollment fetched", enrollment[0]);
 });
 
-// Unenroll from course
 exports.unenrollFromCourse = asyncHandler(async (req, res) => {
   const enrollmentId = req.params.id;
   const currentUser = req.user;
@@ -254,10 +266,10 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
 });
 
 exports.createEnrollment = asyncHandler(async (req, res) => {
-  const { firstName, middleName, lastName, mobile, email, collegeName } =
+  const { fullName, mobileNo, email, collegeName, course, studentId } =
     req.body;
 
-  if (!firstName || !lastName || !mobile || !email || !collegeName) {
+  if (!mobileNo || !email || !collegeName) {
     return res.status(400).json({
       success: false,
       message: "All required fields must be filled.",
@@ -265,11 +277,11 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
   }
 
   const enrollment = await Enrollment.create({
-    firstName,
-    middleName,
-    lastName,
-    mobile,
+    fullName,
+    mobileNo,
     email,
+    course,
+    studentId,
   });
 
   res.status(201).json({

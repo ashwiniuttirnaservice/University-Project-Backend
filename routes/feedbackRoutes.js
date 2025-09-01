@@ -1,11 +1,19 @@
 const express = require("express");
-const feedbackRouter = express.Router();
-const feedbackController = require("../controllers/feedbackController");
+const router = express.Router();
+const upload = require("../utils/multer");
+const {
+  createFeedback,
+  getAllFeedback,
+  getFeedbackByCourse,
+} = require("../controllers/feedbackController");
 
-// POST /api/feedback - submit feedback
-feedbackRouter.post("/", feedbackController.submitFeedback);
+// ⭐ Single profile file upload
+router.post("/", upload.single("profile"), createFeedback);
 
-// GET /api/feedback - get all feedback (admin only)
-feedbackRouter.get("/", feedbackController.getAllFeedback);
+// Get all feedback
+router.get("/", getAllFeedback);
 
-module.exports = feedbackRouter;
+// Get feedback by courseId
+router.get("/:courseId", getFeedbackByCourse);
+
+module.exports = router;
