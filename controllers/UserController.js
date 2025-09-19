@@ -3,39 +3,32 @@ const Course = require("../models/Course.js");
 const Branch = require("../models/Branch.js");
 const asyncHandler = require("../middleware/asyncHandler.js");
 const { sendResponse, sendError } = require("../utils/apiResponse.js");
-const Student = require("../models/Student");
+const Student = require("../models/Student.js");
 const Trainer = require("../models/Trainer");
 const Batch = require("../models/Batch");
-
 const getUserProfile = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id).select("-password");
+  // Use req.user.studentId from JWT
+  const student = await Student.findById(req.user.studentId)
+    .populate("enrolledCourses")
+    .populate("branch", "name");
 
-  if (!user) {
+  if (!student) {
     return sendError(res, 404, false, "User not found");
   }
 
-  let studentData = null;
-
-  if (user.role === "student") {
-    studentData = await Student.findOne({ email: user.email })
-      .populate("branch", "name")
-      .populate("enrolledCourses", "title imageUrl");
-
-    if (!studentData) {
-      return sendError(res, 404, false, "Student data not found");
-    }
-  }
-
   return sendResponse(res, 200, true, "User profile fetched successfully", {
-    _id: user._id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    role: user.role,
-    branch: studentData?.branch || null,
-    enrolledCourses: studentData?.enrolledCourses || [],
-    studentId: studentData?._id || null,
-    createdAt: user.createdAt,
+    _id: student._id,
+    fullName: student.fullName,
+    email: student.email,
+    mobileNo: student.mobileNo,
+    role: req.user.role,
+    branch: student.branch || null,
+    selectedProgram: student.selectedProgram || null,
+    enrolledCourses: student.enrolledCourses || [],
+    coursesInterested: student.coursesInterested || [],
+    profilePhotoStudent: student.profilePhotoStudent || "",
+    registeredAt: student.registeredAt,
+    createdAt: student.createdAt,
   });
 });
 
