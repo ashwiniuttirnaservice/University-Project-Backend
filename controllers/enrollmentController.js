@@ -1,10 +1,10 @@
 const mongoose = require("mongoose");
-const Enrollment = require("../models/Enrollment.js");
+
 const Course = require("../models/Course");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const Student = require("../models/Student");
-
+const Enrollment = require("../models/Enrollment.js");
 exports.enrollInCourse = asyncHandler(async (req, res) => {
   const { course, studentId } = req.body;
 
@@ -35,11 +35,17 @@ exports.enrollInCourse = asyncHandler(async (req, res) => {
 });
 
 exports.getMyEnrollments = asyncHandler(async (req, res) => {
+  const studentId = req.user?.studentId;
+
+  if (!studentId) {
+    return sendError(res, 401, false, "Student not authorized");
+  }
+
   const enrollments = await Enrollment.aggregate([
     {
       $lookup: {
         from: "courses",
-        localField: "course",
+        localField: "enrolledCourses", // use correct field
         foreignField: "_id",
         as: "courseDetails",
       },
@@ -68,14 +74,12 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
         _id: 1,
         enrolledAt: 1,
         completedContent: 1,
-
         student: {
           _id: "$studentDetails._id",
           fullName: "$studentDetails.fullName",
           mobileNo: "$studentDetails.mobileNo",
           email: "$studentDetails.email",
         },
-
         course: {
           _id: "$courseDetails._id",
           title: "$courseDetails.title",
@@ -266,27 +270,49 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
 });
 
 exports.createEnrollment = asyncHandler(async (req, res) => {
-  const { fullName, mobileNo, email, collegeName, course, studentId } =
-    req.body;
+  const { fullName, mobileNo, email, collegeName, enrolledCourses } = req.body;
 
-  if (!mobileNo || !email || !collegeName) {
+  if (!fullName || !mobileNo || !email || !collegeName || !enrolledCourses) {
     return res.status(400).json({
       success: false,
       message: "All required fields must be filled.",
     });
   }
 
+  // 1️⃣ Save student if not exists
+  let student = await Student.findOne({ mobileNo });
+  if (!student) {
+    student = await Student.create({
+      fullName,
+      mobileNo,
+      email,
+      collegeName,
+      enrolledCourses,
+    });
+  } else {
+    // Update enrolledCourses if student already exists
+    student.enrolledCourses = Array.from(
+      new Set([...student.enrolledCourses, ...enrolledCourses])
+    );
+    await student.save();
+  }
+
+  // 2️⃣ Save enrollment
   const enrollment = await Enrollment.create({
+    studentId: student._id,
     fullName,
     mobileNo,
     email,
-    course,
-    studentId,
+    collegeName,
+    enrolledCourses,
   });
 
   res.status(201).json({
     success: true,
     message: "Enrollment created successfully",
-    data: enrollment,
+    data: {
+      student,
+      enrollment,
+    },
   });
 });

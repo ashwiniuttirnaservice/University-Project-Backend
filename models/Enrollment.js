@@ -9,7 +9,7 @@ const EnrollmentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Student",
   },
-  course: {
+  enrolledCourses: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Course",
   },
@@ -32,7 +32,6 @@ const EnrollmentSchema = new mongoose.Schema({
   mobileNo: {
     type: String,
     required: true,
-    trim: true,
   },
   email: {
     type: String,
@@ -46,7 +45,5 @@ const EnrollmentSchema = new mongoose.Schema({
     trim: true,
   },
 });
-
-EnrollmentSchema.index({ user: 1, course: 1 }, { unique: true });
 
 module.exports = mongoose.model("Enrollment", EnrollmentSchema);

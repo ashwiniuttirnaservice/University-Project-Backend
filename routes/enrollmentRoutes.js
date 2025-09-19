@@ -22,7 +22,7 @@ enrollmentRouter.post("/enroll", createEnrollment);
 enrollmentRouter.route("/").post(enrollInCourse);
 
 // Student gets their own list of enrolled courses
-enrollmentRouter.route("/").get(getMyEnrollments);
+enrollmentRouter.get("/my", protect, getMyEnrollments);
 
 // Student marks content as complete
 enrollmentRouter
