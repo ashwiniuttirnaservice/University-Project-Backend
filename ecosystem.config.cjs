@@ -1,7 +1,7 @@
 module.exports = {
         apps: [
                 {
-                        name: "uat-api.codedrift.co",
+                        name: "api.codedrift.co",
                         script: "server.js",
                         instances: 1,
                         autorestart: true,
