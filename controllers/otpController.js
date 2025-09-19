@@ -1,15 +1,20 @@
 const Otp = require("../models/OtpModel");
-const { v4: uuidv4 } = require("uuid");
 const smsModel = require("../models/smsModel.js");
 const Student = require("../models/Student");
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
+
+const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 
 // Generate random 6-digit OTP
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
+/**
+ * ✅ Send OTP
+ */
 exports.sendOtp = asyncHandler(async (req, res) => {
   const { mobileNo } = req.body;
 
@@ -22,9 +27,9 @@ exports.sendOtp = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "Mobile number not found in our records");
   }
 
-  const otp = generateOtp(); // dynamic OTP
+  const otp = generateOtp();
   const reference_id = crypto.randomBytes(8).toString("hex");
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
   await Otp.create({
     mobileNo,
@@ -33,7 +38,6 @@ exports.sendOtp = asyncHandler(async (req, res) => {
     expiresAt,
   });
 
-  // ✅ Send OTP via SMS
   try {
     await smsModel.sendSMS({
       smsDetails: { mobile: mobileNo, otp },
@@ -46,38 +50,59 @@ exports.sendOtp = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "OTP sent successfully", {
     reference_id,
     studentId: existingStudent._id,
-    // otp,   // ❌ Do NOT return OTP in response (for security)
   });
 });
 
+/**
+ * ✅ Verify OTP
+ */
 exports.verifyOtp = asyncHandler(async (req, res) => {
   const { reference_id, otp } = req.body;
 
   const otpRecord = await Otp.findOne({ reference_id });
-  if (!otpRecord) return sendError(res, 404, "Invalid reference ID");
+  if (!otpRecord) return sendError(res, 404, false, "Invalid reference ID");
 
-  if (otpRecord.is_verified) return sendError(res, 400, "OTP already verified");
+  if (otpRecord.is_verified)
+    return sendError(res, 400, false, "OTP already verified");
 
   if (otpRecord.expiresAt < new Date()) {
-    return sendError(res, 400, "OTP expired");
+    return sendError(res, 400, false, "OTP expired");
   }
 
   if (otp !== otpRecord.otp) {
-    return sendError(res, 400, "Invalid OTP");
+    return sendError(res, 400, false, "Invalid OTP");
   }
 
   otpRecord.is_verified = true;
   await otpRecord.save();
 
   const student = await Student.findOne({ mobileNo: otpRecord.mobileNo });
-  if (!student) return sendError(res, 404, "Student not found");
+  if (!student) return sendError(res, 404, false, "Student not found");
+
+  // Get first enrolled course ID if exists
+  const firstCourseId = student.enrolledCourses?.[0]?._id || null;
+
+  // ✅ Generate JWT
+  const tokenPayload = {
+    studentId: student._id,
+    courseId: firstCourseId,
+    role: "student",
+  };
+
+  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
 
   return sendResponse(res, 200, true, "OTP verified successfully", {
     mobileNo: otpRecord.mobileNo,
     studentId: student._id,
+    courseId: firstCourseId,
+    role: "student",
+    token,
   });
 });
 
+/**
+ * ✅ Register Student
+ */
 exports.registerStudent = asyncHandler(async (req, res) => {
   const { reference_id, ...studentData } = req.body;
 
@@ -86,10 +111,28 @@ exports.registerStudent = asyncHandler(async (req, res) => {
 
   studentData.mobileNo = otpRecord.mobileNo;
 
-  const student = await Student.create(studentData);
+  // prevent duplicate registration
+  let student = await Student.findOne({ mobileNo: studentData.mobileNo });
+  if (!student) {
+    student = await Student.create(studentData);
+  }
 
-  return sendResponse(res, 201, true, {
-    message: "Student registered successfully",
-    data: student,
+  // Get first enrolled course ID if exists
+  const firstCourseId = student.enrolledCourses?.[0]?._id || null;
+
+  // ✅ Generate JWT
+  const tokenPayload = {
+    studentId: student._id,
+    courseId: firstCourseId,
+    role: "student",
+  };
+
+  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
+
+  return sendResponse(res, 201, true, "Student registered successfully", {
+    student,
+    courseId: firstCourseId,
+    role: "student",
+    token,
   });
 });
