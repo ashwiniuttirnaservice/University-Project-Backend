@@ -56,7 +56,7 @@ const courseSchema = new mongoose.Schema(
         ref: "Trainer",
       },
     ],
-
+    phases: [{ type: mongoose.Types.ObjectId, ref: "Phase" }],
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }

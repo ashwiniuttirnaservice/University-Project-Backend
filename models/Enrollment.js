@@ -9,10 +9,12 @@ const EnrollmentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Student",
   },
-  enrolledCourses: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Course",
-  },
+  enrolledCourses: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+  ],
   enrolledAt: {
     type: Date,
     default: Date.now,
@@ -41,8 +43,7 @@ const EnrollmentSchema = new mongoose.Schema({
   },
   collegeName: {
     type: String,
-
-    trim: true,
+    required: false,
   },
 });
 

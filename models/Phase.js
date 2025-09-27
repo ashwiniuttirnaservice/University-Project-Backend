@@ -1,0 +1,14 @@
+const mongoose = require("mongoose");
+
+const PhaseSchema = new mongoose.Schema(
+  {
+    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+    title: { type: String, required: true },
+    description: { type: String },
+    weeks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Week" }],
+  },
+  { timestamps: true }
+);
+
+const Phase = mongoose.model("Phase", PhaseSchema);
+module.exports = Phase;
