@@ -14,14 +14,14 @@ app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 const allowedOrigins = [
-    'https://uat.codedrift.co',
-    'https://www.uat.codedrift.co',
-    'https://codedrift.co',
-    'https://www.codedrift.co',
-    'http://localhost:6174',
-    'http://localhost:6184',
-    'http://localhost:5001',
-    'http://localhost:5005',
+  "https://uat-api.codedrift.co",
+  "https://www.uat.codedrift.co",
+  "https://codedrift.co",
+  "https://www.codedrift.co",
+  "http://localhost:6174",
+  "http://localhost:6184",
+  "http://localhost:5001",
+  "http://localhost:5005",
 ];
 
 const corsOptions = {
