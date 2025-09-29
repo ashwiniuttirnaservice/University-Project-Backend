@@ -30,7 +30,9 @@ exports.getAllChapters = asyncHandler(async (req, res) => {
   const chapters = await Chapter.find()
     .populate("week")
     .populate("lectures")
-    .populate("assignments");
+    .populate("assignments")
+    .populate("notes");
+
   return sendResponse(
     res,
     200,
@@ -50,7 +52,8 @@ exports.getChapterById = asyncHandler(async (req, res) => {
   const chapter = await Chapter.findById(id)
     .populate("week")
     .populate("lectures")
-    .populate("assignments");
+    .populate("assignments")
+    .populate("notes");
 
   if (!chapter) {
     return sendError(res, 404, false, "Chapter not found");
