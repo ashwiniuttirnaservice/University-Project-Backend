@@ -130,7 +130,6 @@ exports.getCourseById = asyncHandler(async (req, res) => {
       },
     },
 
-    // Final projection
     {
       $project: {
         title: 1,
