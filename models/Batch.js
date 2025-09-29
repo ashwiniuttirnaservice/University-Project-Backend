@@ -8,19 +8,17 @@ const batchSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // ⏰ Daily Timing
     time: {
       start: {
-        type: String, // e.g. "09:00 AM"
+        type: String,
         required: true,
       },
       end: {
-        type: String, // e.g. "11:00 AM"
+        type: String,
         required: true,
       },
     },
 
-    // ✅ Selective Days
     days: [
       {
         type: String,

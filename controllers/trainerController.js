@@ -224,7 +224,6 @@ const deleteTrainer = asyncHandler(async (req, res) => {
   await trainer.deleteOne();
   return sendResponse(res, 200, true, "Trainer deleted successfully");
 });
-
 const getTrainerById = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
 
@@ -233,9 +232,9 @@ const getTrainerById = asyncHandler(async (req, res) => {
   }
 
   const trainer = await Trainer.findById(trainerId)
-    .populate("courses")
-    .populate("batches")
-    .populate("branches");
+    .populate("courses", "title")
+    .populate("batchIds", "batchName time days mode studentCount")
+    .populate("branches", "branchName location");
 
   if (!trainer) {
     return sendError(res, 404, false, "Trainer not found");

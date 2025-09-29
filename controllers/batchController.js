@@ -27,10 +27,12 @@ exports.createBatch = asyncHandler(async (req, res) => {
   });
 
   if (Array.isArray(trainersAssigned)) {
-    await Trainer.updateMany(
+    const updated = await Trainer.updateMany(
       { _id: { $in: trainersAssigned } },
       { $addToSet: { batchIds: batch._id } }
     );
+
+    console.log("Trainers updated:", updated); // For debugging
   }
 
   return sendResponse(res, 201, true, "Batch created successfully", batch);
