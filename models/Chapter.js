@@ -9,6 +9,7 @@ const ChapterSchema = new mongoose.Schema(
         description: { type: String },
       },
     ],
+    notes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Note" }],
     lectures: [{ type: mongoose.Schema.Types.ObjectId, ref: "Lecture" }],
     assignments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Assignment" }],
   },

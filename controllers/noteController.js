@@ -1,28 +1,31 @@
 const mongoose = require("mongoose");
 const Note = require("../models/Note");
-const Course = require("../models/Course");
+const Chapter = require("../models/Chapter");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
 exports.createNote = asyncHandler(async (req, res) => {
-  const { course, title, content, duration } = req.body;
+  const { chapter, title, content, duration } = req.body;
 
-  if (!course || !title) {
-    return sendError(res, 400, false, "Course and Title are required");
+  if (!chapter || !title) {
+    return sendError(res, 400, false, "Chapter and Title are required");
   }
 
-  const courseExists = await Course.findById(course);
-  if (!courseExists) {
-    return sendError(res, 404, false, "Course not found");
+  const chapterExists = await Chapter.findById(chapter);
+  if (!chapterExists) {
+    return sendError(res, 404, false, "Chapter not found");
   }
 
   const note = await Note.create({
-    course,
+    chapter,
     title,
     content,
     file: req.file ? `${req.file.filename}` : null,
-    duration,
     uploadedAt: new Date(),
+  });
+
+  await Chapter.findByIdAndUpdate(chapter, {
+    $push: { notes: note._id },
   });
 
   return sendResponse(res, 201, true, "Note created successfully", note);
@@ -32,13 +35,13 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
   const notes = await Note.aggregate([
     {
       $lookup: {
-        from: "courses",
-        localField: "course",
+        from: "chapters",
+        localField: "chapter",
         foreignField: "_id",
-        as: "course",
+        as: "chapter",
       },
     },
-    { $unwind: "$course" },
+    { $unwind: "$chapter" },
     { $sort: { uploadedAt: -1 } },
   ]);
 
@@ -52,13 +55,13 @@ exports.getNoteById = asyncHandler(async (req, res) => {
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
     {
       $lookup: {
-        from: "courses",
-        localField: "course",
+        from: "chapters",
+        localField: "chapter",
         foreignField: "_id",
-        as: "course",
+        as: "chapter",
       },
     },
-    { $unwind: "$course" },
+    { $unwind: "$chapter" },
   ]);
 
   if (!note.length) return sendError(res, 404, false, "Note not found");
@@ -68,12 +71,11 @@ exports.getNoteById = asyncHandler(async (req, res) => {
 
 exports.updateNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { title, content, duration } = req.body;
+  const { title, content, duration, chapter } = req.body;
 
   let updateData = { title, content, duration };
-  if (req.file) {
-    updateData.file = `/uploads/course-notes/${req.file.filename}`;
-  }
+  if (chapter) updateData.chapter = chapter;
+  if (req.file) updateData.file = `${req.file.filename}`;
 
   const note = await Note.findByIdAndUpdate(id, updateData, { new: true });
   if (!note) return sendError(res, 404, false, "Note not found");
