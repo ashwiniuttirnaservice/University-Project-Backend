@@ -1,8 +1,13 @@
-const express = require('express');
+const express = require("express");
 
 const authRoutes = require("./authRoutes");
 const branchRoutes = require("./branchRoutes");
 const courseRoutes = require("./courseRouter.js");
+const PhaseRouter = require("./phaseRouter.js");
+const chapterRouter = require("./chapterRouter.js");
+const weekRouter = require("./weekRouter");
+const lectureRoutes = require("./lectureRoutes.js");
+const assignmentRouter = require("./assignmentRouter.js");
 const enrollmentRoutes = require("./enrollmentRoutes");
 const adminRoutes = require("./adminRoutes");
 const testRoutes = require("./TestRoutes");
@@ -24,21 +29,26 @@ const SponsorshipRouter = require("./sponsorshipRouter.js");
 const HackathonRouter = require("./hackathonRoutes.js");
 const indexRouter = express.Router();
 
-indexRouter.get('/', (req, res) => {
-    res.send('LMS API is alive and running...');
+indexRouter.get("/", (req, res) => {
+  res.send("LMS API is alive and running...");
 });
-// All routes grouped here
-indexRouter.use('/auth', authRoutes);
-indexRouter.use('/branches', branchRoutes);
-indexRouter.use('/courses', courseRoutes);
-indexRouter.use('/enrollments', enrollmentRoutes);
-indexRouter.use('/admin', adminRoutes);
-indexRouter.use('/tests', testRoutes);
-indexRouter.use('/users', userRoutes);
-indexRouter.use('/feedback', feedbackRoutes);
-indexRouter.use('/batches', batcheRouter);
-indexRouter.use('/contact', contactRouter);
-// Trainer & Student routes/contact
+
+indexRouter.use("/auth", authRoutes);
+indexRouter.use("/branches", branchRoutes);
+indexRouter.use("/courses", courseRoutes);
+indexRouter.use("/phases", PhaseRouter);
+indexRouter.use("/weeks", weekRouter);
+indexRouter.use("/chapters", chapterRouter);
+indexRouter.use("/lectures", lectureRoutes);
+indexRouter.use("/assignments", assignmentRouter);
+indexRouter.use("/enrollments", enrollmentRoutes);
+indexRouter.use("/admin", adminRoutes);
+indexRouter.use("/tests", testRoutes);
+indexRouter.use("/users", userRoutes);
+indexRouter.use("/feedback", feedbackRoutes);
+indexRouter.use("/batches", batcheRouter);
+indexRouter.use("/contact", contactRouter);
+
 indexRouter.use("/trainer", trainerRouter);
 indexRouter.use("/student", studentRouter);
 indexRouter.use("/session-category", sessionCategoryRouter);

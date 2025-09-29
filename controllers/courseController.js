@@ -51,18 +51,85 @@ exports.getCourseById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   const course = await Course.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+
+    // Trainer
     {
-      $match: { _id: new mongoose.Types.ObjectId(id) },
+      $lookup: {
+        from: "trainers",
+        localField: "trainer",
+        foreignField: "_id",
+        as: "trainer",
+      },
+    },
+
+    // Notes
+    {
+      $lookup: {
+        from: "notes",
+        localField: "notes",
+        foreignField: "_id",
+        as: "notes",
+      },
+    },
+
+    // Video Lectures
+    {
+      $lookup: {
+        from: "videolectures",
+        localField: "videolectures",
+        foreignField: "_id",
+        as: "videolectures",
+      },
     },
 
     {
       $lookup: {
-        from: "trainers",
-        localField: "_id",
-        foreignField: "courses",
-        as: "trainer",
+        from: "phases",
+        localField: "phases",
+        foreignField: "_id",
+        as: "phases",
+        pipeline: [
+          {
+            $lookup: {
+              from: "weeks",
+              localField: "weeks",
+              foreignField: "_id",
+              as: "weeks",
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "chapters",
+                    localField: "chapters",
+                    foreignField: "_id",
+                    as: "chapters",
+                    pipeline: [
+                      {
+                        $lookup: {
+                          from: "lectures",
+                          localField: "lectures",
+                          foreignField: "_id",
+                          as: "lectures",
+                        },
+                      },
+                      {
+                        $lookup: {
+                          from: "assignments",
+                          localField: "assignments",
+                          foreignField: "_id",
+                          as: "assignments",
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
       },
     },
+
     {
       $project: {
         title: 1,
@@ -76,97 +143,22 @@ exports.getCourseById = asyncHandler(async (req, res) => {
         benefits: 1,
         keyFeatures: 1,
         features: 1,
-        videolectures: 1,
-        notes: 1,
         isActive: 1,
         createdAt: 1,
         updatedAt: 1,
-        trainer: {
-          $map: {
-            input: "$trainer",
-            as: "t",
-            in: {
-              _id: "$$t._id",
-              fullName: "$$t.fullName",
-              highestQualification: "$$t.highestQualification",
-              profilePhotoTrainer: "$$t.profilePhotoTrainer",
-            },
-          },
-        },
-      },
-    },
-
-    {
-      $lookup: {
-        from: "videolectures",
-        localField: "_id",
-        foreignField: "course",
-        as: "videolectures",
-      },
-    },
-    {
-      $addFields: {
-        videolectures: {
-          $map: {
-            input: "$videolectures",
-            as: "v",
-            in: {
-              _id: "$$v._id",
-              type: "$$v.type",
-              title: "$$v.title",
-              contentUrl: "$$v.contentUrl",
-              duration: "$$v.duration",
-              description: "$$v.description",
-              createdAt: "$$v.createdAt",
-              updatedAt: "$$v.updatedAt",
-            },
-          },
-        },
-      },
-    },
-
-    {
-      $lookup: {
-        from: "notes",
-        localField: "_id",
-        foreignField: "course",
-        as: "notes",
-      },
-    },
-    {
-      $addFields: {
-        notes: {
-          $map: {
-            input: "$notes",
-            as: "n",
-            in: {
-              _id: "$$n._id",
-              title: "$$n.title",
-              content: "$$n.content",
-              file: "$$n.file",
-              type: "$$n.type",
-              duration: "$$n.duration",
-              uploadedAt: "$$n.uploadedAt",
-            },
-          },
-        },
+        trainer: 1,
+        notes: 1,
+        videolectures: 1,
+        phases: 1,
       },
     },
   ]);
 
-  if (!course || course.length === 0) {
+  if (!course?.length) {
     return sendError(res, 404, false, "Course not found");
   }
 
-  const formattedCourse = {
-    ...course[0],
-    trainer:
-      Array.isArray(course[0].trainer) && course[0].trainer.length === 1
-        ? course[0].trainer[0]
-        : course[0].trainer,
-  };
-
-  return sendResponse(res, 200, true, "Course fetched", formattedCourse);
+  return sendResponse(res, 200, true, "Course fetched", course[0]);
 });
 
 exports.updateCourse = asyncHandler(async (req, res) => {

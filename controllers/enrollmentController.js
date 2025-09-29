@@ -268,37 +268,81 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
   await enrollment.deleteOne();
   return sendResponse(res, 200, true, "Unenrolled successfully");
 });
-
 exports.createEnrollment = asyncHandler(async (req, res) => {
   const { fullName, mobileNo, email, collegeName, enrolledCourses } = req.body;
 
-  if (!fullName || !mobileNo || !email || !collegeName || !enrolledCourses) {
-    return res.status(400).json({
-      success: false,
-      message: "All required fields must be filled.",
-    });
+  if (!mobileNo) {
+    return sendError(res, 400, false, "Mobile number is required");
   }
 
-  // 1️⃣ Save student if not exists
+  // 🔎 Check if student already exists
   let student = await Student.findOne({ mobileNo });
-  if (!student) {
-    student = await Student.create({
-      fullName,
-      mobileNo,
-      email,
-      collegeName,
-      enrolledCourses,
-    });
-  } else {
-    // Update enrolledCourses if student already exists
-    student.enrolledCourses = Array.from(
-      new Set([...student.enrolledCourses, ...enrolledCourses])
+  let enrollment;
+
+  if (student) {
+    // ✅ Merge new courses with old ones (avoid duplicates)
+    if (enrolledCourses && enrolledCourses.length > 0) {
+      const mergedCourses = Array.from(
+        new Set([...student.enrolledCourses, ...enrolledCourses])
+      );
+      student.enrolledCourses = mergedCourses;
+      await student.save();
+
+      // 🔄 Create a new enrollment record that also has the full merged array
+      enrollment = await Enrollment.create({
+        studentId: student._id,
+        fullName: student.fullName,
+        mobileNo: student.mobileNo,
+        email: student.email,
+        collegeName: student.collegeName,
+        enrolledCourses: mergedCourses, // ✅ same as student
+      });
+
+      return sendResponse(
+        res,
+        200,
+        true,
+        "Student enrollment updated with new course(s).",
+        { student, enrollment }
+      );
+    }
+
+    // If no new course passed
+    return sendResponse(
+      res,
+      200,
+      true,
+      "Student already enrolled. Please verify OTP.",
+      {
+        studentId: student._id,
+        mobileNo: student.mobileNo,
+        fullName: student.fullName,
+        email: student.email,
+        enrolledCourses: student.enrolledCourses,
+      }
     );
-    await student.save();
   }
 
-  // 2️⃣ Save enrollment
-  const enrollment = await Enrollment.create({
+  if (!fullName || !email || !enrolledCourses) {
+    return sendError(
+      res,
+      400,
+      false,
+      "All required fields must be filled for new enrollment."
+    );
+  }
+
+  // 3️⃣ Create new student
+  student = await Student.create({
+    fullName,
+    mobileNo,
+    email,
+    collegeName,
+    enrolledCourses,
+  });
+
+  // 4️⃣ Create first enrollment (with same enrolledCourses)
+  enrollment = await Enrollment.create({
     studentId: student._id,
     fullName,
     mobileNo,
@@ -307,12 +351,8 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     enrolledCourses,
   });
 
-  res.status(201).json({
-    success: true,
-    message: "Enrollment created successfully",
-    data: {
-      student,
-      enrollment,
-    },
+  return sendResponse(res, 201, true, "Enrollment created successfully", {
+    student,
+    enrollment,
   });
 });
