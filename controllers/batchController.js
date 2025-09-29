@@ -3,11 +3,13 @@ const asyncHandler = require("../middleware/asyncHandler");
 const Batch = require("../models/Batch");
 const Student = require("../models/Student");
 const { sendResponse, sendError } = require("../utils/apiResponse");
+const Trainer = require("../models/Trainer");
 
 exports.createBatch = asyncHandler(async (req, res) => {
   const {
     batchName,
-    timing,
+    time,
+    days,
     mode,
     coursesAssigned,
     trainersAssigned,
@@ -16,16 +18,20 @@ exports.createBatch = asyncHandler(async (req, res) => {
 
   const batch = await Batch.create({
     batchName,
-    timing,
+    time,
+    days,
     mode,
-    coursesAssigned: Array.isArray(coursesAssigned)
-      ? coursesAssigned
-      : coursesAssigned?.split(","),
-    trainersAssigned: Array.isArray(trainersAssigned)
-      ? trainersAssigned
-      : trainersAssigned?.split(","),
+    coursesAssigned,
+    trainersAssigned,
     additionalNotes,
   });
+
+  if (Array.isArray(trainersAssigned)) {
+    await Trainer.updateMany(
+      { _id: { $in: trainersAssigned } },
+      { $addToSet: { batchIds: batch._id } }
+    );
+  }
 
   return sendResponse(res, 201, true, "Batch created successfully", batch);
 });
@@ -51,7 +57,8 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
     {
       $project: {
         batchName: 1,
-        timing: 1,
+        time: 1,
+        days: 1,
         mode: 1,
         additionalNotes: 1,
         studentCount: 1,
@@ -88,7 +95,8 @@ exports.getBatchById = asyncHandler(async (req, res) => {
     {
       $project: {
         batchName: 1,
-        timing: 1,
+        time: 1,
+        days: 1,
         mode: 1,
         additionalNotes: 1,
         studentCount: 1,
@@ -138,7 +146,8 @@ exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
     {
       $project: {
         batchName: 1,
-        timing: 1,
+        time: 1,
+        days: 1,
         mode: 1,
         coursesAssigned: { _id: 1, title: 1 },
         trainersAssigned: { _id: 1, fullName: 1, email: 1 },
@@ -146,8 +155,7 @@ exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
     },
   ]);
 
-  return res.status(200).json({
-    success: true,
+  return sendResponse(res, 200, true, "Batches fetched successfully", {
     studentId,
     courseId,
     count: batches.length,
@@ -156,15 +164,14 @@ exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
 });
 
 exports.assignStudentToBatch = asyncHandler(async (req, res) => {
-  const { courseId, studentId } = req.body;
+  const { batchId, studentId } = req.body;
 
-  if (!courseId || !studentId) {
-    return sendError(res, 400, false, "courseId and studentId are required");
+  if (!batchId || !studentId) {
+    return sendError(res, 400, false, "batchId and studentId are required");
   }
 
-  const batch = await Batch.findOne({ coursesAssigned: courseId });
-  if (!batch)
-    return sendError(res, 404, false, "Batch not found for the given courseId");
+  const batch = await Batch.findById(batchId);
+  if (!batch) return sendError(res, 404, false, "Batch not found");
 
   const student = await Student.findById(studentId);
   if (!student) return sendError(res, 404, false, "Student not found");
@@ -182,6 +189,10 @@ exports.assignStudentToBatch = asyncHandler(async (req, res) => {
     fullName: student.fullName,
     email: student.email,
   });
+
+  batch.enrolledIds = batch.enrolledIds || [];
+  if (!batch.enrolledIds.includes(student._id))
+    batch.enrolledIds.push(student._id);
 
   batch.studentCount = batch.students.length;
   await batch.save();
@@ -221,7 +232,8 @@ exports.getBatchesForStudent = asyncHandler(async (req, res) => {
     {
       $project: {
         batchName: 1,
-        timing: 1,
+        time: 1,
+        days: 1,
         mode: 1,
         coursesAssigned: { _id: 1, title: 1 },
         trainersAssigned: { _id: 1, fullName: 1, email: 1 },
@@ -236,6 +248,7 @@ exports.getBatchesForStudent = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Batches fetched successfully", batches);
 });
 
+// ✅ Update Batch
 exports.updateBatch = asyncHandler(async (req, res) => {
   const updated = await Batch.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
