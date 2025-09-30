@@ -121,7 +121,12 @@ exports.getBatchesByCourseId = asyncHandler(async (req, res) => {
   ]);
 
   if (!batches || batches.length === 0) {
-    return sendError(res, 404, false, "No batches found for this course");
+    return sendError(
+      res,
+      404,
+      false,
+      "No batches found for this course ,Please contact to Admin"
+    );
   }
 
   return sendResponse(res, 200, true, "Batches fetched successfully", batches);
