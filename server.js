@@ -16,6 +16,8 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 const allowedOrigins = [
   "https://uat.codedrift.co",
   "https://www.uat.codedrift.co",
+  "https://www.uat-lms.codedrift.co",
+  "https://uat-lms.codedrift.co",
   "https://uat-api.codedrift.co",
   "https://www.uat-api.codedrift.co",
   "https://codedrift.co",
