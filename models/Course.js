@@ -44,7 +44,9 @@ const courseSchema = new mongoose.Schema(
       codingExercises: { type: Boolean, default: true },
       recordedLectures: { type: Boolean, default: true },
     },
-
+    fees: {
+      type: String,
+    },
     videolectures: [
       { type: mongoose.Schema.Types.ObjectId, ref: "VideoLecture" },
     ],

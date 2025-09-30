@@ -20,6 +20,7 @@ exports.createCourse = asyncHandler(async (req, res) => {
     keyFeatures,
     features,
     trainer,
+    fees,
     isActive,
   } = req.body;
 
@@ -35,6 +36,7 @@ exports.createCourse = asyncHandler(async (req, res) => {
     benefits,
     keyFeatures,
     features,
+    fees,
     trainer,
     isActive,
   });
@@ -53,7 +55,6 @@ exports.getCourseById = asyncHandler(async (req, res) => {
   const course = await Course.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
 
-    // Trainer
     {
       $lookup: {
         from: "trainers",
@@ -63,17 +64,6 @@ exports.getCourseById = asyncHandler(async (req, res) => {
       },
     },
 
-    // Notes
-    {
-      $lookup: {
-        from: "notes",
-        localField: "notes",
-        foreignField: "_id",
-        as: "notes",
-      },
-    },
-
-    // Video Lectures
     {
       $lookup: {
         from: "videolectures",
@@ -107,17 +97,55 @@ exports.getCourseById = asyncHandler(async (req, res) => {
                       {
                         $lookup: {
                           from: "lectures",
-                          localField: "lectures",
-                          foreignField: "_id",
+                          let: { lectureIds: "$lectures" },
+                          pipeline: [
+                            {
+                              $match: {
+                                $expr: {
+                                  $in: [
+                                    "$_id",
+                                    { $ifNull: ["$$lectureIds", []] },
+                                  ],
+                                },
+                              },
+                            },
+                          ],
                           as: "lectures",
                         },
                       },
                       {
                         $lookup: {
                           from: "assignments",
-                          localField: "assignments",
-                          foreignField: "_id",
+                          let: { assignmentIds: "$assignments" },
+                          pipeline: [
+                            {
+                              $match: {
+                                $expr: {
+                                  $in: [
+                                    "$_id",
+                                    { $ifNull: ["$$assignmentIds", []] },
+                                  ],
+                                },
+                              },
+                            },
+                          ],
                           as: "assignments",
+                        },
+                      },
+                      {
+                        $lookup: {
+                          from: "notes",
+                          let: { noteIds: "$notes" },
+                          pipeline: [
+                            {
+                              $match: {
+                                $expr: {
+                                  $in: ["$_id", { $ifNull: ["$$noteIds", []] }],
+                                },
+                              },
+                            },
+                          ],
+                          as: "notes",
                         },
                       },
                     ],
@@ -142,6 +170,7 @@ exports.getCourseById = asyncHandler(async (req, res) => {
         learningOutcomes: 1,
         benefits: 1,
         keyFeatures: 1,
+        fees: 1,
         features: 1,
         isActive: 1,
         createdAt: 1,
@@ -172,6 +201,7 @@ exports.updateCourse = asyncHandler(async (req, res) => {
     overview,
     learningOutcomes,
     benefits,
+    fees,
     keyFeatures,
     features,
     trainer,
@@ -190,6 +220,7 @@ exports.updateCourse = asyncHandler(async (req, res) => {
       overview,
       learningOutcomes,
       benefits,
+      fees,
       keyFeatures,
       features,
       trainer,
