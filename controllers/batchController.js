@@ -11,6 +11,8 @@ exports.createBatch = asyncHandler(async (req, res) => {
     time,
     days,
     mode,
+    startDate,
+    endDate,
     coursesAssigned,
     trainersAssigned,
     additionalNotes,
@@ -21,6 +23,8 @@ exports.createBatch = asyncHandler(async (req, res) => {
     time,
     days,
     mode,
+    startDate,
+    endDate,
     coursesAssigned,
     trainersAssigned,
     additionalNotes,
@@ -62,6 +66,8 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
         time: 1,
         days: 1,
         mode: 1,
+        startDate: 1,
+        endDate: 1,
         additionalNotes: 1,
         studentCount: 1,
         coursesAssigned: { _id: 1, title: 1 },
@@ -69,6 +75,54 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
       },
     },
   ]);
+
+  return sendResponse(res, 200, true, "Batches fetched successfully", batches);
+});
+
+exports.getBatchesByCourseId = asyncHandler(async (req, res) => {
+  const courseId = new mongoose.Types.ObjectId(req.params.courseId);
+
+  const batches = await Batch.aggregate([
+    {
+      $match: {
+        coursesAssigned: courseId,
+      },
+    },
+    {
+      $lookup: {
+        from: "courses",
+        localField: "coursesAssigned",
+        foreignField: "_id",
+        as: "coursesAssigned",
+      },
+    },
+    {
+      $lookup: {
+        from: "trainers",
+        localField: "trainersAssigned",
+        foreignField: "_id",
+        as: "trainersAssigned",
+      },
+    },
+    {
+      $project: {
+        batchName: 1,
+        time: 1,
+        days: 1,
+        mode: 1,
+        startDate: 1,
+        endDate: 1,
+        additionalNotes: 1,
+        studentCount: 1,
+        coursesAssigned: { _id: 1, title: 1 },
+        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+      },
+    },
+  ]);
+
+  if (!batches || batches.length === 0) {
+    return sendError(res, 404, false, "No batches found for this course");
+  }
 
   return sendResponse(res, 200, true, "Batches fetched successfully", batches);
 });
@@ -100,6 +154,8 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         time: 1,
         days: 1,
         mode: 1,
+        startDate: 1,
+        endDate: 1,
         additionalNotes: 1,
         studentCount: 1,
         coursesAssigned: { _id: 1, title: 1 },
@@ -151,6 +207,8 @@ exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
         time: 1,
         days: 1,
         mode: 1,
+        startDate: 1,
+        endDate: 1,
         coursesAssigned: { _id: 1, title: 1 },
         trainersAssigned: { _id: 1, fullName: 1, email: 1 },
       },
@@ -237,6 +295,8 @@ exports.getBatchesForStudent = asyncHandler(async (req, res) => {
         time: 1,
         days: 1,
         mode: 1,
+        startDate: 1,
+        endDate: 1,
         coursesAssigned: { _id: 1, title: 1 },
         trainersAssigned: { _id: 1, fullName: 1, email: 1 },
       },

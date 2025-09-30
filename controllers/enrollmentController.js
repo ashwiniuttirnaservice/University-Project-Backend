@@ -275,51 +275,60 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Mobile number is required");
   }
 
-  // 🔎 Check if student already exists
   let student = await Student.findOne({ mobileNo });
-  let enrollment;
 
   if (student) {
-    // ✅ Merge new courses with old ones (avoid duplicates)
     if (enrolledCourses && enrolledCourses.length > 0) {
-      const mergedCourses = Array.from(
-        new Set([...student.enrolledCourses, ...enrolledCourses])
+      const newCourses = enrolledCourses.filter(
+        (course) => !student.enrolledCourses.includes(course)
       );
-      student.enrolledCourses = mergedCourses;
+
+      if (newCourses.length === 0) {
+        return sendResponse(
+          res,
+          200,
+          true,
+          "Student already enrolled in the same course(s).",
+          {
+            student,
+          }
+        );
+      }
+
+      student.enrolledCourses = [...student.enrolledCourses, ...newCourses];
       await student.save();
 
-      // 🔄 Create a new enrollment record that also has the full merged array
-      enrollment = await Enrollment.create({
-        studentId: student._id,
-        fullName: student.fullName,
-        mobileNo: student.mobileNo,
-        email: student.email,
-        collegeName: student.collegeName,
-        enrolledCourses: mergedCourses, // ✅ same as student
-      });
+      let enrollment = await Enrollment.findOne({ studentId: student._id });
+
+      if (enrollment) {
+        enrollment.enrolledCourses = student.enrolledCourses;
+        await enrollment.save();
+      } else {
+        enrollment = await Enrollment.create({
+          studentId: student._id,
+          fullName: student.fullName,
+          mobileNo: student.mobileNo,
+          email: student.email,
+          collegeName: student.collegeName,
+          enrolledCourses: student.enrolledCourses,
+        });
+      }
 
       return sendResponse(
         res,
         200,
         true,
-        "Student enrollment updated with new course(s).",
+        "Student enrollment updated successfully.",
         { student, enrollment }
       );
     }
 
-    // If no new course passed
     return sendResponse(
       res,
       200,
       true,
-      "Student already enrolled. Please verify OTP.",
-      {
-        studentId: student._id,
-        mobileNo: student.mobileNo,
-        fullName: student.fullName,
-        email: student.email,
-        enrolledCourses: student.enrolledCourses,
-      }
+      "Student already exists. Please verify OTP.",
+      { student }
     );
   }
 
@@ -332,7 +341,6 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     );
   }
 
-  // 3️⃣ Create new student
   student = await Student.create({
     fullName,
     mobileNo,
@@ -341,8 +349,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     enrolledCourses,
   });
 
-  // 4️⃣ Create first enrollment (with same enrolledCourses)
-  enrollment = await Enrollment.create({
+  const enrollment = await Enrollment.create({
     studentId: student._id,
     fullName,
     mobileNo,

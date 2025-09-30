@@ -71,13 +71,22 @@ const batchSchema = new mongoose.Schema(
     enrolledIds: [
       {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Student",
+        ref: "Enrollment",
       },
     ],
 
     studentCount: {
       type: Number,
       default: 0,
+    },
+
+    startDate: {
+      type: String,
+      required: false,
+    },
+    endDate: {
+      type: String,
+      required: false,
     },
   },
   {

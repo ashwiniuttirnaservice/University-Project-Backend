@@ -4,6 +4,7 @@ const {
   getAllBatches,
   getBatchesByCourseAndStudent,
   getBatchById,
+  getBatchesByCourseId,
   updateBatch,
   deleteBatch,
   assignStudentToBatch,
@@ -14,8 +15,9 @@ const batchRouter = express.Router();
 
 batchRouter.route("/").get(getAllBatches).post(createBatch);
 batchRouter.get("/all-batches-student", getBatchesByCourseAndStudent);
-batchRouter.get("/student-batche", assignStudentToBatch);
+batchRouter.post("/student-batche", assignStudentToBatch);
 batchRouter.get("/student/:studentId", getBatchesForStudent);
+batchRouter.get("/:courseId", getBatchesByCourseId);
 
 batchRouter
   .route("/:id")
