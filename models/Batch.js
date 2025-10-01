@@ -84,9 +84,21 @@ const batchSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+
     endDate: {
       type: String,
       required: false,
+    },
+
+    status: {
+      type: String,
+      enum: ["Upcoming", "Ongoing", "Past"],
+      default: "Upcoming",
+    },
+
+    isEnrolled: {
+      type: Boolean,
+      default: false,
     },
   },
   {
