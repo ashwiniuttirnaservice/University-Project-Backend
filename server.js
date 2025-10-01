@@ -23,6 +23,7 @@ const allowedOrigins = [
   "https://codedrift.co",
   "https://www.codedrift.co",
   "http://localhost:6174",
+  "http://localhost:6194",
   "http://localhost:6184",
   "http://localhost:5001",
   "http://localhost:5005",

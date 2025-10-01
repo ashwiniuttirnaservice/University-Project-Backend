@@ -62,10 +62,19 @@ const studentSchema = new mongoose.Schema({
 
     trim: true,
   },
-  coursesInterested: {
-    type: [String],
-    required: false,
-  },
+  coursesInterested: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+  ],
+
+  enrolledCourses: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+  ],
   preferredBatchTiming: {
     type: String,
   },
