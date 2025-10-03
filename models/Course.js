@@ -58,6 +58,7 @@ const courseSchema = new mongoose.Schema(
         ref: "Trainer",
       },
     ],
+    batches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
     phases: [{ type: mongoose.Types.ObjectId, ref: "Phase" }],
     isActive: { type: Boolean, default: true },
   },

@@ -4,6 +4,7 @@ const Batch = require("../models/Batch");
 const Student = require("../models/Student");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const Trainer = require("../models/Trainer");
+const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
 exports.createBatch = asyncHandler(async (req, res) => {
   const {
@@ -15,11 +16,12 @@ exports.createBatch = asyncHandler(async (req, res) => {
     endDate,
     status,
     isEnrolled,
-    coursesAssigned,
-    trainersAssigned,
+    coursesAssigned, // array of course IDs
+    trainersAssigned, // array of trainer IDs
     additionalNotes,
   } = req.body;
 
+  // 1️⃣ Create Batch
   const batch = await Batch.create({
     batchName,
     time,
@@ -34,13 +36,20 @@ exports.createBatch = asyncHandler(async (req, res) => {
     additionalNotes,
   });
 
-  if (Array.isArray(trainersAssigned)) {
-    const updated = await Trainer.updateMany(
+  // 2️⃣ Update Trainers → add batchId
+  if (Array.isArray(trainersAssigned) && trainersAssigned.length > 0) {
+    await Trainer.updateMany(
       { _id: { $in: trainersAssigned } },
-      { $addToSet: { batchIds: batch._id } }
+      { $addToSet: { batches: batch._id } }
     );
+  }
 
-    console.log("Trainers updated:", updated);
+  // 3️⃣ Update Courses → add batchId
+  if (Array.isArray(coursesAssigned) && coursesAssigned.length > 0) {
+    await Course.updateMany(
+      { _id: { $in: coursesAssigned } },
+      { $addToSet: { batches: batch._id } }
+    );
   }
 
   return sendResponse(res, 201, true, "Batch created successfully", batch);
