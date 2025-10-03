@@ -136,13 +136,19 @@ exports.deleteCourse = asyncHandler(async (req, res) => {
 });
 
 exports.getAllCourse = asyncHandler(async (req, res) => {
-  const courses = await Course.find({}).select(
-    "title duration  features.certificate features.codingExercises features.recordedLectures"
-  );
+  const courses = await Course.find({})
+    .select(
+      "title duration features.certificate features.codingExercises features.recordedLectures"
+    )
+    .populate({
+      path: "batches",
+      select: "batchName startDate endDate mode status", // pick only useful fields
+    })
+    .lean();
 
-  return res.status(200).json({
-    success: true,
-    message: "Courses fetched successfully",
-    data: courses,
-  });
+  if (!courses.length) {
+    return sendError(res, 404, false, "No courses found");
+  }
+
+  return sendResponse(res, 200, true, "Courses fetched", courses);
 });
