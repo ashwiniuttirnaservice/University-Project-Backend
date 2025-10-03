@@ -233,8 +233,8 @@ const getTrainerById = asyncHandler(async (req, res) => {
 
   const trainer = await Trainer.findById(trainerId)
     .populate("courses", "title")
-    .populate("batchIds", "batchName time days mode studentCount")
-    .populate("branches", "branchName location");
+
+    .populate("batches", "batchName startDate endDate mode status");
 
   if (!trainer) {
     return sendError(res, 404, false, "Trainer not found");

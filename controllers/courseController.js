@@ -134,15 +134,14 @@ exports.deleteCourse = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "Course deleted", null);
 });
-
 exports.getAllCourse = asyncHandler(async (req, res) => {
   const courses = await Course.find({})
     .select(
-      "title duration features.certificate features.codingExercises features.recordedLectures"
+      "title duration features.certificate features.codingExercises features.recordedLectures batches"
     )
     .populate({
       path: "batches",
-      select: "batchName startDate endDate mode status", // pick only useful fields
+      select: "batchName startDate endDate mode status",
     })
     .lean();
 
@@ -150,5 +149,20 @@ exports.getAllCourse = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "No courses found");
   }
 
-  return sendResponse(res, 200, true, "Courses fetched", courses);
+  // batches असलेले courses filter करा
+  const withBatches = courses
+    .filter((c) => c.batches && c.batches.length > 0)
+    .map((c) => {
+      // batches ला startDate वर sort करा
+      c.batches.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      return c;
+    });
+
+  const withoutBatches = courses.filter(
+    (c) => !c.batches || c.batches.length === 0
+  );
+
+  const finalCourses = [...withBatches, ...withoutBatches];
+
+  return sendResponse(res, 200, true, "Courses fetched", finalCourses);
 });
