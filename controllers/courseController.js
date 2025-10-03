@@ -52,142 +52,31 @@ exports.getAllCourses = asyncHandler(async (req, res) => {
 exports.getCourseById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const course = await Course.aggregate([
-    { $match: { _id: new mongoose.Types.ObjectId(id) } },
-
-    {
-      $lookup: {
-        from: "trainers",
-        localField: "trainer",
-        foreignField: "_id",
-        as: "trainer",
+  const course = await Course.findById(id)
+    .populate("trainer")
+    .populate("batches")
+    .populate("videolectures")
+    .populate({
+      path: "phases",
+      populate: {
+        path: "weeks",
+        populate: {
+          path: "chapters",
+          populate: [
+            { path: "lectures" }, // Nested Lectures
+            { path: "assignments" }, // Nested Assignments
+            { path: "notes" }, // Nested Notes
+          ],
+        },
       },
-    },
+    })
+    .lean();
 
-    {
-      $lookup: {
-        from: "videolectures",
-        localField: "videolectures",
-        foreignField: "_id",
-        as: "videolectures",
-      },
-    },
-
-    {
-      $lookup: {
-        from: "phases",
-        localField: "phases",
-        foreignField: "_id",
-        as: "phases",
-        pipeline: [
-          {
-            $lookup: {
-              from: "weeks",
-              localField: "weeks",
-              foreignField: "_id",
-              as: "weeks",
-              pipeline: [
-                {
-                  $lookup: {
-                    from: "chapters",
-                    localField: "chapters",
-                    foreignField: "_id",
-                    as: "chapters",
-                    pipeline: [
-                      {
-                        $lookup: {
-                          from: "lectures",
-                          let: { lectureIds: "$lectures" },
-                          pipeline: [
-                            {
-                              $match: {
-                                $expr: {
-                                  $in: [
-                                    "$_id",
-                                    { $ifNull: ["$$lectureIds", []] },
-                                  ],
-                                },
-                              },
-                            },
-                          ],
-                          as: "lectures",
-                        },
-                      },
-                      {
-                        $lookup: {
-                          from: "assignments",
-                          let: { assignmentIds: "$assignments" },
-                          pipeline: [
-                            {
-                              $match: {
-                                $expr: {
-                                  $in: [
-                                    "$_id",
-                                    { $ifNull: ["$$assignmentIds", []] },
-                                  ],
-                                },
-                              },
-                            },
-                          ],
-                          as: "assignments",
-                        },
-                      },
-                      {
-                        $lookup: {
-                          from: "notes",
-                          let: { noteIds: "$notes" },
-                          pipeline: [
-                            {
-                              $match: {
-                                $expr: {
-                                  $in: ["$_id", { $ifNull: ["$$noteIds", []] }],
-                                },
-                              },
-                            },
-                          ],
-                          as: "notes",
-                        },
-                      },
-                    ],
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    },
-
-    {
-      $project: {
-        title: 1,
-        description: 1,
-        duration: 1,
-        branch: 1,
-        rating: 1,
-        enrolledCount: 1,
-        overview: 1,
-        learningOutcomes: 1,
-        benefits: 1,
-        keyFeatures: 1,
-        fees: 1,
-        features: 1,
-        isActive: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        trainer: 1,
-        notes: 1,
-        videolectures: 1,
-        phases: 1,
-      },
-    },
-  ]);
-
-  if (!course?.length) {
+  if (!course) {
     return sendError(res, 404, false, "Course not found");
   }
 
-  return sendResponse(res, 200, true, "Course fetched", course[0]);
+  return sendResponse(res, 200, true, "Course fetched", course);
 });
 
 exports.updateCourse = asyncHandler(async (req, res) => {
