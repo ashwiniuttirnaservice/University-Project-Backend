@@ -30,6 +30,10 @@ const getFolderPath = (fieldname) => {
       return "uploads/feedback/profiles/";
     case "logo":
       return "uploads/sponsorship/logo/";
+    case "contentUrl":
+      return "uploads/lectures/";
+    case "fileUrl": // 📑 Assignments
+      return "uploads/assignments/";
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }
@@ -74,6 +78,10 @@ const allowedMimeTypes = [
   "application/x-zip-compressed",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "video/mp4",
+  "video/mov",
+  "video/avi",
+  "video/mkv",
 ];
 
 // File filter
@@ -89,7 +97,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileSize: 1024 * 1024 * 100,
 });
 
 module.exports = upload;

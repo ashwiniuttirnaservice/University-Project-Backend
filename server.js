@@ -15,7 +15,16 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 const allowedOrigins = [
   "https://uat.codedrift.co",
+  "https://www.uat.codedrift.co",
+  "https://www.uat-lms.codedrift.co",
+  "https://uat-lms.codedrift.co",
+  "https://uat-api.codedrift.co",
+  "https://www.uat-api.codedrift.co",
+  "https://codedrift.co",
+  "https://www.codedrift.co",
   "http://localhost:6174",
+  "http://localhost:6194",
+  "http://localhost:6184",
   "http://localhost:5001",
   "http://localhost:5005",
 ];
@@ -35,24 +44,9 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
   optionsSuccessStatus: 200,
 };
-// const corsOptions = {
-//   origin: "http://localhost:6174",
-//   credentials: true,
-//   optionsSuccessStatus: 200,
-// };
+
 app.use(cors(corsOptions));
 
-// Global CORS middleware
-// app.use(cors(corsOptions));
-
-// Preflight middleware for all routes
-// app.use((req, res, next) => {
-//     if (req.method === 'OPTIONS') {
-//         cors(corsOptions)(req, res, next);
-//     } else {
-//         next();
-//     }
-// });
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const indexRouter = require("./routes/index.js");
@@ -70,7 +64,6 @@ app.listen(PORT, () =>
   console.log(`🚀 LMS API running on http://localhost:${PORT}`)
 );
 
-// Handle unhandled promise rejections
 process.on("unhandledRejection", (err, promise) => {
   console.error(`Unhandled Rejection: ${err.message}`);
 });

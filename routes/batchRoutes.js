@@ -4,28 +4,24 @@ const {
   getAllBatches,
   getBatchesByCourseAndStudent,
   getBatchById,
+  getBatchesByCourseId,
   updateBatch,
   deleteBatch,
   assignStudentToBatch,
   getBatchesForStudent,
 } = require("../controllers/batchController");
-const { protect, authorize } = require("../middleware/authMiddleware");
 
 const batchRouter = express.Router();
 
-batchRouter
-  .route("/")
-  .get(protect, authorize("admin", "trainer"), getAllBatches)
-  .post(protect, authorize("admin", "trainer"), createBatch);
-
+batchRouter.route("/").get(getAllBatches).post(createBatch);
 batchRouter.get("/all-batches-student", getBatchesByCourseAndStudent);
-batchRouter.get("/student-batche", assignStudentToBatch);
+batchRouter.post("/student-batche", assignStudentToBatch);
 batchRouter.get("/student/:studentId", getBatchesForStudent);
+batchRouter.get("/:courseId", getBatchesByCourseId);
 
 batchRouter
   .route("/:id")
-  .get(protect, authorize("admin", "trainer"), getBatchById)
-  .put(protect, authorize("admin", "trainer"), updateBatch)
-  .delete(protect, authorize("admin"), deleteBatch); // Only admin can delete
-
+  .get(getBatchById)
+  .put(updateBatch)
+  .delete(deleteBatch);
 module.exports = batchRouter;

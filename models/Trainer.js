@@ -130,12 +130,7 @@ const trainerSchema = new mongoose.Schema(
         ref: "Course",
       },
     ],
-    batches: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Batch",
-      },
-    ],
+    batchIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
     branches: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Branch",

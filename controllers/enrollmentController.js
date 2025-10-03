@@ -268,51 +268,121 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
   await enrollment.deleteOne();
   return sendResponse(res, 200, true, "Unenrolled successfully");
 });
-
 exports.createEnrollment = asyncHandler(async (req, res) => {
-  const { fullName, mobileNo, email, collegeName, enrolledCourses } = req.body;
+  const {
+    fullName,
+    mobileNo,
+    email,
+    collegeName,
+    enrolledCourses,
+    enrolledBatches,
+  } = req.body;
 
-  if (!fullName || !mobileNo || !email || !collegeName || !enrolledCourses) {
-    return res.status(400).json({
-      success: false,
-      message: "All required fields must be filled.",
-    });
+  if (!mobileNo) {
+    return sendError(res, 400, false, "Mobile number is required");
   }
 
-  // 1️⃣ Save student if not exists
   let student = await Student.findOne({ mobileNo });
-  if (!student) {
-    student = await Student.create({
-      fullName,
-      mobileNo,
-      email,
-      collegeName,
-      enrolledCourses,
-    });
-  } else {
-    // Update enrolledCourses if student already exists
-    student.enrolledCourses = Array.from(
-      new Set([...student.enrolledCourses, ...enrolledCourses])
-    );
+  let enrollment;
+
+  if (student) {
+    let updated = false;
+
+    if (enrolledCourses && enrolledCourses.length > 0) {
+      const newCourses = enrolledCourses.filter(
+        (course) => !student.enrolledCourses.includes(course)
+      );
+      if (newCourses.length > 0) {
+        student.enrolledCourses.push(...newCourses);
+        updated = true;
+      }
+    }
+
+    if (enrolledBatches && enrolledBatches.length > 0) {
+      const newBatches = enrolledBatches.filter(
+        (batch) => !student.enrolledBatches.includes(batch)
+      );
+      if (newBatches.length > 0) {
+        student.enrolledBatches.push(...newBatches);
+        updated = true;
+      }
+    }
+
+    if (!updated) {
+      enrollment = await Enrollment.findOne({ studentId: student._id });
+      return sendResponse(
+        res,
+        200,
+        true,
+        "Student already enrolled in same course(s)/batch(es).",
+        {
+          student,
+          enrollment,
+        }
+      );
+    }
+
     await student.save();
+
+    enrollment = await Enrollment.findOne({ studentId: student._id });
+    if (enrollment) {
+      enrollment.enrolledCourses = student.enrolledCourses;
+      enrollment.enrolledBatches = student.enrolledBatches;
+      await enrollment.save();
+    } else {
+      enrollment = await Enrollment.create({
+        studentId: student._id,
+        fullName: student.fullName,
+        mobileNo: student.mobileNo,
+        email: student.email,
+        collegeName: student.collegeName,
+        enrolledCourses: student.enrolledCourses,
+        enrolledBatches: student.enrolledBatches,
+      });
+    }
+
+    return sendResponse(
+      res,
+      200,
+      true,
+      "Student enrollment updated successfully.",
+      {
+        student,
+        enrollment,
+      }
+    );
   }
 
-  // 2️⃣ Save enrollment
-  const enrollment = await Enrollment.create({
+  if (!fullName || !email || !enrolledCourses) {
+    return sendError(
+      res,
+      400,
+      false,
+      "All required fields must be filled for new enrollment."
+    );
+  }
+
+  student = await Student.create({
+    fullName,
+    mobileNo,
+    email,
+    collegeName,
+    enrolledCourses,
+    enrolledBatches,
+  });
+
+  enrollment = await Enrollment.create({
     studentId: student._id,
     fullName,
     mobileNo,
     email,
     collegeName,
     enrolledCourses,
+    enrolledBatches,
   });
 
-  res.status(201).json({
-    success: true,
-    message: "Enrollment created successfully",
-    data: {
-      student,
-      enrollment,
-    },
+  return sendResponse(res, 201, true, "Enrollment created successfully", {
+    student,
+    enrollment,
   });
 });

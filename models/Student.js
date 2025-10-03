@@ -50,7 +50,7 @@ const studentSchema = new mongoose.Schema({
   },
 
   branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch" },
-  // --- NAYA FIELD YAHAN ADD KIYA HAI ---
+
   enrolledCourses: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -62,10 +62,19 @@ const studentSchema = new mongoose.Schema({
 
     trim: true,
   },
-  coursesInterested: {
-    type: [String],
-    required: false,
-  },
+  coursesInterested: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+  ],
+
+  enrolledCourses: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+    },
+  ],
   preferredBatchTiming: {
     type: String,
   },

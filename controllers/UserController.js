@@ -6,14 +6,40 @@ const { sendResponse, sendError } = require("../utils/apiResponse.js");
 const Student = require("../models/Student.js");
 const Trainer = require("../models/Trainer");
 const Batch = require("../models/Batch");
-const getUserProfile = asyncHandler(async (req, res) => {
-  // Use req.user.studentId from JWT
-  const student = await Student.findById(req.user.studentId)
-    .populate("enrolledCourses")
-    .populate("branch", "name");
+const Enrollment = require("../models/Enrollment");
 
-  if (!student) {
-    return sendError(res, 404, false, "User not found");
+const getUserProfile = asyncHandler(async (req, res) => {
+  const studentId = req.user.studentId;
+
+  const student = await Student.findById(studentId)
+    .populate("branch", "name")
+    .lean();
+  if (!student) return sendError(res, 404, false, "User not found");
+
+  const enrollment = await Enrollment.findOne({ studentId })
+    .populate("enrolledCourses", "title duration")
+    .populate("coursesInterested", "title duration")
+    .lean();
+
+  // Map batch info into enrolledCourses
+  const enrolledCoursesWithBatch = [];
+  if (enrollment?.enrolledCourses?.length) {
+    for (const course of enrollment.enrolledCourses) {
+      // Find the batch where this student is assigned for this course
+      const batch = await Batch.findOne({
+        students: { $elemMatch: { studentId } },
+        coursesAssigned: course._id,
+      })
+        .select(
+          "batchName time days mode status startDate endDate studentCount"
+        )
+        .lean();
+
+      enrolledCoursesWithBatch.push({
+        ...course,
+        batch: batch || null,
+      });
+    }
   }
 
   return sendResponse(res, 200, true, "User profile fetched successfully", {
@@ -24,13 +50,15 @@ const getUserProfile = asyncHandler(async (req, res) => {
     role: req.user.role,
     branch: student.branch || null,
     selectedProgram: student.selectedProgram || null,
-    enrolledCourses: student.enrolledCourses || [],
-    coursesInterested: student.coursesInterested || [],
+    enrolledCourses: enrolledCoursesWithBatch,
+    coursesInterested: enrollment?.coursesInterested || [],
     profilePhotoStudent: student.profilePhotoStudent || "",
     registeredAt: student.registeredAt,
     createdAt: student.createdAt,
   });
 });
+
+module.exports = { getUserProfile };
 
 const getUserProfileTrainer = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
