@@ -134,15 +134,35 @@ exports.deleteCourse = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "Course deleted", null);
 });
-
 exports.getAllCourse = asyncHandler(async (req, res) => {
-  const courses = await Course.find({}).select(
-    "title duration  features.certificate features.codingExercises features.recordedLectures"
+  const courses = await Course.find({})
+    .select(
+      "title duration features.certificate features.codingExercises features.recordedLectures batches"
+    )
+    .populate({
+      path: "batches",
+      select: "batchName startDate endDate mode status",
+    })
+    .lean();
+
+  if (!courses.length) {
+    return sendError(res, 404, false, "No courses found");
+  }
+
+  // batches असलेले courses filter करा
+  const withBatches = courses
+    .filter((c) => c.batches && c.batches.length > 0)
+    .map((c) => {
+      // batches ला startDate वर sort करा
+      c.batches.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      return c;
+    });
+
+  const withoutBatches = courses.filter(
+    (c) => !c.batches || c.batches.length === 0
   );
 
-  return res.status(200).json({
-    success: true,
-    message: "Courses fetched successfully",
-    data: courses,
-  });
+  const finalCourses = [...withBatches, ...withoutBatches];
+
+  return sendResponse(res, 200, true, "Courses fetched", finalCourses);
 });
