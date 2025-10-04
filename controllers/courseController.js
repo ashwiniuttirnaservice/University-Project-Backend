@@ -149,18 +149,26 @@ exports.getAllCourse = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "No courses found");
   }
 
-  // batches असलेले courses filter करा
+  const order = { Upcoming: 1, Ongoing: 2, Completed: 3 };
+
   const withBatches = courses
     .filter((c) => c.batches && c.batches.length > 0)
     .map((c) => {
-      // batches ला startDate वर sort करा
-      c.batches.sort((a, b) => new Date(a.startDate) - new Date(b.startDate));
+      c.batches.sort(
+        (a, b) => (order[a.status] || 99) - (order[b.status] || 99)
+      );
       return c;
     });
 
   const withoutBatches = courses.filter(
     (c) => !c.batches || c.batches.length === 0
   );
+
+  withBatches.sort((a, b) => {
+    const statusA = order[a.batches[0]?.status] || 99;
+    const statusB = order[b.batches[0]?.status] || 99;
+    return statusA - statusB;
+  });
 
   const finalCourses = [...withBatches, ...withoutBatches];
 
