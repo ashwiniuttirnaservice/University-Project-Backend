@@ -23,7 +23,7 @@ const internshipSessionSchema = new mongoose.Schema(
       default: "Online",
     },
     location: {
-      type: String, // Required if Offline
+      type: String,
       trim: true,
     },
 
@@ -31,8 +31,8 @@ const internshipSessionSchema = new mongoose.Schema(
 
     capacity: { type: String, required: true },
     fees: {
-      amount: { type: Number, default: 0 }, // 0 = free
-      currency: { type: String, default: "INR" },
+      amount: { type: Number, default: 0 },
+
       refundPolicy: { type: String, trim: true },
     },
 

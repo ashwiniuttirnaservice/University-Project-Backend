@@ -77,7 +77,7 @@ exports.updateAssignment = asyncHandler(async (req, res) => {
   const { title, description, deadline, status, score } = req.body;
   const updateData = { title, description, deadline, status, score };
 
-  if (req.file) updateData.fileUrl = req.file.path;
+  if (req.file) updateData.fileUrl = path.basename(req.file.path);
 
   const assignment = await Assignment.findByIdAndUpdate(
     req.params.id,

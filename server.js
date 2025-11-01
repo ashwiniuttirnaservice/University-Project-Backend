@@ -17,6 +17,8 @@ const allowedOrigins = [
   "https://uat.codedrift.co",
   "https://www.uat.codedrift.co",
   "https://www.uat-lms.codedrift.co",
+  "https://www.lms.codedrift.co",
+  "https://lms.codedrift.co",
   "https://uat-lms.codedrift.co",
   "https://uat-api.codedrift.co",
   "https://www.uat-api.codedrift.co",

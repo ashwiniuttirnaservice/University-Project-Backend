@@ -152,43 +152,92 @@ exports.markContentAsIncomplete = asyncHandler(async (req, res) => {
 });
 
 exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
-  const enrollments = await Enrollment.aggregate([
-    {
-      $lookup: {
-        from: "users",
-        localField: "user",
-        foreignField: "_id",
-        as: "userDetails",
+  const enrollments = await Enrollment.find()
+    .populate({
+      path: "studentId",
+      select:
+        "fullName email mobileNo selectedProgram enrolledCourses coursesInterested profilePhotoStudent registeredAt",
+    })
+    .populate({
+      path: "enrolledCourses",
+      select: "title category duration",
+    })
+    .populate({
+      path: "enrolledBatches",
+      select: "batchName timing trainers",
+      populate: {
+        path: "trainers",
+        select: "firstName lastName email",
       },
-    },
-    { $unwind: "$userDetails" },
-    {
-      $lookup: {
-        from: "courses",
-        localField: "course",
-        foreignField: "_id",
-        as: "courseDetails",
-      },
-    },
-    { $unwind: "$courseDetails" },
-    {
-      $project: {
-        _id: 1,
-        enrolledAt: 1,
-        user: {
-          firstName: "$userDetails.firstName",
-          lastName: "$userDetails.lastName",
-          email: "$userDetails.email",
-        },
-        course: {
-          title: "$courseDetails.title",
-        },
-      },
-    },
-    { $sort: { enrolledAt: -1 } },
-  ]);
+    })
+    .sort({ enrolledAt: -1 });
 
-  return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
+  if (!enrollments || enrollments.length === 0) {
+    return sendResponse(
+      res,
+      200,
+      true,
+      "All enrollments fetched successfully.",
+      []
+    );
+  }
+
+  const formattedResponse = enrollments.map((enrollment) => ({
+    student: {
+      _id: enrollment.studentId?._id,
+      fullName: enrollment.studentId?.fullName || enrollment.fullName,
+      email: enrollment.studentId?.email || enrollment.email,
+      mobileNo: enrollment.studentId?.mobileNo || enrollment.mobileNo,
+      selectedProgram:
+        enrollment.studentId?.selectedProgram ||
+        enrollment.enrolledCourses?.[0]?.title ||
+        "",
+      enrolledCourses: enrollment.studentId?.enrolledCourses?.length
+        ? enrollment.studentId.enrolledCourses
+        : enrollment.enrolledCourses.map((c) => ({
+            _id: c._id,
+            title: c.title,
+          })),
+      coursesInterested: enrollment.studentId?.coursesInterested || [],
+      profilePhotoStudent: enrollment.studentId?.profilePhotoStudent || "",
+      registeredAt: enrollment.studentId?.registeredAt || enrollment.createdAt,
+      __v: enrollment.studentId?.__v || 0,
+    },
+    enrollment: {
+      _id: enrollment._id,
+      studentId: enrollment.studentId?._id,
+      enrolledCourses: enrollment.enrolledCourses.map((c) => ({
+        _id: c._id,
+        title: c.title,
+      })),
+      enrolledBatches: enrollment.enrolledBatches.map((b) => ({
+        _id: b._id,
+        batchName: b.batchName,
+        timing: b.timing,
+        trainers: b.trainers?.map((t) => ({
+          _id: t._id,
+          fullName: `${t.firstName} ${t.lastName}`.trim(),
+          email: t.email,
+        })),
+      })),
+      coursesInterested: enrollment.coursesInterested,
+      fullName: enrollment.fullName,
+      mobileNo: enrollment.mobileNo,
+      email: enrollment.email,
+      enrolledAt: enrollment.enrolledAt,
+      createdAt: enrollment.createdAt,
+      updatedAt: enrollment.updatedAt,
+      __v: enrollment.__v || 0,
+    },
+  }));
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "All enrollments fetched successfully.",
+    formattedResponse
+  );
 });
 
 exports.getEnrollmentByIdAdmin = asyncHandler(async (req, res) => {

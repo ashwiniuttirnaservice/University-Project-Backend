@@ -20,6 +20,7 @@ exports.createNote = asyncHandler(async (req, res) => {
     chapter,
     title,
     content,
+    duration,
     file: req.file ? `${req.file.filename}` : null,
     uploadedAt: new Date(),
   });
@@ -51,6 +52,10 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
 exports.getNoteById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid note ID");
+  }
+
   const note = await Note.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
     {
@@ -61,10 +66,71 @@ exports.getNoteById = asyncHandler(async (req, res) => {
         as: "chapter",
       },
     },
-    { $unwind: "$chapter" },
+    {
+      $unwind: {
+        path: "$chapter",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "modules",
+        localField: "chapter.module",
+        foreignField: "_id",
+        as: "chapter.moduleDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$chapter.moduleDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "courses",
+        localField: "chapter.course",
+        foreignField: "_id",
+        as: "chapter.courseDetails",
+      },
+    },
+    {
+      $unwind: {
+        path: "$chapter.courseDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        content: 1,
+        file: 1,
+        duration: 1, // 👈 Added duration field
+        uploadedAt: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        __v: 1,
+        chapter: {
+          _id: 1,
+          chapterName: 1,
+          description: 1,
+          moduleDetails: {
+            _id: 1,
+            moduleName: 1,
+          },
+          courseDetails: {
+            _id: 1,
+            courseName: 1,
+          },
+        },
+      },
+    },
   ]);
 
-  if (!note.length) return sendError(res, 404, false, "Note not found");
+  if (!note.length) {
+    return sendError(res, 404, false, "Note not found");
+  }
 
   return sendResponse(res, 200, true, "Note fetched successfully", note[0]);
 });
