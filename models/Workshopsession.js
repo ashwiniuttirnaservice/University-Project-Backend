@@ -28,8 +28,8 @@ const workshopSchema = new mongoose.Schema(
     registrationLink: { type: String, trim: true },
 
     fees: {
-      amount: { type: Number, default: 0 }, // 0 = free
-      currency: { type: String, default: "INR" },
+      amount: { type: Number, default: 0 },
+
       refundPolicy: { type: String, trim: true },
     },
 

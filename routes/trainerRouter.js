@@ -2,6 +2,7 @@ const express = require("express");
 const {
   registerTrainer,
   getAllTrainers,
+  getApprovedTrainers,
   getAllTrainer,
   updateTrainerApproval,
   updateTrainer,
@@ -22,6 +23,7 @@ trainerRouter.post(
   ]),
   registerTrainer
 );
+trainerRouter.get("/approved", getApprovedTrainers);
 
 trainerRouter.get("/all", getAllTrainers);
 trainerRouter.get("/all-profile", getAllTrainer);

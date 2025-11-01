@@ -69,10 +69,10 @@ exports.getLectureById = asyncHandler(async (req, res) => {
 });
 
 exports.updateLecture = asyncHandler(async (req, res) => {
-  const { title, duration, description, status } = req.body;
-  const updateData = { title, duration, description, status };
+  const { title, duration, description, status, chapter } = req.body;
+  const updateData = { title, duration, description, status, chapter };
 
-  if (req.file) updateData.contentUrl = req.file.path;
+  if (req.file) updateData.contentUrl = path.basename(req.file.path);
 
   const lecture = await Lecture.findByIdAndUpdate(req.params.id, updateData, {
     new: true,

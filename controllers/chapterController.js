@@ -62,6 +62,55 @@ exports.getChapterById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Chapter fetched successfully", chapter);
 });
 
+exports.getChaptersByCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  const chapters = await Chapter.aggregate([
+    {
+      $lookup: {
+        from: "weeks",
+        localField: "week",
+        foreignField: "_id",
+        as: "weekData",
+      },
+    },
+    { $unwind: "$weekData" },
+    {
+      $lookup: {
+        from: "phases",
+        localField: "weekData.phase",
+        foreignField: "_id",
+        as: "phaseData",
+      },
+    },
+    { $unwind: "$phaseData" },
+    {
+      $match: {
+        "phaseData.course": new mongoose.Types.ObjectId(courseId),
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        "weekData.title": 1,
+        "phaseData.title": 1,
+      },
+    },
+  ]);
+
+  if (!chapters.length)
+    return sendError(res, 404, false, "No chapters found for this course");
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Chapters fetched successfully",
+    chapters
+  );
+});
+
 exports.updateChapter = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { week, title, points, lectures, assignments } = req.body;

@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const ChapterSchema = new mongoose.Schema(
   {
     week: { type: mongoose.Schema.Types.ObjectId, ref: "Week" },
+    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
     title: { type: String, required: true },
     points: [
       {

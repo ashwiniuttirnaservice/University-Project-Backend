@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const upload = require("../utils/multer"); // Your multer config
+const upload = require("../utils/multer");
 const {
   createEvent,
   getAllEvents,
@@ -9,7 +9,6 @@ const {
   deleteEvent,
 } = require("../controllers/eventController");
 
-// Multer fields for event uploads
 const eventUploads = upload.fields([
   { name: "bannerImage", maxCount: 1 },
   { name: "gallery", maxCount: 10 },

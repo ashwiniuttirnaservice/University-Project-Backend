@@ -16,12 +16,11 @@ exports.createBatch = asyncHandler(async (req, res) => {
     endDate,
     status,
     isEnrolled,
-    coursesAssigned, // array of course IDs
-    trainersAssigned, // array of trainer IDs
+    coursesAssigned,
+    trainersAssigned,
     additionalNotes,
   } = req.body;
 
-  // 1️⃣ Create Batch
   const batch = await Batch.create({
     batchName,
     time,
@@ -36,7 +35,6 @@ exports.createBatch = asyncHandler(async (req, res) => {
     additionalNotes,
   });
 
-  // 2️⃣ Update Trainers → add batchId
   if (Array.isArray(trainersAssigned) && trainersAssigned.length > 0) {
     await Trainer.updateMany(
       { _id: { $in: trainersAssigned } },
@@ -44,7 +42,6 @@ exports.createBatch = asyncHandler(async (req, res) => {
     );
   }
 
-  // 3️⃣ Update Courses → add batchId
   if (Array.isArray(coursesAssigned) && coursesAssigned.length > 0) {
     await Course.updateMany(
       { _id: { $in: coursesAssigned } },
@@ -143,9 +140,15 @@ exports.getBatchesByCourseId = asyncHandler(async (req, res) => {
 });
 
 exports.getBatchById = asyncHandler(async (req, res) => {
-  const batchId = new mongoose.Types.ObjectId(req.params.id);
+  const { id } = req.params;
 
-  const batches = await Batch.aggregate([
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Batch ID format");
+  }
+
+  const batchId = new mongoose.Types.ObjectId(id);
+
+  const batch = await Batch.aggregate([
     { $match: { _id: batchId } },
     {
       $lookup: {
@@ -180,11 +183,11 @@ exports.getBatchById = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!batches || batches.length === 0) {
+  if (!batch || batch.length === 0) {
     return sendError(res, 404, false, "Batch not found");
   }
 
-  return sendResponse(res, 200, true, "Batch fetched successfully", batches[0]);
+  return sendResponse(res, 200, true, "Batch fetched successfully", batch[0]);
 });
 
 exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {

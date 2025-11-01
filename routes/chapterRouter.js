@@ -3,6 +3,7 @@ const router = express.Router();
 const chapterController = require("../controllers/chapterController");
 
 router.post("/", chapterController.createChapter);
+router.get("/course/:courseId", chapterController.getChaptersByCourse);
 router.get("/", chapterController.getAllChapters);
 router.get("/:id", chapterController.getChapterById);
 router.put("/:id", chapterController.updateChapter);

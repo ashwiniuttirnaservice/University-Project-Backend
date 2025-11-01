@@ -7,7 +7,6 @@ const {
   getFeedbackByCourse,
 } = require("../controllers/feedbackController");
 
-// ⭐ Single profile file upload
 router.post("/", upload.single("profile"), createFeedback);
 
 // Get all feedback

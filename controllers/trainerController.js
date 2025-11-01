@@ -80,10 +80,8 @@ const registerTrainer = asyncHandler(async (req, res) => {
 });
 
 const getAllTrainers = asyncHandler(async (req, res) => {
-  const trainers = await Trainer.find()
-    .populate("courses")
-    .populate("batches")
-    .populate("branches");
+  const trainers = await Trainer.find().populate("courses").populate("batches");
+
   return sendResponse(
     res,
     200,
@@ -243,9 +241,33 @@ const getTrainerById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Trainer fetched successfully", trainer);
 });
 
+const getApprovedTrainers = asyncHandler(async (req, res) => {
+  const trainers = await Trainer.find({
+    isApproved: true,
+    approvalStatus: "approved",
+    isActive: true,
+  })
+    .populate("courses", "title description")
+    .populate("batches", "batchName timing")
+    .sort({ createdAt: -1 });
+
+  if (!trainers.length) {
+    return sendError(res, 404, false, "No approved trainers found");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Approved trainers fetched successfully",
+    trainers
+  );
+});
+
 module.exports = {
   registerTrainer,
   getAllTrainer,
+  getApprovedTrainers,
   getAllTrainers,
   updateTrainerApproval,
   updateTrainer,
