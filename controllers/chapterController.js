@@ -65,49 +65,36 @@ exports.getChapterById = asyncHandler(async (req, res) => {
 exports.getChaptersByCourse = asyncHandler(async (req, res) => {
   const { courseId } = req.params;
 
-  const chapters = await Chapter.aggregate([
-    {
-      $lookup: {
-        from: "weeks",
-        localField: "week",
-        foreignField: "_id",
-        as: "weekData",
+  const chapters = await Chapter.find()
+    .populate({
+      path: "week",
+      populate: {
+        path: "phase",
+        populate: { path: "course", model: "Course" },
       },
-    },
-    { $unwind: "$weekData" },
-    {
-      $lookup: {
-        from: "phases",
-        localField: "weekData.phase",
-        foreignField: "_id",
-        as: "phaseData",
-      },
-    },
-    { $unwind: "$phaseData" },
-    {
-      $match: {
-        "phaseData.course": new mongoose.Types.ObjectId(courseId),
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        title: 1,
-        "weekData.title": 1,
-        "phaseData.title": 1,
-      },
-    },
-  ]);
+    })
+    .populate("lectures")
+    .populate("assignments")
+    .populate("notes");
 
-  if (!chapters.length)
-    return sendError(res, 404, false, "No chapters found for this course");
+  const filteredChapters = chapters.filter(
+    (ch) =>
+      ch.week &&
+      ch.week.phase &&
+      ch.week.phase.course &&
+      ch.week.phase.course._id.toString() === courseId
+  );
+
+  if (!filteredChapters.length) {
+    return sendError(res, 404, "No chapters found for this course");
+  }
 
   return sendResponse(
     res,
     200,
     true,
-    "Chapters fetched successfully",
-    chapters
+    "Chapters fetched successfully for the given course",
+    filteredChapters
   );
 });
 
@@ -139,11 +126,19 @@ exports.deleteChapter = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid Chapter ID");
   }
 
-  const chapter = await Chapter.findByIdAndDelete(id);
-
+  const chapter = await Chapter.findById(id);
   if (!chapter) {
     return sendError(res, 404, false, "Chapter not found");
   }
 
-  return sendResponse(res, 200, true, "Chapter deleted successfully", null);
+  chapter.isActive = false;
+  await chapter.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Chapter deactivated successfully",
+    chapter
+  );
 });

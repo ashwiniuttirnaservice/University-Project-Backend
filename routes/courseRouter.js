@@ -3,7 +3,7 @@ const router = express.Router();
 
 const {
   createCourse,
-  getAllCourses,
+  cloneCourse,
   getAllCourse,
   getCourseById,
   updateCourse,
@@ -12,7 +12,7 @@ const {
 
 // POST /api/courses
 router.post("/", createCourse);
-
+router.post("/:id/clone", cloneCourse);
 // GET /api/courses
 // router.get('/', getAllCourses);
 

@@ -5,6 +5,7 @@ const {
   createNote,
   getAllNotes,
   getNoteById,
+  getNotesByCourse,
   updateNote,
   deleteNote,
 } = require("../controllers/noteController");
@@ -18,5 +19,7 @@ router.get("/:id", getNoteById);
 router.put("/:id", upload.single("file"), updateNote);
 
 router.delete("/:id", deleteNote);
+
+router.get("/course/:courseId", getNotesByCourse);
 
 module.exports = router;

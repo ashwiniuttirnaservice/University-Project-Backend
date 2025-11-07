@@ -16,11 +16,11 @@ const webinarSchema = new mongoose.Schema(
       required: true,
     },
     startTime: {
-      type: String, // e.g. "10:00 AM"
+      type: String,
       required: true,
     },
     endTime: {
-      type: String, // e.g. "12:00 PM"
+      type: String,
     },
     speakerName: {
       type: String,
@@ -32,10 +32,10 @@ const webinarSchema = new mongoose.Schema(
       trim: true,
     },
     speakerPhoto: {
-      type: String, // URL of the photo
+      type: String,
     },
     platform: {
-      type: String, // e.g. "Zoom", "Google Meet"
+      type: String,
       required: true,
     },
     meetingLink: {
@@ -44,6 +44,10 @@ const webinarSchema = new mongoose.Schema(
     },
     meetingId: {
       type: String,
+    },
+    meetingdescription: {
+      type: String,
+      trim: true,
     },
     passcode: {
       type: String,
@@ -67,6 +71,10 @@ const webinarSchema = new mongoose.Schema(
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }

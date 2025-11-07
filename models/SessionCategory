@@ -2,13 +2,13 @@ const mongoose = require("mongoose");
 
 const SessionCategorySchema = new mongoose.Schema(
   {
-    name: { type: String, required: true },
+    name: { type: String, required: false },
     slug: { type: String, required: true, unique: true },
     desc: String,
     type: {
       type: String,
 
-      required: true,
+      required: false,
     },
     isActive: { type: Boolean, default: true },
   },

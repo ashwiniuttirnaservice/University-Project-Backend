@@ -14,6 +14,7 @@ router.post(
   upload.single("fileUrl"),
   assignmentController.createAssignments
 );
+router.get("/course/:courseId", assignmentController.getAssignmentsByCourse);
 
 router.get("/", assignmentController.getAllAssignments);
 router.get("/:id", assignmentController.getAssignmentById);

@@ -31,6 +31,32 @@ exports.getAllWeeks = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All weeks fetched successfully", weeks);
 });
 
+exports.getWeeksByCourseId = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  const weeks = await Week.find()
+    .populate({
+      path: "phase",
+      match: { course: courseId },
+      populate: { path: "course", model: "Course" },
+    })
+    .populate("chapters");
+
+  const filteredWeeks = weeks.filter((week) => week.phase !== null);
+
+  if (filteredWeeks.length === 0) {
+    return sendError(res, 404, "No weeks found for this course");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Weeks fetched successfully for the given course",
+    filteredWeeks
+  );
+});
+
 exports.getWeekById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
@@ -75,11 +101,13 @@ exports.deleteWeek = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid Week ID");
   }
 
-  const week = await Week.findByIdAndDelete(id);
-
+  const week = await Week.findById(id);
   if (!week) {
     return sendError(res, 404, false, "Week not found");
   }
 
-  return sendResponse(res, 200, true, "Week deleted successfully", null);
+  week.isActive = false;
+  await week.save();
+
+  return sendResponse(res, 200, true, "Week deactivated successfully", week);
 });

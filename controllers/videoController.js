@@ -106,21 +106,26 @@ exports.updateVideoLecture = asyncHandler(async (req, res) => {
 exports.deleteVideoLecture = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  // Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return sendError(res, 400, false, "Invalid Video Lecture ID");
   }
 
-  const deletedLecture = await VideoLecture.findByIdAndDelete(id);
-
-  if (!deletedLecture) {
+  // Find the lecture
+  const lecture = await VideoLecture.findById(id);
+  if (!lecture) {
     return sendError(res, 404, false, "Video Lecture not found");
   }
+
+  // Soft delete
+  lecture.isActive = false;
+  await lecture.save();
 
   return sendResponse(
     res,
     200,
     true,
-    "Video Lecture deleted successfully",
-    null
+    "Video Lecture deactivated successfully",
+    lecture
   );
 });

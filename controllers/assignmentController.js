@@ -6,7 +6,7 @@ const path = require("path");
 const Chapter = require("../models/Chapter");
 
 exports.createAssignments = asyncHandler(async (req, res) => {
-  const { chapter, titles, descriptions, deadlines } = req.body;
+  const { course, chapter, title, description, deadline } = req.body;
 
   if (!chapter || !mongoose.Types.ObjectId.isValid(chapter)) {
     return sendError(res, 400, false, "Valid chapter ID is required");
@@ -21,16 +21,17 @@ exports.createAssignments = asyncHandler(async (req, res) => {
     );
   }
 
-  const titlesArr = Array.isArray(titles) ? titles : [titles];
-  const descriptionsArr = Array.isArray(descriptions)
-    ? descriptions
-    : [descriptions];
-  const deadlinesArr = Array.isArray(deadlines) ? deadlines : [deadlines];
+  const titlesArr = Array.isArray(title) ? title : [title];
+  const descriptionsArr = Array.isArray(description)
+    ? description
+    : [description];
+  const deadlinesArr = Array.isArray(deadline) ? deadline : [deadline];
 
   const assignmentsData = req.files.map((file, index) => {
     const filename = path.basename(file.path);
 
     return {
+      course,
       chapter,
       title: titlesArr[index] || `Assignment ${index + 1}`,
       description: descriptionsArr[index] || "",
@@ -57,6 +58,55 @@ exports.createAssignments = asyncHandler(async (req, res) => {
 exports.getAllAssignments = asyncHandler(async (req, res) => {
   const assignments = await Assignment.find().populate("chapter");
   return sendResponse(res, 200, true, "All assignments fetched", assignments);
+});
+
+exports.getAssignmentsByCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return sendError(res, 400, false, "Invalid Course ID");
+  }
+
+  const assignments = await Assignment.find()
+    .populate({
+      path: "chapter",
+      populate: {
+        path: "week",
+        populate: {
+          path: "phase",
+          match: { course: courseId },
+          select: "_id course",
+        },
+      },
+    })
+    .lean();
+
+  const filteredAssignments = assignments
+    .filter((a) => a.chapter?.week?.phase)
+    .map((a) => ({
+      _id: a._id,
+      title: a.title,
+      description: a.description,
+      deadline: a.deadline,
+      fileUrl: a.fileUrl,
+      status: a.status,
+      chapter: {
+        _id: a.chapter?._id,
+        title: a.chapter?.title,
+      },
+    }));
+
+  if (!filteredAssignments.length) {
+    return sendError(res, 404, false, "No assignments found for this course");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Assignments fetched successfully for the given course",
+    filteredAssignments
+  );
 });
 
 exports.getAssignmentById = asyncHandler(async (req, res) => {
@@ -95,6 +145,9 @@ exports.updateAssignment = asyncHandler(async (req, res) => {
 
 exports.deleteAssignment = asyncHandler(async (req, res) => {
   const assignment = await Assignment.findByIdAndDelete(req.params.id);
+
+  assignment.isActive = false;
+  await assignment.save();
 
   if (!assignment) return sendError(res, 404, false, "Assignment not found");
 

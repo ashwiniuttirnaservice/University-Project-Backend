@@ -8,7 +8,6 @@ const {
   deleteSessionCategory,
 } = require("../controllers/sessionCategoryController");
 
-// Routes
 router.post("/", createSessionCategory);
 router.get("/", getAllSessionCategories);
 router.get("/:id", getSessionCategoryById);

@@ -5,7 +5,12 @@ const EventSchema = new mongoose.Schema(
     title: { type: String, required: false },
     slug: { type: String, required: false },
     description: { type: String, required: false },
-
+    studentIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Student",
+      },
+    ],
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SessionCategory",

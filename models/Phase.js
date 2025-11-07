@@ -6,6 +6,10 @@ const PhaseSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String },
     weeks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Week" }],
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

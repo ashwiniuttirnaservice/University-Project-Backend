@@ -9,6 +9,8 @@ router.post(
   lectureController.createMultipleLectures
 );
 
+router.get("/course/:courseId", lectureController.getLecturesByCourse);
+
 router.get("/", lectureController.getAllLectures);
 router.get("/:id", lectureController.getLectureById);
 router.put(

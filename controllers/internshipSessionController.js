@@ -1,7 +1,7 @@
 const InternshipSession = require("../models/InternshipSession");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
+const mongoose = require("mongoose");
 exports.createSession = asyncHandler(async (req, res) => {
   const {
     title,
@@ -13,6 +13,7 @@ exports.createSession = asyncHandler(async (req, res) => {
     location,
     topics,
     capacity,
+    isFree,
     fees,
     certification,
     status,
@@ -28,6 +29,7 @@ exports.createSession = asyncHandler(async (req, res) => {
     location,
     topics,
     capacity,
+    isFree,
     fees,
     certification,
     status,
@@ -67,8 +69,27 @@ exports.updateSession = asyncHandler(async (req, res) => {
 });
 
 exports.deleteSession = asyncHandler(async (req, res) => {
-  const session = await InternshipSession.findByIdAndDelete(req.params.id);
-  if (!session) return sendError(res, 404, "Internship session not found");
+  const { id } = req.params;
 
-  return sendResponse(res, 200, true, "Internship session deleted", session);
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Session ID");
+  }
+
+  const session = await InternshipSession.findById(id);
+
+  if (!session) {
+    return sendError(res, 404, false, "Internship session not found");
+  }
+
+  session.isActive = false;
+  await session.save();
+
+  await session.deleteOne();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Internship session deleted successfully"
+  );
 });

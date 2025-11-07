@@ -195,12 +195,19 @@ exports.updateSponsorship = asyncHandler(async (req, res) => {
 });
 
 exports.deleteSponsorship = asyncHandler(async (req, res) => {
-  const sponsorship = await Sponsorship.findById(req.params.id);
+  const { id } = req.params;
+
+  const sponsorship = await Sponsorship.findById(id);
 
   if (!sponsorship) {
     return sendError(res, 404, false, "Sponsorship not found");
   }
 
+  // First mark inactive
+  sponsorship.isActive = false;
+  await sponsorship.save();
+
+  // Then delete the record
   await sponsorship.deleteOne();
 
   return sendResponse(res, 200, true, "Sponsorship deleted successfully");

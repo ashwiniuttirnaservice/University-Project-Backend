@@ -1,7 +1,12 @@
 const Course = require("../models/Course");
 const Trainer = require("../models/Trainer");
+
+const Phase = require("../models/Phase");
+const Week = require("../models/Week");
+const Chapter = require("../models/Chapter");
+const Lecture = require("../models/Lecture");
+const Assignment = require("../models/Assignment");
 const Note = require("../models/Note");
-const VideoLecture = require("../models/Video");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
@@ -124,16 +129,25 @@ exports.updateCourse = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "Course updated successfully", course);
 });
-
 exports.deleteCourse = asyncHandler(async (req, res) => {
-  const course = await Course.findByIdAndDelete(req.params.id);
+  const course = await Course.findById(req.params.id);
 
   if (!course) {
     return sendError(res, 404, false, "Course not found");
   }
 
-  return sendResponse(res, 200, true, "Course deleted", null);
+  course.isActive = false;
+  await course.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Course deactivated successfully",
+    course
+  );
 });
+
 exports.getAllCourse = asyncHandler(async (req, res) => {
   const courses = await Course.find({})
     .select(
@@ -173,4 +187,164 @@ exports.getAllCourse = asyncHandler(async (req, res) => {
   const finalCourses = [...withBatches, ...withoutBatches];
 
   return sendResponse(res, 200, true, "Courses fetched", finalCourses);
+});
+
+exports.cloneCourse = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Course ID");
+  }
+
+  // 🔹 1️⃣ Fetch the full course structure using aggregation instead of populate
+  const [originalCourse] = await Course.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(id) } },
+    {
+      $lookup: {
+        from: "phases",
+        localField: "_id",
+        foreignField: "course",
+        as: "phases",
+        pipeline: [
+          {
+            $lookup: {
+              from: "weeks",
+              localField: "_id",
+              foreignField: "phase",
+              as: "weeks",
+              pipeline: [
+                {
+                  $lookup: {
+                    from: "chapters",
+                    localField: "_id",
+                    foreignField: "week",
+                    as: "chapters",
+                    pipeline: [
+                      {
+                        $lookup: {
+                          from: "lectures",
+                          localField: "_id",
+                          foreignField: "chapter",
+                          as: "lectures",
+                        },
+                      },
+                      {
+                        $lookup: {
+                          from: "assignments",
+                          localField: "_id",
+                          foreignField: "chapter",
+                          as: "assignments",
+                        },
+                      },
+                      {
+                        $lookup: {
+                          from: "notes",
+                          localField: "_id",
+                          foreignField: "chapter",
+                          as: "notes",
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!originalCourse) {
+    return sendError(res, 404, false, "Course not found to clone");
+  }
+
+  // 🔹 2️⃣ Create cloned course
+  const clonedCourseData = {
+    title: `${originalCourse.title} (Clone)`,
+    description: originalCourse.description,
+    duration: originalCourse.duration,
+    branch: originalCourse.branch,
+    rating: originalCourse.rating,
+    enrolledCount: 0,
+    overview: originalCourse.overview,
+    learningOutcomes: originalCourse.learningOutcomes,
+    benefits: originalCourse.benefits,
+    keyFeatures: originalCourse.keyFeatures,
+    features: originalCourse.features,
+    trainer: originalCourse.trainer,
+    fees: originalCourse.fees,
+    isActive: false,
+  };
+
+  const clonedCourse = await Course.create(clonedCourseData);
+
+  // 🔹 3️⃣ Clone nested data manually
+  const clonedPhases = [];
+
+  for (const phase of originalCourse.phases || []) {
+    const newPhase = await Phase.create({
+      course: clonedCourse._id,
+      title: `${phase.title} (Clone)`,
+    });
+
+    const clonedWeeks = [];
+
+    for (const week of phase.weeks || []) {
+      const newWeek = await Week.create({
+        phase: newPhase._id,
+        title: `${week.title} (Clone)`,
+        weekNumber: week.weekNumber || 1,
+        course: clonedCourse._id,
+      });
+
+      const clonedChapters = [];
+
+      for (const chapter of week.chapters || []) {
+        const newChapter = await Chapter.create({
+          course: clonedCourse._id,
+          title: `${chapter.title} (Clone)`,
+          description: chapter.description,
+        });
+
+        const clonedLectures = [];
+        for (const lecture of chapter.lectures || []) {
+          const newLecture = await Lecture.create({
+            chapter: newChapter._id,
+            title: `${lecture.title} (Clone)`,
+            description: lecture.description,
+            duration: lecture.duration,
+            contentUrl: lecture.contentUrl,
+            trainer: lecture.trainer,
+            course: clonedCourse._id,
+            status: "pending",
+          });
+          clonedLectures.push(newLecture._id);
+        }
+
+        newChapter.lectures = clonedLectures;
+        await newChapter.save();
+        clonedChapters.push(newChapter._id);
+      }
+
+      newWeek.chapters = clonedChapters;
+      await newWeek.save();
+      clonedWeeks.push(newWeek._id);
+    }
+
+    newPhase.weeks = clonedWeeks;
+    await newPhase.save();
+    clonedPhases.push(newPhase._id);
+  }
+
+  clonedCourse.phases = clonedPhases;
+  await clonedCourse.save();
+
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Course cloned successfully",
+    clonedCourse
+  );
 });

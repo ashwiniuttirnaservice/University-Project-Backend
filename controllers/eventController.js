@@ -1,5 +1,5 @@
 const Event = require("../models/EventSession ");
-
+const mongoose = require("mongoose");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const path = require("path");
@@ -183,9 +183,22 @@ exports.updateEvent = asyncHandler(async (req, res) => {
 });
 
 exports.deleteEvent = asyncHandler(async (req, res) => {
-  const event = await Event.findByIdAndDelete(req.params.id);
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Event ID");
+  }
+
+  const event = await Event.findById(id);
+
   if (!event) {
     return sendError(res, 404, false, "Event not found");
   }
+
+  event.isActive = false;
+  await event.save();
+
+  await event.deleteOne();
+
   return sendResponse(res, 200, true, "Event deleted successfully");
 });

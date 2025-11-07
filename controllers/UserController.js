@@ -7,6 +7,7 @@ const Student = require("../models/Student.js");
 const Trainer = require("../models/Trainer");
 const Batch = require("../models/Batch");
 const Enrollment = require("../models/Enrollment");
+const mongoose = require("mongoose");
 
 const getUserProfile = asyncHandler(async (req, res) => {
   const studentId = req.user.studentId;
@@ -123,13 +124,21 @@ const getUserById = asyncHandler(async (req, res) => {
 });
 
 const deleteUser = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.params.id);
-  if (user) {
-    await user.deleteOne();
-    return sendResponse(res, 200, true, "User removed successfully");
-  } else {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid User ID");
+  }
+
+  const user = await User.findById(id);
+  if (!user) {
     return sendError(res, 404, false, "User not found");
   }
+
+  user.isActive = false;
+  await user.save();
+
+  return sendResponse(res, 200, true, "User deactivated successfully", user);
 });
 
 const updateUser = asyncHandler(async (req, res) => {
