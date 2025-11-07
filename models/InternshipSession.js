@@ -36,11 +36,18 @@ const internshipSessionSchema = new mongoose.Schema(
       refundPolicy: { type: String, trim: true },
     },
 
+    isFree: { type: Boolean, default: true },
+
     certification: { type: Boolean, default: false },
     status: {
       type: String,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
+
   { timestamps: true }
 );
 

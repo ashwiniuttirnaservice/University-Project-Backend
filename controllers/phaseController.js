@@ -50,12 +50,30 @@ exports.createPhase = asyncHandler(async (req, res) => {
 });
 
 exports.getAllPhases = asyncHandler(async (req, res) => {
-  const phases = await Phase.find().populate("course").populate("weeks");
+  const phases = await Phase.find();
   return sendResponse(
     res,
     200,
     true,
     "All phases fetched successfully",
+    phases
+  );
+});
+
+exports.getPhasesByCourseId = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  const phases = await Phase.find({ course: courseId }).populate("weeks");
+
+  if (!phases || phases.length === 0) {
+    return sendError(res, 404, "No phases found for this course");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Phases fetched successfully for the given course",
     phases
   );
 });
@@ -104,11 +122,16 @@ exports.deletePhase = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid Phase ID");
   }
 
-  const phase = await Phase.findByIdAndDelete(id);
+  const phase = await Phase.findById(id);
 
   if (!phase) {
     return sendError(res, 404, false, "Phase not found");
   }
 
-  return sendResponse(res, 200, true, "Phase deleted successfully", null);
+  phase.isActive = false;
+  await phase.save();
+
+  await phase.deleteOne();
+
+  return sendResponse(res, 200, true, "Phase deleted successfully");
 });

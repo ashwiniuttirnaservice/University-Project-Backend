@@ -21,6 +21,7 @@ const mongoose = require("mongoose");
 
 const LectureSchema = new mongoose.Schema(
   {
+    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
     chapter: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chapter",
@@ -39,46 +40,45 @@ const LectureSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    coverImage: {
-      type: String,
-    },
     duration: {
       type: Number,
       default: 60,
     },
-    startDateTime: {
-      type: Date,
-      required: true,
-    },
-    requiredRecordingWatchPercentage: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
 
-    trainer: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-
-    host: {
+    type: {
       type: String,
-      trim: true,
     },
-    showRecordedVideo: {
-      type: Boolean,
-      default: true,
-    },
-    allowFreePreview: {
-      type: Boolean,
-      default: false,
-    },
-    bypassProgressiveLock: {
-      type: Boolean,
-      default: false,
-    },
+    // startDateTime: {
+    //   type: Date,
+    //   required: true,
+    // },
+    // requiredRecordingWatchPercentage: {
+    //   type: Number,
+    //   default: 0,
+    //   min: 0,
+    //   max: 100,
+    // },
+
+    // trainer: [
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: "Trainer",
+    //     required: true,
+    //   },
+    // ],
+
+    // showRecordedVideo: {
+    //   type: Boolean,
+    //   default: true,
+    // },
+    // allowFreePreview: {
+    //   type: Boolean,
+    //   default: false,
+    // },
+    // bypassProgressiveLock: {
+    //   type: Boolean,
+    //   default: false,
+    // },
     batches: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -87,8 +87,10 @@ const LectureSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["pending", "in-progress", "completed"],
-      default: "pending",
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
     },
   },
   { timestamps: true }

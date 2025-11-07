@@ -4,7 +4,8 @@ const phaseController = require("../controllers/phaseController");
 
 router.post("/", phaseController.createPhase);
 router.get("/", phaseController.getAllPhases);
-router.get("/:id", phaseController.getPhaseById);
+router.get("/:courseId", phaseController.getPhasesByCourseId);
+router.get("/p1/:id", phaseController.getPhaseById);
 router.put("/:id", phaseController.updatePhase);
 router.delete("/:id", phaseController.deletePhase);
 

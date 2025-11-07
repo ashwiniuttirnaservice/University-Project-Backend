@@ -61,9 +61,18 @@ exports.updateSessionCategory = asyncHandler(async (req, res) => {
 });
 
 exports.deleteSessionCategory = asyncHandler(async (req, res) => {
-  const category = await SessionCategory.findByIdAndDelete(req.params.id);
+  const { id } = req.params;
+
+  const category = await SessionCategory.findById(id);
+
   if (!category) {
     return sendError(res, 404, false, "Category not found");
   }
+
+  category.isActive = false;
+  await category.save();
+
+  await category.deleteOne();
+
   return sendResponse(res, 200, true, "Session category deleted successfully");
 });

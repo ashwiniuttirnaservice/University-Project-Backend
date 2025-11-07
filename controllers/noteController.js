@@ -5,7 +5,7 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
 exports.createNote = asyncHandler(async (req, res) => {
-  const { chapter, title, content, duration } = req.body;
+  const { course, chapter, title, content } = req.body;
 
   if (!chapter || !title) {
     return sendError(res, 400, false, "Chapter and Title are required");
@@ -18,9 +18,9 @@ exports.createNote = asyncHandler(async (req, res) => {
 
   const note = await Note.create({
     chapter,
+    course,
     title,
     content,
-    duration,
     file: req.file ? `${req.file.filename}` : null,
     uploadedAt: new Date(),
   });
@@ -47,6 +47,83 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
   ]);
 
   return sendResponse(res, 200, true, "Notes fetched successfully", notes);
+});
+
+exports.getNotesByCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return sendError(res, 400, false, "Invalid Course ID");
+  }
+
+  const notes = await Note.aggregate([
+    // Join Chapter
+    {
+      $lookup: {
+        from: "chapters",
+        localField: "chapter",
+        foreignField: "_id",
+        as: "chapterData",
+      },
+    },
+    { $unwind: "$chapterData" },
+
+    // Join Week (to reach Phase)
+    {
+      $lookup: {
+        from: "weeks",
+        localField: "chapterData.week",
+        foreignField: "_id",
+        as: "weekData",
+      },
+    },
+    { $unwind: "$weekData" },
+
+    // Join Phase
+    {
+      $lookup: {
+        from: "phases",
+        localField: "weekData.phase",
+        foreignField: "_id",
+        as: "phaseData",
+      },
+    },
+    { $unwind: "$phaseData" },
+
+    // Match specific Course
+    {
+      $match: {
+        "phaseData.course": new mongoose.Types.ObjectId(courseId),
+      },
+    },
+
+    // Final shape: only notes + chapter info
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        fileUrl: 1,
+        uploadedAt: 1,
+        description: 1,
+        "chapterData._id": 1,
+        "chapterData.title": 1,
+      },
+    },
+
+    { $sort: { uploadedAt: -1 } },
+  ]);
+
+  if (!notes.length) {
+    return sendError(res, 404, false, "No notes found for this course");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Notes fetched successfully for the given course",
+    notes
+  );
 });
 
 exports.getNoteById = asyncHandler(async (req, res) => {
@@ -106,7 +183,6 @@ exports.getNoteById = asyncHandler(async (req, res) => {
         title: 1,
         content: 1,
         file: 1,
-        duration: 1, // 👈 Added duration field
         uploadedAt: 1,
         createdAt: 1,
         updatedAt: 1,
@@ -137,9 +213,9 @@ exports.getNoteById = asyncHandler(async (req, res) => {
 
 exports.updateNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { title, content, duration, chapter } = req.body;
+  const { title, content, chapter } = req.body;
 
-  let updateData = { title, content, duration };
+  let updateData = { title, content };
   if (chapter) updateData.chapter = chapter;
   if (req.file) updateData.file = `${req.file.filename}`;
 
@@ -152,8 +228,20 @@ exports.updateNote = asyncHandler(async (req, res) => {
 exports.deleteNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const note = await Note.findByIdAndDelete(id);
-  if (!note) return sendError(res, 404, false, "Note not found");
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Note ID");
+  }
 
-  return sendResponse(res, 200, true, "Note deleted successfully", null);
+  const note = await Note.findById(id);
+
+  if (!note) {
+    return sendError(res, 404, false, "Note not found");
+  }
+
+  note.isActive = false;
+  await note.save();
+
+  await note.deleteOne();
+
+  return sendResponse(res, 200, true, "Note deleted successfully");
 });

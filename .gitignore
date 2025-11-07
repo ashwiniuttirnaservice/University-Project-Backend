@@ -2,3 +2,8 @@ node_modules
 .env
 ecosystem.config.js
 ecosystem.config.cjs
+# edit .gitignore and add:
+uploads/
+# or for just assignments
+uploads/assignments/
+uploads/

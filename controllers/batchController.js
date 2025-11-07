@@ -90,6 +90,59 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Batches fetched successfully", batches);
 });
 
+exports.getAllBatches1 = asyncHandler(async (req, res) => {
+  const batches = await Batch.aggregate([
+    {
+      $match: { isActive: true },
+    },
+    {
+      $lookup: {
+        from: "courses",
+        localField: "coursesAssigned",
+        foreignField: "_id",
+        as: "coursesAssigned",
+      },
+    },
+    {
+      $lookup: {
+        from: "trainers",
+        localField: "trainersAssigned",
+        foreignField: "_id",
+        as: "trainersAssigned",
+      },
+    },
+    {
+      $project: {
+        batchName: 1,
+        time: 1,
+        days: 1,
+        mode: 1,
+        startDate: 1,
+        endDate: 1,
+        status: 1,
+        additionalNotes: 1,
+        studentCount: 1,
+        isActive: 1,
+        coursesAssigned: { _id: 1, title: 1 },
+        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+  ]);
+
+  if (!batches || batches.length === 0) {
+    return sendError(res, 404, false, "No active batches found");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Active batches fetched successfully",
+    batches
+  );
+});
+
 exports.getBatchesByCourseId = asyncHandler(async (req, res) => {
   const courseId = new mongoose.Types.ObjectId(req.params.courseId);
 
@@ -134,6 +187,55 @@ exports.getBatchesByCourseId = asyncHandler(async (req, res) => {
 
   if (!batches || batches.length === 0) {
     return sendError(res, 404, false, "No batches found for this course");
+  }
+
+  return sendResponse(res, 200, true, "Batches fetched successfully", batches);
+});
+
+exports.getBatchesByTrainerId = asyncHandler(async (req, res) => {
+  const trainerId = new mongoose.Types.ObjectId(req.params.trainerId);
+
+  const batches = await Batch.aggregate([
+    {
+      $match: {
+        trainersAssigned: { $in: [trainerId] },
+      },
+    },
+    {
+      $lookup: {
+        from: "courses",
+        localField: "coursesAssigned",
+        foreignField: "_id",
+        as: "coursesAssigned",
+      },
+    },
+    {
+      $lookup: {
+        from: "trainers",
+        localField: "trainersAssigned",
+        foreignField: "_id",
+        as: "trainersAssigned",
+      },
+    },
+    {
+      $project: {
+        batchName: 1,
+        time: 1,
+        days: 1,
+        mode: 1,
+        startDate: 1,
+        endDate: 1,
+        status: 1,
+        additionalNotes: 1,
+        studentCount: 1,
+        coursesAssigned: { _id: 1, title: 1 },
+        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+      },
+    },
+  ]);
+
+  if (!batches || batches.length === 0) {
+    return sendError(res, 404, false, "No batches found for this trainer");
   }
 
   return sendResponse(res, 200, true, "Batches fetched successfully", batches);
@@ -286,7 +388,6 @@ exports.assignStudentToBatch = asyncHandler(async (req, res) => {
     await batch.save();
   }
 
-  // CREATE OR UPDATE ENROLLMENT
   let enrollment = await Enrollment.findOne({ studentId: student._id });
   if (!enrollment) {
     enrollment = new Enrollment({
@@ -297,13 +398,12 @@ exports.assignStudentToBatch = asyncHandler(async (req, res) => {
       mobileNo: student.mobileNo,
       collegeName: student.collegeName || "",
       enrolledCourses: [],
-      enrolledBatches: [], // <--- added
+      enrolledBatches: [],
       coursesInterested: [],
     });
   }
 
   if (batch) {
-    // Add batch courses to enrolledCourses
     if (batch.coursesAssigned?.length) {
       enrollment.enrolledCourses = [
         ...new Set([
@@ -313,19 +413,16 @@ exports.assignStudentToBatch = asyncHandler(async (req, res) => {
       ];
     }
 
-    // ✅ Add batchId to enrolledBatches
     if (!enrollment.enrolledBatches.includes(batch._id)) {
       enrollment.enrolledBatches.push(batch._id);
     }
 
-    // ✅ Remove these courses from coursesInterested if present
     const batchCourseIds =
       batch.coursesAssigned?.map((c) => c._id.toString()) || [];
     enrollment.coursesInterested = (enrollment.coursesInterested || []).filter(
       (c) => !batchCourseIds.includes(c.toString())
     );
   } else if (courseId) {
-    // No batch → add to coursesInterested
     if (!enrollment.coursesInterested.includes(courseId)) {
       enrollment.coursesInterested.push(courseId);
     }
@@ -400,9 +497,19 @@ exports.updateBatch = asyncHandler(async (req, res) => {
 });
 
 exports.deleteBatch = asyncHandler(async (req, res) => {
-  const deleted = await Batch.findByIdAndDelete(req.params.id);
+  const batch = await Batch.findById(req.params.id);
 
-  if (!deleted) return sendError(res, 404, false, "Batch not found");
+  if (!batch) {
+    return sendError(res, 404, false, "Batch not found");
+  }
 
-  return sendResponse(res, 200, true, "Batch deleted successfully");
+  batch.isActive = false;
+  await batch.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Batch deleted (soft delete) successfully"
+  );
 });

@@ -27,6 +27,9 @@ const NotesRouter = require("./noteRouter.js");
 const internshipSessionsRouter = require("./internshipSessionRouter.js");
 const SponsorshipRouter = require("./sponsorshipRouter.js");
 const HackathonRouter = require("./hackathonRoutes.js");
+const meetingRouter = require("./meetingRoutes.js");
+const attendanceRouter = require("./attendanceRoutes.js");
+const ContactinfoRouter = require("./contactInfoRoutes.js");
 const indexRouter = express.Router();
 
 indexRouter.get("/", (req, res) => {
@@ -48,7 +51,8 @@ indexRouter.use("/users", userRoutes);
 indexRouter.use("/feedback", feedbackRoutes);
 indexRouter.use("/batches", batcheRouter);
 indexRouter.use("/contact", contactRouter);
-
+indexRouter.use("/meetings", meetingRouter);
+indexRouter.use("/attendance", attendanceRouter);
 indexRouter.use("/trainer", trainerRouter);
 indexRouter.use("/student", studentRouter);
 indexRouter.use("/session-category", sessionCategoryRouter);
@@ -61,4 +65,5 @@ indexRouter.use("/notes", NotesRouter);
 indexRouter.use("/internship-sessions", internshipSessionsRouter);
 indexRouter.use("/sponsorship", SponsorshipRouter);
 indexRouter.use("/hackathon", HackathonRouter);
+indexRouter.use("/contactinfo", ContactinfoRouter);
 module.exports = indexRouter;

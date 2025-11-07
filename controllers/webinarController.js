@@ -1,7 +1,7 @@
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const Webinar = require("../models/webinarSession");
 const asyncHandler = require("../middleware/asyncHandler");
-
+const mongoose = require("mongoose");
 exports.createWebinar = asyncHandler(async (req, res) => {
   const {
     title,
@@ -14,6 +14,7 @@ exports.createWebinar = asyncHandler(async (req, res) => {
     platform,
     meetingLink,
     meetingId,
+    meetingdescription,
     passcode,
     registrationRequired,
     maxParticipants,
@@ -33,6 +34,7 @@ exports.createWebinar = asyncHandler(async (req, res) => {
     speakerPhoto: req.file ? `${req.file.filename}` : null,
     platform,
     meetingLink,
+    meetingdescription,
     meetingId,
     passcode,
     registrationRequired,
@@ -84,7 +86,28 @@ exports.updateWebinar = asyncHandler(async (req, res) => {
 });
 
 exports.deleteWebinar = asyncHandler(async (req, res) => {
-  const webinar = await Webinar.findByIdAndDelete(req.params.id);
-  if (!webinar) return sendError(res, 404, false, "Webinar not found");
-  return sendResponse(res, 200, true, "Webinar deleted successfully");
+  const { id } = req.params;
+
+  // Validate MongoDB ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Webinar ID");
+  }
+
+  // Find the webinar
+  const webinar = await Webinar.findById(id);
+  if (!webinar) {
+    return sendError(res, 404, false, "Webinar not found");
+  }
+
+  // Soft delete
+  webinar.isActive = false;
+  await webinar.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Webinar deactivated successfully",
+    webinar
+  );
 });

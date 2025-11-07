@@ -29,6 +29,11 @@ const feedbackSchema = new mongoose.Schema(
 
     rating: { type: String, trim: true, required: true },
     createdAt: { type: Date, default: Date.now },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

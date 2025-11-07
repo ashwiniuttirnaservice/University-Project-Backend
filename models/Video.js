@@ -16,6 +16,10 @@ const VideoLectureSchema = new mongoose.Schema(
     contentUrl: { type: String, trim: true },
     duration: { type: String, trim: true },
     description: { type: String, trim: true },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

@@ -18,6 +18,7 @@ exports.createWorkshop = async (req, res) => {
       instructors,
       schedule,
       registrationLink,
+      isFree,
       fees,
       certification,
       contact,
@@ -37,6 +38,7 @@ exports.createWorkshop = async (req, res) => {
       instructors,
       schedule,
       registrationLink,
+      isFree,
       fees,
       certification,
       contact,
@@ -87,15 +89,26 @@ exports.updateWorkshop = asyncHandler(async (req, res) => {
 
   sendResponse(res, 200, true, "Workshop updated successfully", updated);
 });
-
 exports.deleteWorkshop = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  const deleted = await Workshop.findByIdAndDelete(id);
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Workshop ID");
+  }
 
-  if (!deleted) {
+  const workshop = await Workshop.findById(id);
+  if (!workshop) {
     return sendError(res, 404, false, "Workshop not found");
   }
 
-  sendResponse(res, 200, true, "Workshop deleted successfully", deleted);
+  workshop.isActive = false;
+  await workshop.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Workshop deactivated successfully",
+    workshop
+  );
 });

@@ -5,6 +5,8 @@ const fs = require("fs");
 // Return folder path based on fieldname
 const getFolderPath = (fieldname) => {
   switch (fieldname) {
+    case "Logo":
+      return "uploads/contact/logo/";
     case "profilePhotoTrainer":
       return "uploads/trainer/trainer-profilephoto/";
     case "idProofTrainer":

@@ -19,19 +19,20 @@ const workshopSchema = new mongoose.Schema(
 
     instructors: [
       {
-        name: { type: String, required: true, trim: true },
-        bio: { type: String, trim: true },
-        experience: { type: String, trim: true },
+        type: String,
+        required: true,
+        trim: true,
       },
     ],
 
     registrationLink: { type: String, trim: true },
 
     fees: {
-      amount: { type: Number, default: 0 },
-
-      refundPolicy: { type: String, trim: true },
+      type: String,
+      trim: true,
     },
+
+    isFree: { type: Boolean, default: true },
 
     certification: { type: Boolean, default: false },
 
@@ -44,6 +45,10 @@ const workshopSchema = new mongoose.Schema(
       type: String,
     },
     createdAt: { type: Date, default: Date.now },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

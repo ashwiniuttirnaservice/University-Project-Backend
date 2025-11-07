@@ -1,7 +1,7 @@
 const Hackathon = require("../models/Hackathon");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
+const mongoose = require("mongoose");
 exports.createHackathon = asyncHandler(async (req, res) => {
   const {
     title,
@@ -140,11 +140,22 @@ exports.updateHackathon = asyncHandler(async (req, res) => {
 });
 
 exports.deleteHackathon = asyncHandler(async (req, res) => {
-  const hackathon = await Hackathon.findByIdAndDelete(req.params.id);
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Hackathon ID");
+  }
+
+  const hackathon = await Hackathon.findById(id);
 
   if (!hackathon) {
     return sendError(res, 404, false, "Hackathon not found");
   }
+
+  hackathon.isActive = false;
+  await hackathon.save();
+
+  await hackathon.deleteOne();
 
   return sendResponse(res, 200, true, "Hackathon deleted successfully");
 });

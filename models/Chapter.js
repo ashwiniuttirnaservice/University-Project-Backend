@@ -2,7 +2,11 @@ const mongoose = require("mongoose");
 const ChapterSchema = new mongoose.Schema(
   {
     week: { type: mongoose.Schema.Types.ObjectId, ref: "Week" },
-    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      required: true,
+    },
     title: { type: String, required: true },
     points: [
       {
@@ -13,6 +17,10 @@ const ChapterSchema = new mongoose.Schema(
     notes: [{ type: mongoose.Schema.Types.ObjectId, ref: "Note" }],
     lectures: [{ type: mongoose.Schema.Types.ObjectId, ref: "Lecture" }],
     assignments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Assignment" }],
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

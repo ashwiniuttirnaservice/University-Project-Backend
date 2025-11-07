@@ -177,6 +177,8 @@ const updateTest = asyncHandler(async (req, res) => {
 
 const deleteTest = asyncHandler(async (req, res) => {
   const test = await Test.findByIdAndDelete(req.params.id);
+  test.isActive = false;
+  await test.save();
   if (!test) return sendError(res, 404, false, "Test not found.");
   return sendResponse(res, 200, true, "Test deleted successfully.");
 });

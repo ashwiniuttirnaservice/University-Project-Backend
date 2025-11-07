@@ -95,6 +95,10 @@ const studentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  isActive: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const Student = mongoose.model("Student", studentSchema);

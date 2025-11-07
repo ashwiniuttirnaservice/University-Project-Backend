@@ -213,15 +213,30 @@ const getTrainerSummary = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc Delete Trainer
 const deleteTrainer = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
-  const trainer = await Trainer.findById(trainerId);
-  if (!trainer) return sendError(res, 404, "Trainer not found");
 
-  await trainer.deleteOne();
-  return sendResponse(res, 200, true, "Trainer deleted successfully");
+  if (!mongoose.Types.ObjectId.isValid(trainerId)) {
+    return sendError(res, 400, false, "Invalid Trainer ID");
+  }
+
+  const trainer = await Trainer.findById(trainerId);
+  if (!trainer) {
+    return sendError(res, 404, false, "Trainer not found");
+  }
+
+  trainer.isActive = false;
+  await trainer.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Trainer deactivated successfully",
+    trainer
+  );
 });
+
 const getTrainerById = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
 

@@ -166,7 +166,7 @@ exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
       path: "enrolledBatches",
       select: "batchName timing trainers",
       populate: {
-        path: "trainers",
+        path: "trainersAssigned",
         select: "firstName lastName email",
       },
     })

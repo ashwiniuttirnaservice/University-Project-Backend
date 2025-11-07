@@ -198,9 +198,25 @@ exports.updateStudent = asyncHandler(async (req, res) => {
 });
 
 exports.deleteStudent = asyncHandler(async (req, res) => {
-  const student = await Student.findById(req.params.studentId);
-  if (!student) return sendError(res, 404, false, "Student not found");
+  const { studentId } = req.params;
 
-  await student.deleteOne();
-  return sendResponse(res, 200, true, "Student deleted");
+  if (!mongoose.Types.ObjectId.isValid(studentId)) {
+    return sendError(res, 400, false, "Invalid Student ID");
+  }
+
+  const student = await Student.findById(studentId);
+  if (!student) {
+    return sendError(res, 404, false, "Student not found");
+  }
+
+  student.isActive = false;
+  await student.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Student deactivated successfully",
+    student
+  );
 });

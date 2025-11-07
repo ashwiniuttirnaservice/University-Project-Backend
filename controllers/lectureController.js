@@ -1,39 +1,40 @@
+const mongoose = require("mongoose");
+const path = require("path");
 const Lecture = require("../models/Lecture");
 const Chapter = require("../models/Chapter");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-const mongoose = require("mongoose");
-
-const path = require("path");
 
 exports.createMultipleLectures = asyncHandler(async (req, res) => {
-  const { chapter, title, duration, description } = req.body;
+  const {
+    course,
+    chapter,
+    type,
+    title,
+    duration,
+    description,
+    batches,
+    status,
+    contentUrl,
+  } = req.body;
 
   if (!chapter || !mongoose.Types.ObjectId.isValid(chapter)) {
     return sendError(res, 400, false, "Valid chapter ID is required");
   }
 
-  if (!req.files || req.files.length === 0) {
-    return sendError(res, 400, false, "At least one lecture file is required");
-  }
-
-  const titlesArr = Array.isArray(title) ? title : [title];
-  const durationsArr = Array.isArray(duration) ? duration : [duration];
-  const descriptionsArr = Array.isArray(description)
-    ? description
-    : [description];
-
-  const lecturesData = req.files.map((file, index) => {
-    const filename = path.basename(file.path);
-
-    return {
+  const lecturesData = [
+    {
+      course,
       chapter,
-      title: titlesArr[index] || `Lecture ${index + 1}`,
-      duration: durationsArr[index] || "",
-      description: descriptionsArr[index] || "",
-      contentUrl: filename,
-    };
-  });
+      type,
+      title,
+      duration,
+      description,
+      contentUrl,
+      batches: batches ? (Array.isArray(batches) ? batches : [batches]) : [],
+      status: status || "pending",
+    },
+  ];
 
   const createdLectures = await Lecture.insertMany(lecturesData);
 
@@ -45,14 +46,37 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
     res,
     201,
     true,
-    "Lectures created successfully and linked to chapter",
+    "Lecture created successfully (YouTube link or URL)",
     createdLectures
   );
 });
 
 exports.getAllLectures = asyncHandler(async (req, res) => {
-  const lectures = await Lecture.find().populate("chapter");
+  const lectures = await Lecture.find()
+    .populate("course")
+    .populate("chapter")
+    .populate("batches")
+    .sort({ createdAt: -1 });
+
   return sendResponse(res, 200, true, "All lectures fetched", lectures);
+});
+
+exports.getLecturesByCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return sendError(res, 400, false, "Invalid course ID");
+  }
+
+  const lectures = await Lecture.find({ course: courseId })
+    .populate("course")
+    .populate("chapter")
+    .populate("batches");
+
+  if (!lectures.length)
+    return sendError(res, 404, false, "No lectures found for this course");
+
+  return sendResponse(res, 200, true, "Lectures fetched by course", lectures);
 });
 
 exports.getLectureById = asyncHandler(async (req, res) => {
@@ -62,31 +86,53 @@ exports.getLectureById = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid lecture ID");
   }
 
-  const lecture = await Lecture.findById(id).populate("chapter");
+  const lecture = await Lecture.findById(id)
+    .populate("course")
+    .populate("chapter")
+    .populate("batches");
+
   if (!lecture) return sendError(res, 404, false, "Lecture not found");
 
   return sendResponse(res, 200, true, "Lecture fetched", lecture);
 });
 
 exports.updateLecture = asyncHandler(async (req, res) => {
-  const { title, duration, description, status, chapter } = req.body;
-  const updateData = { title, duration, description, status, chapter };
+  const { id } = req.params;
 
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid lecture ID");
+  }
+
+  const updateData = { ...req.body };
   if (req.file) updateData.contentUrl = path.basename(req.file.path);
 
-  const lecture = await Lecture.findByIdAndUpdate(req.params.id, updateData, {
+  const lecture = await Lecture.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
   });
 
   if (!lecture) return sendError(res, 404, false, "Lecture not found");
 
-  return sendResponse(res, 200, true, "Lecture updated", lecture);
+  return sendResponse(res, 200, true, "Lecture updated successfully", lecture);
 });
 
 exports.deleteLecture = asyncHandler(async (req, res) => {
-  const lecture = await Lecture.findByIdAndDelete(req.params.id);
-  if (!lecture) return sendError(res, 404, false, "Lecture not found");
+  const { id } = req.params;
 
-  return sendResponse(res, 200, true, "Lecture deleted", null);
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Lecture ID");
+  }
+
+  const lecture = await Lecture.findById(id);
+
+  if (!lecture) {
+    return sendError(res, 404, false, "Lecture not found");
+  }
+
+  lecture.isActive = false;
+  await lecture.save();
+
+  await lecture.deleteOne();
+
+  return sendResponse(res, 200, true, "Lecture deleted successfully");
 });

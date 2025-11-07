@@ -12,13 +12,12 @@ const brachRouter = express.Router();
 
 brachRouter
   .route("/")
-  .get(getAllBranches) // Public
-  .post(protect, authorize("admin"), createBranch); // Admin only
-
+  .get(getAllBranches)
+  .post(protect, authorize("admin"), createBranch);
 brachRouter
   .route("/:id")
-  .get(getBranchById) // Public
-  .put(protect, authorize("admin"), updateBranch) // Admin only
-  .delete(protect, authorize("admin"), deleteBranch); // Admin only
+  .get(getBranchById)
+  .put(protect, authorize("admin"), updateBranch)
+  .delete(protect, authorize("admin"), deleteBranch);
 
 module.exports = brachRouter;
