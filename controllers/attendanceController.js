@@ -89,15 +89,6 @@ exports.getAllAttendance = asyncHandler(async (req, res) => {
     { $unwind: "$meeting" },
     {
       $lookup: {
-        from: "students",
-        localField: "student",
-        foreignField: "_id",
-        as: "student",
-      },
-    },
-    { $unwind: "$student" },
-    {
-      $lookup: {
         from: "batches",
         localField: "batch",
         foreignField: "_id",
@@ -114,10 +105,48 @@ exports.getAllAttendance = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$trainer" },
+
+    // ✅ Unwind attendees to access student info
+    { $unwind: "$attendees" },
+
+    // ✅ Lookup student details for each attendee
+    {
+      $lookup: {
+        from: "students",
+        localField: "attendees.student",
+        foreignField: "_id",
+        as: "attendees.studentDetails",
+      },
+    },
+    { $unwind: "$attendees.studentDetails" },
+
+    // ✅ Optional: group back if you want one record per attendance
+    {
+      $group: {
+        _id: "$_id",
+        meeting: { $first: "$meeting" },
+        batch: { $first: "$batch" },
+        trainer: { $first: "$trainer" },
+        course: { $first: "$course" },
+        markedByTrainer: { $first: "$markedByTrainer" },
+        markedAt: { $first: "$markedAt" },
+        isActive: { $first: "$isActive" },
+        createdAt: { $first: "$createdAt" },
+        updatedAt: { $first: "$updatedAt" },
+        attendees: { $push: "$attendees" },
+      },
+    },
+
     { $sort: { createdAt: -1 } },
   ]);
 
-  return sendResponse(res, 200, "All attendance records fetched", records);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "All attendance records fetched",
+    records
+  );
 });
 
 exports.getAttendanceByMeeting = asyncHandler(async (req, res) => {
@@ -125,36 +154,19 @@ exports.getAttendanceByMeeting = asyncHandler(async (req, res) => {
 
   const records = await Attendance.aggregate([
     { $match: { meeting: meetingId } },
+
+    { $unwind: "$attendees" },
+
     {
       $lookup: {
         from: "students",
-        localField: "student",
+        localField: "attendees.student",
         foreignField: "_id",
-        as: "student",
+        as: "attendees.studentDetails",
       },
     },
-    { $unwind: "$student" },
-  ]);
+    { $unwind: "$attendees.studentDetails" },
 
-  if (!records.length)
-    return sendError(res, 404, "No attendance found for this meeting");
-
-  const presentCount = records.filter((r) => r.present).length;
-  const absentCount = records.filter((r) => !r.present).length;
-
-  return sendResponse(res, 200, "Attendance fetched by meeting", {
-    total: records.length,
-    presentCount,
-    absentCount,
-    records,
-  });
-});
-
-exports.getAttendanceByBatch = asyncHandler(async (req, res) => {
-  const batchId = new mongoose.Types.ObjectId(req.params.batchId);
-
-  const records = await Attendance.aggregate([
-    { $match: { batch: batchId } },
     {
       $lookup: {
         from: "meetings",
@@ -164,22 +176,98 @@ exports.getAttendanceByBatch = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$meeting" },
+
+    {
+      $lookup: {
+        from: "batches",
+        localField: "batch",
+        foreignField: "_id",
+        as: "batch",
+      },
+    },
+    { $unwind: "$batch" },
+
+    {
+      $group: {
+        _id: "$_id",
+        meeting: { $first: "$meeting" },
+        batch: { $first: "$batch" },
+        trainer: { $first: "$trainer" },
+        markedByTrainer: { $first: "$markedByTrainer" },
+        markedAt: { $first: "$markedAt" },
+        attendees: { $push: "$attendees" },
+      },
+    },
+  ]);
+
+  if (!records.length)
+    return sendError(res, 404, false, "No attendance found for this meeting");
+
+  const attendees = records[0].attendees || [];
+  const presentCount = attendees.filter((a) => a.present).length;
+  const absentCount = attendees.filter((a) => !a.present).length;
+
+  return sendResponse(res, 200, true, "Attendance fetched by meeting", {
+    total: attendees.length,
+    presentCount,
+    absentCount,
+    record: records[0],
+  });
+});
+
+exports.getAttendanceByBatch = asyncHandler(async (req, res) => {
+  const batchId = new mongoose.Types.ObjectId(req.params.batchId);
+
+  const records = await Attendance.aggregate([
+    { $match: { batch: batchId } },
+
+    { $unwind: "$attendees" },
+
     {
       $lookup: {
         from: "students",
-        localField: "student",
+        localField: "attendees.student",
         foreignField: "_id",
-        as: "student",
+        as: "attendees.studentDetails",
       },
     },
-    { $unwind: "$student" },
+    { $unwind: "$attendees.studentDetails" },
+
+    {
+      $lookup: {
+        from: "meetings",
+        localField: "meeting",
+        foreignField: "_id",
+        as: "meeting",
+      },
+    },
+    { $unwind: "$meeting" },
+
+    {
+      $group: {
+        _id: "$_id",
+        meeting: { $first: "$meeting" },
+        batch: { $first: "$batch" },
+        trainer: { $first: "$trainer" },
+        markedByTrainer: { $first: "$markedByTrainer" },
+        markedAt: { $first: "$markedAt" },
+        attendees: { $push: "$attendees" },
+      },
+    },
+
+    { $sort: { "meeting.date": -1 } },
   ]);
 
-  const presentCount = records.filter((r) => r.present).length;
-  const absentCount = records.filter((r) => !r.present).length;
+  if (!records.length) {
+    return sendError(res, 404, false, "No attendance found for this batch");
+  }
 
-  return sendResponse(res, 200, "Attendance fetched by batch", {
-    total: records.length,
+  const allAttendees = records.flatMap((r) => r.attendees);
+  const presentCount = allAttendees.filter((a) => a.present).length;
+  const absentCount = allAttendees.filter((a) => !a.present).length;
+
+  return sendResponse(res, 200, true, "Attendance fetched by batch", {
+    total: allAttendees.length,
     presentCount,
     absentCount,
     records,
@@ -190,7 +278,12 @@ exports.getAttendanceByStudent = asyncHandler(async (req, res) => {
   const studentId = new mongoose.Types.ObjectId(req.params.studentId);
 
   const records = await Attendance.aggregate([
-    { $match: { student: studentId } },
+    { $match: { "attendees.student": studentId } },
+
+    { $unwind: "$attendees" },
+
+    { $match: { "attendees.student": studentId } },
+
     {
       $lookup: {
         from: "meetings",
@@ -200,6 +293,7 @@ exports.getAttendanceByStudent = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$meeting" },
+
     {
       $lookup: {
         from: "batches",
@@ -209,16 +303,39 @@ exports.getAttendanceByStudent = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$batch" },
+
+    {
+      $lookup: {
+        from: "trainers",
+        localField: "trainer",
+        foreignField: "_id",
+        as: "trainer",
+      },
+    },
+    { $unwind: "$trainer" },
+
+    {
+      $lookup: {
+        from: "students",
+        localField: "attendees.student",
+        foreignField: "_id",
+        as: "attendees.studentDetails",
+      },
+    },
+    { $unwind: "$attendees.studentDetails" },
+
+    { $sort: { "meeting.date": -1 } },
   ]);
 
   if (!records.length)
-    return sendError(res, 404, "No attendance found for this student");
+    return sendError(res, 404, false, "No attendance found for this student");
 
-  const presentCount = records.filter((r) => r.present).length;
-  const absentCount = records.filter((r) => !r.present).length;
+  const total = records.length;
+  const presentCount = records.filter((r) => r.attendees.present).length;
+  const absentCount = records.filter((r) => !r.attendees.present).length;
 
-  return sendResponse(res, 200, "Attendance fetched by student", {
-    total: records.length,
+  return sendResponse(res, 200, true, "Attendance fetched by student", {
+    total,
     presentCount,
     absentCount,
     records,
@@ -228,20 +345,58 @@ exports.getAttendanceByStudent = asyncHandler(async (req, res) => {
 exports.getAttendanceStats = asyncHandler(async (req, res) => {
   const stats = await Attendance.aggregate([
     {
+      $addFields: {
+        isPresent: {
+          $cond: [
+            {
+              $or: [
+                { $eq: ["$present", true] },
+                { $eq: ["$present", "true"] },
+                { $eq: ["$present", 1] },
+              ],
+            },
+            true,
+            false,
+          ],
+        },
+      },
+    },
+
+    {
       $group: {
         _id: null,
         total: { $sum: 1 },
-        presentCount: { $sum: { $cond: [{ $eq: ["$present", true] }, 1, 0] } },
-        absentCount: { $sum: { $cond: [{ $eq: ["$present", false] }, 1, 0] } },
+        presentCount: {
+          $sum: {
+            $cond: [{ $eq: ["$isPresent", true] }, 1, 0],
+          },
+        },
+        absentCount: {
+          $sum: {
+            $cond: [{ $eq: ["$isPresent", false] }, 1, 0],
+          },
+        },
       },
     },
   ]);
 
-  const result = stats[0] || { total: 0, presentCount: 0, absentCount: 0 };
+  const result =
+    stats.length > 0
+      ? {
+          total: stats[0].total,
+          presentCount: stats[0].presentCount,
+          absentCount: stats[0].absentCount,
+        }
+      : {
+          total: 0,
+          presentCount: 0,
+          absentCount: 0,
+        };
 
   return sendResponse(
     res,
     200,
+    true,
     "Attendance summary fetched successfully",
     result
   );
@@ -251,7 +406,8 @@ exports.deleteAttendance = asyncHandler(async (req, res) => {
   const attendance = await Attendance.findByIdAndDelete(req.params.id);
   attendance.isActive = false;
   await attendance.save();
-  if (!attendance) return sendError(res, 404, "Attendance record not found");
+  if (!attendance)
+    return sendError(res, 404, false, "Attendance record not found");
 
-  return sendResponse(res, 200, "Attendance deleted successfully", null);
+  return sendResponse(res, 200, true, "Attendance deleted successfully", null);
 });

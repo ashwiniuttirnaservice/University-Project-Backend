@@ -252,6 +252,7 @@ exports.getBatchById = asyncHandler(async (req, res) => {
 
   const batch = await Batch.aggregate([
     { $match: { _id: batchId } },
+
     {
       $lookup: {
         from: "courses",
@@ -260,6 +261,7 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         as: "coursesAssigned",
       },
     },
+
     {
       $lookup: {
         from: "trainers",
@@ -268,6 +270,7 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         as: "trainersAssigned",
       },
     },
+
     {
       $project: {
         batchName: 1,
@@ -278,9 +281,21 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         endDate: 1,
         status: 1,
         additionalNotes: 1,
+        isActive: 1,
+        isEnrolled: 1,
         studentCount: 1,
-        coursesAssigned: { _id: 1, title: 1 },
-        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+        students: 1,
+        coursesAssigned: {
+          _id: 1,
+          title: 1,
+        },
+        trainersAssigned: {
+          _id: 1,
+          fullName: 1,
+          email: 1,
+        },
+        createdAt: 1,
+        updatedAt: 1,
       },
     },
   ]);
