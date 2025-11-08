@@ -4,7 +4,10 @@ const {
   getMyEnrollments,
   createEnrollment,
   getAllEnrollmentsAdmin,
+  createStudentEnrollmentByAdmin,
+  updateStudentEnrollmentByAdmin,
   getEnrollmentByIdAdmin,
+  getEnrollmentById,
   unenrollFromCourse,
   markContentAsComplete,
   markContentAsIncomplete,
@@ -12,9 +15,11 @@ const {
 const { protect, authorize } = require("../middleware/authMiddleware.js");
 
 const enrollmentRouter = express.Router();
-
 enrollmentRouter.post("/enroll", createEnrollment);
+enrollmentRouter.post("/admin/enroll", createStudentEnrollmentByAdmin);
+enrollmentRouter.put("/:id", updateStudentEnrollmentByAdmin);
 enrollmentRouter.get("/", getAllEnrollmentsAdmin);
+enrollmentRouter.get("/:id", getEnrollmentById);
 enrollmentRouter.route("/").post(enrollInCourse);
 
 enrollmentRouter.get("/my", protect, getMyEnrollments);

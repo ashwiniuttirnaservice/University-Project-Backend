@@ -44,7 +44,7 @@ exports.createMeeting = asyncHandler(async (req, res) => {
     notification,
   });
 
-  return sendResponse(res, 201, "Meeting created successfully", meeting);
+  return sendResponse(res, 201, true, "Meeting created successfully", meeting);
 });
 
 exports.getAllMeetings = asyncHandler(async (req, res) => {
