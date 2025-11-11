@@ -144,12 +144,25 @@ exports.updateAssignment = asyncHandler(async (req, res) => {
 });
 
 exports.deleteAssignment = asyncHandler(async (req, res) => {
-  const assignment = await Assignment.findByIdAndDelete(req.params.id);
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid assignment ID");
+  }
+
+  const assignment = await Assignment.findById(id);
+  if (!assignment) {
+    return sendError(res, 404, false, "Assignment not found");
+  }
 
   assignment.isActive = false;
   await assignment.save();
 
-  if (!assignment) return sendError(res, 404, false, "Assignment not found");
-
-  return sendResponse(res, 200, true, "Assignment deleted", null);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Assignment soft deleted successfully",
+    assignment
+  );
 });
