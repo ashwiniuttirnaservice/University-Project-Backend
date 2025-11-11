@@ -1,49 +1,22 @@
 const express = require("express");
-const testRouter = express.Router();
-const upload = require("../utils/multer.js");
-
 const {
+  uploadMiddleware,
+  uploadExcel,
   createTest,
-  getAllTests,
-  getTestById,
-  updateTest,
-  deleteTest,
-  getTestsForCourse,
-  submitTest,
-  getTestResults,
-  getSingleTestResult,
-  getAllStudentResults,
-  importTestsFromExcel,
+  getQuestionsForAdmin,
+  deleteTestById,
+  getTestListForAdmin,
 } = require("../controllers/TestController");
+const router = express.Router();
 
-const { protect, admin } = require("../middleware/authMiddleware.js");
+router.post("/upload-excel", uploadMiddleware, uploadExcel);
 
-testRouter.post(
-  "/import-excel",
-  protect,
-  admin,
-  upload.single("testExcel"),
-  importTestsFromExcel
-);
-testRouter
-  .route("/")
-  .get(protect, admin, getAllTests)
-  .post(protect, admin, createTest);
+router.post("/create", createTest);
 
-testRouter.route("/all-results").get(protect, admin, getAllStudentResults);
+router.get("/questions/:id", getQuestionsForAdmin);
 
-testRouter.route("/course/:courseId").get(protect, getTestsForCourse);
+router.delete("/:id", deleteTestById);
 
-testRouter.route("/submit").post(protect, submitTest);
+router.post("/list", getTestListForAdmin);
 
-testRouter.route("/results").get(protect, getTestResults);
-
-testRouter.route("/results/:id").get(protect, getSingleTestResult);
-
-testRouter
-  .route("/:id")
-  .get(protect, getTestById)
-  .put(protect, admin, updateTest)
-  .delete(protect, admin, deleteTest);
-
-module.exports = testRouter;
+module.exports = router;

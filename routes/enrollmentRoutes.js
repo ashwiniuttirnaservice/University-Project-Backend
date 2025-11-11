@@ -3,6 +3,7 @@ const {
   enrollInCourse,
   getMyEnrollments,
   createEnrollment,
+  deleteEnrollment,
   getAllEnrollmentsAdmin,
   createStudentEnrollmentByAdmin,
   updateStudentEnrollmentByAdmin,
@@ -21,7 +22,7 @@ enrollmentRouter.put("/:id", updateStudentEnrollmentByAdmin);
 enrollmentRouter.get("/", getAllEnrollmentsAdmin);
 enrollmentRouter.get("/:id", getEnrollmentById);
 enrollmentRouter.route("/").post(enrollInCourse);
-
+enrollmentRouter.delete("/:id", deleteEnrollment);
 enrollmentRouter.get("/my", protect, getMyEnrollments);
 
 enrollmentRouter
