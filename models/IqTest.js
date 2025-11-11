@@ -13,23 +13,28 @@ const QuestionSchema = new mongoose.Schema({
   isCorrect: { type: Boolean, default: false },
 });
 
-const TestListSchema = new mongoose.Schema(
+const IQTestSchema = new mongoose.Schema(
   {
     testID: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TestList",
+      required: true,
+    },
+
+    studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+      required: true,
     },
 
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
-      required: true,
     },
 
     chapterId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Chapter",
-      required: true,
     },
 
     title: {
@@ -40,32 +45,37 @@ const TestListSchema = new mongoose.Schema(
 
     questions: [QuestionSchema],
 
+    status: {
+      type: Number,
+      enum: [0, 1, -1],
+      default: 0,
+    },
+
     testDuration: {
       minutes: { type: Number, default: 0 },
       seconds: { type: Number, default: 0 },
     },
 
     totalQuestions: { type: Number, default: 0 },
+    correctAnswers: { type: Number, default: 0 },
+    wrongAnswers: { type: Number, default: 0 },
     totalMarks: { type: Number, default: 0 },
+    marksGained: { type: Number, default: 0 },
     passingMarks: { type: Number, default: 0 },
 
     userType: {
       type: String,
+
       default: "0",
     },
 
-    visible: {
-      type: Boolean,
-      default: true,
-    },
-
-    reportType: {
-      type: Number,
-      default: 1,
-    },
+    isShared: { type: Boolean, default: false },
+    reportType: { type: Number, default: 1 },
+    report: { type: String, default: "" },
+    certificate: { type: String, default: "" },
   },
   { timestamps: true }
 );
 
-const TestList = mongoose.model("TestList", TestListSchema);
-module.exports = TestList;
+const IQTest = mongoose.model("IQTest", IQTestSchema);
+module.exports = IQTest;

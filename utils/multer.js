@@ -34,8 +34,12 @@ const getFolderPath = (fieldname) => {
       return "uploads/sponsorship/logo/";
     case "contentUrl":
       return "uploads/lectures/";
-    case "fileUrl": // 📑 Assignments
+    case "fileUrl":
       return "uploads/assignments/";
+    case "certificate":
+      return "uploads/iqtests/certificates/";
+    case "report":
+      return "uploads/iqtests/reports/";
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }
@@ -99,7 +103,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  fileSize: 1024 * 1024 * 100,
+  fileSize: 1024 * 1024 * 10,
 });
 
 module.exports = upload;

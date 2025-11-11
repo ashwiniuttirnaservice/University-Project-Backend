@@ -103,6 +103,31 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
 });
 
+exports.deleteEnrollment = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid enrollment ID");
+  }
+
+  const enrollment = await Enrollment.findById(id);
+
+  if (!enrollment) {
+    return sendError(res, 404, false, "Enrollment not found");
+  }
+
+  enrollment.isActive = false;
+  await enrollment.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Enrollment soft deleted successfully",
+    enrollment
+  );
+});
+
 exports.markContentAsComplete = asyncHandler(async (req, res) => {
   const { enrollmentId } = req.params;
   const { contentId } = req.body;

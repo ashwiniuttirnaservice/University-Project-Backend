@@ -22,7 +22,7 @@ batchRouter.post("/student-batche", assignStudentToBatch);
 batchRouter.get("/student/:studentId", getBatchesForStudent);
 batchRouter.get("/:courseId", getBatchesByCourseId);
 batchRouter.get("/trainer/:trainerId", getBatchesByTrainerId);
-batchRouter.get("/batches/:batchId", getBatchById);
+batchRouter.get("/batches/:id", getBatchById);
 
 batchRouter.route("/:id").put(updateBatch).delete(deleteBatch);
 module.exports = batchRouter;
