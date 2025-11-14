@@ -27,6 +27,15 @@ const IQTestSchema = new mongoose.Schema(
       required: true,
     },
 
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+    },
+    phaseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Phase",
+    },
+
     courseId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",

@@ -6,11 +6,12 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 
 const getAllIQTests = asyncHandler(async (req, res) => {
   const student = req.student;
-  const { type } = req.query;
+  const { chapterId, phaseId, batchId } = req.query;
 
   let match = {};
-  if (type && type !== "all")
-    match.chapterId = new mongoose.Types.ObjectId(type);
+  if (chapterId) match.chapterId = new mongoose.Types.ObjectId(chapterId);
+  if (phaseId) match.phaseId = new mongoose.Types.ObjectId(phaseId);
+  if (batchId) match.batchId = new mongoose.Types.ObjectId(batchId);
 
   const result = await TestList.aggregate([
     { $match: match },
@@ -34,6 +35,7 @@ const getAllIQTests = asyncHandler(async (req, res) => {
       },
     },
     { $addFields: { attempted: { $gt: [{ $size: "$userAttempts" }, 0] } } },
+    { $sort: { createdAt: -1 } },
   ]);
 
   const formatted = result.map((test) => ({
@@ -64,7 +66,6 @@ const getQuestionsForUser = asyncHandler(async (req, res) => {
   if (iqTest) {
     if (iqTest.status === 1)
       return sendError(res, 400, false, "Test already completed");
-
     return sendResponse(res, 200, true, "Test resumed successfully", iqTest);
   }
 
@@ -98,6 +99,10 @@ const getQuestionsForUser = asyncHandler(async (req, res) => {
     totalQuestions: test.totalQuestions,
     passingMarks: test.passingMarks,
     questions: sampled,
+    courseId: test.courseId,
+    chapterId: test.chapterId,
+    phaseId: test.phaseId,
+    batchId: test.batchId,
   });
 
   sendResponse(res, 200, true, "Questions fetched successfully", newTest);
@@ -166,6 +171,8 @@ const submitExam = asyncHandler(async (req, res) => {
         passingMarks: testList?.passingMarks || 0,
         status: 1,
         testDuration,
+        phaseId: testList.phaseId,
+        batchId: testList.batchId,
       },
     }
   );
@@ -179,9 +186,127 @@ const submitExam = asyncHandler(async (req, res) => {
   });
 });
 
+const getAllInProgressIQTests = asyncHandler(async (req, res) => {
+  const { studentId, phaseId, batchId, chapterId } = req.body;
+
+  if (!studentId) return sendError(res, 400, false, "studentId is required");
+
+  let match = {};
+  if (chapterId) match.chapterId = new mongoose.Types.ObjectId(chapterId);
+  if (phaseId) match.phaseId = new mongoose.Types.ObjectId(phaseId);
+  if (batchId) match.batchId = new mongoose.Types.ObjectId(batchId);
+
+  const result = await TestList.aggregate([
+    { $match: match },
+    {
+      $lookup: {
+        from: "iqtests",
+        let: { testID: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$testID", "$$testID"] },
+                  {
+                    $eq: ["$studentId", new mongoose.Types.ObjectId(studentId)],
+                  },
+                  { $eq: ["$status", -1] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "userAttempts",
+      },
+    },
+    { $addFields: { attempted: { $gt: [{ $size: "$userAttempts" }, 0] } } },
+    { $match: { attempted: true } },
+  ]);
+
+  const formattedTests = result.map((test) => ({
+    _id: test._id,
+    title: test.title,
+    totalMarks: test.totalMarks,
+    attempted: -1,
+    testDuration: test.testDuration,
+    createdAt: test.createdAt,
+    updatedAt: test.updatedAt,
+  }));
+
+  sendResponse(
+    res,
+    200,
+    true,
+    "In-progress IQ Tests fetched successfully",
+    formattedTests
+  );
+});
+
+const getCompletedIQTestsForUser = asyncHandler(async (req, res) => {
+  const { studentId, phaseId, batchId, chapterId } = req.body;
+
+  if (!studentId) return sendError(res, 400, false, "studentId is required");
+
+  let match = {};
+  if (chapterId) match.chapterId = new mongoose.Types.ObjectId(chapterId);
+  if (phaseId) match.phaseId = new mongoose.Types.ObjectId(phaseId);
+  if (batchId) match.batchId = new mongoose.Types.ObjectId(batchId);
+
+  const result = await TestList.aggregate([
+    { $match: match },
+    {
+      $lookup: {
+        from: "iqtests",
+        let: { testID: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$testID", "$$testID"] },
+                  {
+                    $eq: ["$studentId", new mongoose.Types.ObjectId(studentId)],
+                  },
+                  { $eq: ["$status", 1] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "userAttempts",
+      },
+    },
+    { $addFields: { attempted: { $gt: [{ $size: "$userAttempts" }, 0] } } },
+    { $match: { attempted: true } },
+    { $sort: { createdAt: -1 } },
+  ]);
+
+  const formatted = result.map((test) => ({
+    _id: test._id,
+    title: test.title,
+    testDuration: test.testDuration,
+    userType: test.userType || "0",
+    totalMarks: test.totalMarks,
+    attempted: 1,
+    createdAt: test.createdAt,
+    updatedAt: test.updatedAt,
+  }));
+
+  sendResponse(
+    res,
+    200,
+    true,
+    "Completed IQ Tests fetched successfully",
+    formatted
+  );
+});
+
 module.exports = {
   getAllIQTests,
   getQuestionsForUser,
   updateUserAnswer,
   submitExam,
+  getAllInProgressIQTests,
+  getCompletedIQTestsForUser,
 };

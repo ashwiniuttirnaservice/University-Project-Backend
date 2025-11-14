@@ -17,46 +17,89 @@ const uploadExcel = asyncHandler(async (req, res) => {
   const data = xlsx.utils.sheet_to_json(sheet);
 
   const questions = data.map((row) => ({
+    chapterName: row["chapterName"] || "All",
     question: row["question"] || "N/A",
     optionA: row["optionA"] || "N/A",
     optionB: row["optionB"] || "N/A",
-    optionC: row["optionC"] || "N/A",
-    optionD: row["optionD"] || "N/A",
+    optionC: row["optionC"] || "",
+    optionD: row["optionD"] || "",
     correctAns: row["correctAns"] || "A",
     marks: Number(row["marks"]) || 1,
   }));
 
-  const totalMarks = Number(req.body.totalMarks) || questions.length;
+  const {
+    title,
+    testLevel,
+    courseId,
+    chapterId,
+    batchId,
+    phaseId,
+    totalMarks,
+    minutes,
+    seconds,
+    userType,
+  } = req.body;
+
+  if (!courseId)
+    return sendError(res, 400, false, "Training Program is required");
+
+  let safeChapterId = chapterId && chapterId !== "" ? chapterId : null;
+  let safePhaseId = phaseId && phaseId !== "" ? phaseId : null;
+  let safeBatchId = batchId && batchId !== "" ? batchId : null;
+
   const testDuration = {
-    minutes: Number(req.body.minutes) || 0,
-    seconds: Number(req.body.seconds) || 0,
+    minutes: Number(minutes) || 0,
+    seconds: Number(seconds) || 0,
   };
-  const userType = req.body.userType || "0";
 
-  let test = await TestList.findOne({ title: req.body.title });
+  const filter = { title };
+  if (safeChapterId) filter.chapterId = safeChapterId;
 
-  if (test) {
-    test.questions = questions;
-    test.userType = userType;
-    test.totalMarks = totalMarks;
-    await test.save();
-    return sendResponse(res, 200, true, "IQ Test updated successfully", test);
+  const existingTest = await TestList.findOne(filter);
+
+  if (existingTest) {
+    existingTest.questions = questions;
+    existingTest.testLevel = testLevel || existingTest.testLevel;
+    existingTest.totalMarks = Number(totalMarks) || questions.length;
+    existingTest.totalQuestions = questions.length;
+    existingTest.testDuration = testDuration;
+    existingTest.userType = userType || "0";
+    existingTest.phaseId = safePhaseId;
+    existingTest.batchId = safeBatchId;
+    existingTest.courseId = courseId;
+    existingTest.chapterId = safeChapterId;
+    await existingTest.save();
+
+    return sendResponse(
+      res,
+      200,
+      true,
+      "Assessment  updated successfully",
+      existingTest
+    );
   }
 
   const newTest = await TestList.create({
-    title: req.body.title || "Untitled Test",
-    testLevel: req.body.testLevel || "Beginner",
+    title: title || "Untitled Assessment ",
+    testLevel: testLevel || "Beginner",
+    courseId,
+    chapterId: safeChapterId,
+    batchId: safeBatchId,
+    phaseId: safePhaseId,
     questions,
     testDuration,
-    userType,
-    totalMarks,
+    totalMarks: Number(totalMarks) || questions.length,
+    totalQuestions: questions.length,
+    userType: userType || "0",
   });
 
-  sendResponse(res, 201, true, "IQ Test uploaded successfully", newTest);
+  sendResponse(res, 201, true, "Assessment  uploaded successfully", newTest);
 });
 
 const createTest = asyncHandler(async (req, res) => {
   const {
+    phaseId,
+    batchId,
     courseId,
     chapterId,
     title,
@@ -69,12 +112,15 @@ const createTest = asyncHandler(async (req, res) => {
     reportType,
   } = req.body;
 
-  if (!chapterId) return sendError(res, 400, false, "chapterId is required");
+  if (!courseId)
+    return sendError(res, 400, false, "Training Program  are required");
 
   const newTest = await TestList.create({
+    phaseId,
+    batchId,
     courseId,
     chapterId,
-    title: title || "Untitled Test",
+    title: title || "Untitled Assessment ",
     questions,
     testDuration: {
       minutes: testDuration?.minutes || 0,
@@ -85,37 +131,76 @@ const createTest = asyncHandler(async (req, res) => {
     totalMarks: totalMarks || 0,
     passingMarks: passingMarks || 0,
     userType: userType || "0",
-    reportType: reportType || 0,
+    reportType: reportType || 1,
   });
 
-  sendResponse(res, 201, true, "Test created successfully", newTest);
+  sendResponse(res, 201, true, "Assessment  created successfully", newTest);
+});
+
+const getAllTests = asyncHandler(async (req, res) => {
+  const tests = await TestList.find().sort({ createdAt: -1 });
+
+  if (!tests || tests.length === 0) {
+    return sendResponse(res, 200, true, "No Assessment  found", []);
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "All Assessment  fetched successfully",
+    tests
+  );
 });
 
 const getQuestionsForAdmin = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  if (!id) return sendError(res, 400, false, "IQ Test ID is required");
+  if (!id) return sendError(res, 400, false, "Assessment  ID is required");
 
   const test = await TestList.findById(id).select("title questions").lean();
-  if (!test) return sendError(res, 404, false, "IQ Test not found");
+  if (!test) return sendError(res, 404, false, "Assessment  not found");
 
   sendResponse(res, 200, true, "Questions fetched successfully", test);
 });
 
 const deleteTestById = asyncHandler(async (req, res) => {
   const deleted = await TestList.findByIdAndDelete(req.params.id);
-  if (!deleted) return sendError(res, 404, false, "Test not found");
+  if (!deleted) return sendError(res, 404, false, "Assessment  not found");
 
-  sendResponse(res, 200, true, "Test deleted successfully", deleted);
+  sendResponse(res, 200, true, "Assessment  deleted successfully", deleted);
 });
 
 const getTestListForAdmin = asyncHandler(async (req, res) => {
-  const { type } = req.body;
-  const result = await TestList.find(
-    { chapterId: new mongoose.Types.ObjectId(type) },
-    { questions: 0 }
-  );
+  const { chapterId, phaseId, batchId } = req.body;
 
-  sendResponse(res, 200, true, "Tests fetched successfully", result);
+  const filter = {};
+
+  if (chapterId && mongoose.Types.ObjectId.isValid(chapterId)) {
+    filter.chapterId = new mongoose.Types.ObjectId(chapterId);
+  }
+
+  if (phaseId && mongoose.Types.ObjectId.isValid(phaseId)) {
+    filter.phaseId = new mongoose.Types.ObjectId(phaseId);
+  }
+
+  if (batchId && mongoose.Types.ObjectId.isValid(batchId)) {
+    filter.batchId = new mongoose.Types.ObjectId(batchId);
+  }
+
+  const result = await TestList.find(filter, { questions: 0 }).sort({
+    createdAt: -1,
+  });
+
+  if (!result.length)
+    return sendResponse(
+      res,
+      200,
+      true,
+      "No Assessment found for given filters",
+      []
+    );
+
+  sendResponse(res, 200, true, "Assessment  fetched successfully", result);
 });
 
 module.exports = {
@@ -125,4 +210,5 @@ module.exports = {
   getQuestionsForAdmin,
   deleteTestById,
   getTestListForAdmin,
+  getAllTests,
 };
