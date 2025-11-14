@@ -12,6 +12,12 @@ const EnrollmentSchema = new mongoose.Schema(
       ref: "Student",
       required: true,
     },
+    assignmentSubmissions: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Assignment",
+      },
+    ],
 
     enrolledCourses: [
       {
@@ -24,6 +30,12 @@ const EnrollmentSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Batch",
+      },
+    ],
+    attendances: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Attendance",
       },
     ],
 

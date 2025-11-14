@@ -46,12 +46,18 @@ exports.createCourse = asyncHandler(async (req, res) => {
     isActive,
   });
 
-  return sendResponse(res, 201, true, "Course created successfully", course);
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Training Program created successfully",
+    course
+  );
 });
 
 exports.getAllCourses = asyncHandler(async (req, res) => {
   const courses = await Course.find().populate("branch").populate("trainer");
-  return sendResponse(res, 200, true, "All courses fetched", courses);
+  return sendResponse(res, 200, true, "All Training Program fetched", courses);
 });
 
 exports.getCourseById = asyncHandler(async (req, res) => {
@@ -68,9 +74,9 @@ exports.getCourseById = asyncHandler(async (req, res) => {
         populate: {
           path: "chapters",
           populate: [
-            { path: "lectures" }, // Nested Lectures
-            { path: "assignments" }, // Nested Assignments
-            { path: "notes" }, // Nested Notes
+            { path: "lectures" },
+            { path: "assignments" },
+            { path: "notes" },
           ],
         },
       },
@@ -78,10 +84,10 @@ exports.getCourseById = asyncHandler(async (req, res) => {
     .lean();
 
   if (!course) {
-    return sendError(res, 404, false, "Course not found");
+    return sendError(res, 404, false, "Training Program not found");
   }
 
-  return sendResponse(res, 200, true, "Course fetched", course);
+  return sendResponse(res, 200, true, "Training Program fetched", course);
 });
 
 exports.updateCourse = asyncHandler(async (req, res) => {
@@ -124,16 +130,22 @@ exports.updateCourse = asyncHandler(async (req, res) => {
   );
 
   if (!course) {
-    return sendError(res, 404, false, "Course not found");
+    return sendError(res, 404, false, "Training Program not found");
   }
 
-  return sendResponse(res, 200, true, "Course updated successfully", course);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Training Program updated successfully",
+    course
+  );
 });
 exports.deleteCourse = asyncHandler(async (req, res) => {
   const course = await Course.findById(req.params.id);
 
   if (!course) {
-    return sendError(res, 404, false, "Course not found");
+    return sendError(res, 404, false, "Training Program not found");
   }
 
   course.isActive = false;
@@ -143,7 +155,7 @@ exports.deleteCourse = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "Course deactivated successfully",
+    "Training Program deactivated successfully",
     course
   );
 });
@@ -160,7 +172,7 @@ exports.getAllCourse = asyncHandler(async (req, res) => {
     .lean();
 
   if (!courses.length) {
-    return sendError(res, 404, false, "No courses found");
+    return sendError(res, 404, false, "No Training Program found");
   }
 
   const order = { Upcoming: 1, Ongoing: 2, Completed: 3 };
@@ -186,17 +198,16 @@ exports.getAllCourse = asyncHandler(async (req, res) => {
 
   const finalCourses = [...withBatches, ...withoutBatches];
 
-  return sendResponse(res, 200, true, "Courses fetched", finalCourses);
+  return sendResponse(res, 200, true, "Training Program fetched", finalCourses);
 });
 
 exports.cloneCourse = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, 400, false, "Invalid Course ID");
+    return sendError(res, 400, false, "Invalid Training Program ID");
   }
 
-  // 🔹 1️⃣ Fetch the full course structure using aggregation instead of populate
   const [originalCourse] = await Course.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
     {
@@ -256,10 +267,9 @@ exports.cloneCourse = asyncHandler(async (req, res) => {
   ]);
 
   if (!originalCourse) {
-    return sendError(res, 404, false, "Course not found to clone");
+    return sendError(res, 404, false, "Training Program not found to clone");
   }
 
-  // 🔹 2️⃣ Create cloned course
   const clonedCourseData = {
     title: `${originalCourse.title} (Clone)`,
     description: originalCourse.description,
@@ -279,7 +289,6 @@ exports.cloneCourse = asyncHandler(async (req, res) => {
 
   const clonedCourse = await Course.create(clonedCourseData);
 
-  // 🔹 3️⃣ Clone nested data manually
   const clonedPhases = [];
 
   for (const phase of originalCourse.phases || []) {
@@ -344,7 +353,7 @@ exports.cloneCourse = asyncHandler(async (req, res) => {
     res,
     201,
     true,
-    "Course cloned successfully",
+    "Training Program cloned successfully",
     clonedCourse
   );
 });

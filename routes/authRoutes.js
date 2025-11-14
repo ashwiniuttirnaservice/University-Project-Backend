@@ -13,6 +13,6 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 
 router.get("/profile", protect, getUserProfile);
-router.put("/profile", protect, updateUserProfile);
+router.put("/profile", updateUserProfile);
 
 module.exports = router;

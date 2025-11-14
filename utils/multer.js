@@ -2,7 +2,6 @@ const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
 
-// Return folder path based on fieldname
 const getFolderPath = (fieldname) => {
   switch (fieldname) {
     case "Logo":
@@ -40,19 +39,20 @@ const getFolderPath = (fieldname) => {
       return "uploads/iqtests/certificates/";
     case "report":
       return "uploads/iqtests/reports/";
+
+    case "submissionFile":
+      return "uploads/assignment-submissions/";
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }
 };
 
-// Ensure directory exists
 const ensureDirExists = (dirPath) => {
   if (!fs.existsSync(dirPath)) {
     fs.mkdirSync(dirPath, { recursive: true });
   }
 };
 
-// Multer storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     try {
@@ -70,7 +70,6 @@ const storage = multer.diskStorage({
   },
 });
 
-// Allowed MIME types
 const allowedMimeTypes = [
   "image/jpeg",
   "image/jpg",
@@ -90,7 +89,6 @@ const allowedMimeTypes = [
   "video/mkv",
 ];
 
-// File filter
 const fileFilter = (req, file, cb) => {
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
@@ -99,7 +97,6 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Multer upload
 const upload = multer({
   storage,
   fileFilter,

@@ -4,6 +4,7 @@ const Meeting = require("../models/Meeting");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
+const Enrollment = require("../models/Enrollment.js");
 exports.markAttendance = asyncHandler(async (req, res) => {
   const { meetingId } = req.params;
   const { attendees } = req.body;
@@ -11,8 +12,7 @@ exports.markAttendance = asyncHandler(async (req, res) => {
   const meeting = await Meeting.findById(meetingId);
   if (!meeting) return sendError(res, 404, false, "Meeting not found");
 
-  let existingAttendance = await Attendance.findOne({ meeting: meetingId });
-
+  const existingAttendance = await Attendance.findOne({ meeting: meetingId });
   if (existingAttendance) {
     return sendError(
       res,
@@ -37,7 +37,15 @@ exports.markAttendance = asyncHandler(async (req, res) => {
     isActive: true,
   });
 
-  const populatedAttendance = await Attendance.aggregate([
+  for (const a of attendees) {
+    await Enrollment.findOneAndUpdate(
+      { studentId: a.studentId },
+      { $push: { attendances: newAttendance._id } },
+      { new: true }
+    );
+  }
+
+  const populated = await Attendance.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(newAttendance._id) } },
     {
       $lookup: {
@@ -71,8 +79,8 @@ exports.markAttendance = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "Attendance marked successfully",
-    populatedAttendance[0]
+    "Attendance marked & saved to enrollment successfully",
+    populated[0]
   );
 });
 
@@ -106,10 +114,8 @@ exports.getAllAttendance = asyncHandler(async (req, res) => {
     },
     { $unwind: "$trainer" },
 
-    // ✅ Unwind attendees to access student info
     { $unwind: "$attendees" },
 
-    // ✅ Lookup student details for each attendee
     {
       $lookup: {
         from: "students",
@@ -120,7 +126,6 @@ exports.getAllAttendance = asyncHandler(async (req, res) => {
     },
     { $unwind: "$attendees.studentDetails" },
 
-    // ✅ Optional: group back if you want one record per attendance
     {
       $group: {
         _id: "$_id",

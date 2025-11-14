@@ -10,21 +10,15 @@ const {
   deleteCourse,
 } = require("../controllers/courseController");
 
-// POST /api/courses
 router.post("/", createCourse);
 router.post("/:id/clone", cloneCourse);
-// GET /api/courses
-// router.get('/', getAllCourses);
 
-// GET /api/courses/all
 router.get("/all", getAllCourse);
 
 router.get("/:id", getCourseById);
 
-// PUT /api/courses/:id
 router.put("/:id", updateCourse);
 
-// DELETE /api/courses/:id
 router.delete("/:id", deleteCourse);
 
 module.exports = router;

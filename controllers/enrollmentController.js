@@ -9,18 +9,28 @@ exports.enrollInCourse = asyncHandler(async (req, res) => {
   const { course, studentId } = req.body;
 
   if (!course || !studentId) {
-    return sendError(res, 400, false, "Course ID and Student ID are required");
+    return sendError(
+      res,
+      400,
+      false,
+      "Training  ID and Student ID are required"
+    );
   }
 
   const courses = await Course.findById(course);
-  if (!courses) return sendError(res, 404, false, "Course not found");
+  if (!courses) return sendError(res, 404, false, "Training Program not found");
 
   const existing = await Enrollment.findOne({
     course: courses._id,
     studentId,
   });
   if (existing)
-    return sendError(res, 400, false, "Already enrolled in this course");
+    return sendError(
+      res,
+      400,
+      false,
+      "Already enrolled in this Training Program"
+    );
 
   const enrollment = await Enrollment.create({
     course: courses._id,
@@ -31,7 +41,7 @@ exports.enrollInCourse = asyncHandler(async (req, res) => {
     .populate("studentId")
     .populate("course", "title description");
 
-  return sendResponse(res, 201, true, "Enrolled successfully", populated);
+  return sendResponse(res, 201, true, "Participant  successfully", populated);
 });
 
 exports.getMyEnrollments = asyncHandler(async (req, res) => {
@@ -100,20 +110,20 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
     { $sort: { enrolledAt: -1 } },
   ]);
 
-  return sendResponse(res, 200, true, "All enrollments fetched", enrollments);
+  return sendResponse(res, 200, true, "All Participant  fetched", enrollments);
 });
 
 exports.deleteEnrollment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, 400, false, "Invalid enrollment ID");
+    return sendError(res, 400, false, "Invalid Participant  ID");
   }
 
   const enrollment = await Enrollment.findById(id);
 
   if (!enrollment) {
-    return sendError(res, 404, false, "Enrollment not found");
+    return sendError(res, 404, false, "Participant  not found");
   }
 
   enrollment.isActive = false;
@@ -123,7 +133,7 @@ exports.deleteEnrollment = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "Enrollment soft deleted successfully",
+    "Participant  soft deleted successfully",
     enrollment
   );
 });
@@ -136,7 +146,7 @@ exports.markContentAsComplete = asyncHandler(async (req, res) => {
   if (!contentId) return sendError(res, 400, false, "Content ID is required");
 
   const enrollment = await Enrollment.findById(enrollmentId).populate("course");
-  if (!enrollment) return sendError(res, 404, false, "Enrollment not found");
+  if (!enrollment) return sendError(res, 404, false, "Participant  not found");
   if (enrollment.user.toString() !== userId)
     return sendError(res, 403, false, "Unauthorized");
 
@@ -164,7 +174,7 @@ exports.markContentAsIncomplete = asyncHandler(async (req, res) => {
   if (!contentId) return sendError(res, 400, false, "Content ID is required");
 
   const enrollment = await Enrollment.findById(enrollmentId);
-  if (!enrollment) return sendError(res, 404, false, "Enrollment not found");
+  if (!enrollment) return sendError(res, 404, false, "Participant  not found");
   if (enrollment.user.toString() !== userId)
     return sendError(res, 403, false, "Unauthorized");
 
@@ -202,7 +212,7 @@ exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
       res,
       200,
       true,
-      "All enrollments fetched successfully.",
+      "All Participant  fetched successfully.",
       []
     );
   }
@@ -260,7 +270,7 @@ exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "All enrollments fetched successfully.",
+    "All Participant  fetched successfully.",
     formattedResponse
   );
 });
@@ -319,10 +329,10 @@ exports.getEnrollmentByIdAdmin = asyncHandler(async (req, res) => {
   ]);
 
   if (!enrollment || enrollment.length === 0) {
-    return sendError(res, 404, false, "Enrollment not found");
+    return sendError(res, 404, false, "Participant  not found");
   }
 
-  return sendResponse(res, 200, true, "Enrollment fetched", enrollment[0]);
+  return sendResponse(res, 200, true, "Participant  fetched", enrollment[0]);
 });
 
 exports.unenrollFromCourse = asyncHandler(async (req, res) => {
@@ -330,7 +340,7 @@ exports.unenrollFromCourse = asyncHandler(async (req, res) => {
   const currentUser = req.user;
 
   const enrollment = await Enrollment.findById(enrollmentId);
-  if (!enrollment) return sendError(res, 404, false, "Enrollment not found");
+  if (!enrollment) return sendError(res, 404, false, "Participant  not found");
 
   if (
     currentUser.role !== "admin" &&
@@ -388,7 +398,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
         res,
         200,
         true,
-        "Student already enrolled in same course(s)/batch(es).",
+        "Student already enrolled in same Training Program(s)/batch(es).",
         {
           student,
           enrollment,
@@ -419,7 +429,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
       res,
       200,
       true,
-      "Student enrollment updated successfully.",
+      "Student Participant  updated successfully.",
       {
         student,
         enrollment,
@@ -455,7 +465,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     enrolledBatches,
   });
 
-  return sendResponse(res, 201, true, "Enrollment created successfully", {
+  return sendResponse(res, 201, true, "Participant  created successfully", {
     student,
     enrollment,
   });
@@ -465,7 +475,6 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
   const { fullName, mobileNo, email, coursesInterested, enrolledBatches } =
     req.body;
 
-  // 1️⃣ Validation
   if (
     !fullName ||
     !mobileNo ||
@@ -481,7 +490,6 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     );
   }
 
-  // 2️⃣ Check if student exists or create new
   let student = await Student.findOne({ email });
 
   if (!student) {
@@ -494,7 +502,6 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     });
   }
 
-  // 3️⃣ Create enrollment record
   const enrollment = await Enrollment.create({
     studentId: student._id,
     fullName,
@@ -509,15 +516,13 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     enrolledAt: new Date(),
   });
 
-  // 4️⃣ Add student details to each batch
   for (const batchId of enrolledBatches) {
     await Batch.findByIdAndUpdate(
       batchId,
       {
-        // ✅ Add only if not already present
         $addToSet: { enrolledIds: student._id },
         $inc: { studentCount: 1 },
-        // ✅ Add full student info in `students` array
+
         $push: {
           students: {
             studentId: student._id,
@@ -531,12 +536,11 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     );
   }
 
-  // 5️⃣ Response
   return sendResponse(
     res,
     201,
     true,
-    "Student enrolled successfully by admin",
+    "Student Participant  successfully by admin",
     {
       student,
       enrollment,
@@ -550,12 +554,12 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     req.body;
 
   if (!id) {
-    return sendError(res, 400, false, "Enrollment ID is required");
+    return sendError(res, 400, false, "Participant  ID is required");
   }
 
   const existingEnrollment = await Enrollment.findById(id);
   if (!existingEnrollment) {
-    return sendError(res, 404, false, "Enrollment not found");
+    return sendError(res, 404, false, "Participant  not found");
   }
 
   let student = await Student.findById(existingEnrollment.studentId);
@@ -636,7 +640,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "Student enrollment updated successfully",
+    "Student Participant  updated successfully",
     {
       student,
       enrollment: existingEnrollment,
@@ -648,7 +652,7 @@ exports.getEnrollmentById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, 400, false, "Invalid enrollment ID");
+    return sendError(res, 400, false, "Invalid Participant  ID");
   }
 
   const enrollmentId = new mongoose.Types.ObjectId(id);
@@ -676,18 +680,69 @@ exports.getEnrollmentById = asyncHandler(async (req, res) => {
 
     {
       $lookup: {
-        from: "assignments",
-        localField: "enrolledCourses",
-        foreignField: "course",
-        as: "assignments",
-      },
-    },
-
-    {
-      $lookup: {
         from: "attendances",
-        localField: "studentId",
-        foreignField: "student",
+        let: { studentId: "$studentId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $in: ["$$studentId", "$attendees.student"] },
+            },
+          },
+
+          {
+            $lookup: {
+              from: "meetings",
+              localField: "meeting",
+              foreignField: "_id",
+              as: "meeting",
+            },
+          },
+          { $unwind: { path: "$meeting", preserveNullAndEmptyArrays: true } },
+
+          {
+            $lookup: {
+              from: "batches",
+              localField: "batch",
+              foreignField: "_id",
+              as: "batch",
+            },
+          },
+          { $unwind: { path: "$batch", preserveNullAndEmptyArrays: true } },
+
+          {
+            $lookup: {
+              from: "trainers",
+              localField: "trainer",
+              foreignField: "_id",
+              as: "trainer",
+            },
+          },
+          { $unwind: { path: "$trainer", preserveNullAndEmptyArrays: true } },
+
+          {
+            $lookup: {
+              from: "courses",
+              localField: "course",
+              foreignField: "_id",
+              as: "course",
+            },
+          },
+          { $unwind: { path: "$course", preserveNullAndEmptyArrays: true } },
+
+          {
+            $addFields: {
+              studentAttendance: {
+                $filter: {
+                  input: "$attendees",
+                  as: "att",
+                  cond: { $eq: ["$$att.student", "$$studentId"] },
+                },
+              },
+            },
+          },
+
+          { $project: { attendees: 0 } },
+        ],
         as: "attendance",
       },
     },
@@ -727,17 +782,43 @@ exports.getEnrollmentById = asyncHandler(async (req, res) => {
         as: "workshops",
       },
     },
+
+    {
+      $lookup: {
+        from: "assignments",
+        let: { enrollmentId: "$_id" },
+        pipeline: [
+          { $unwind: "$submissions" },
+          {
+            $match: {
+              $expr: { $eq: ["$submissions.student", "$$enrollmentId"] },
+            },
+          },
+          {
+            $project: {
+              title: 1,
+              description: 1,
+              course: 1,
+              chapter: 1,
+              deadline: 1,
+              submitted: "$submissions",
+            },
+          },
+        ],
+        as: "assignmentSubmissions",
+      },
+    },
   ]);
 
   if (!enrollment || enrollment.length === 0) {
-    return sendError(res, 404, false, "Enrollment not found");
+    return sendError(res, 404, false, "Participant  not found");
   }
 
   return sendResponse(
     res,
     200,
     true,
-    "Enrollment details fetched successfully",
+    "Participant  details fetched successfully",
     enrollment[0]
   );
 });
