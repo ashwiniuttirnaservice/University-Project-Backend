@@ -50,6 +50,10 @@ exports.createMeeting = asyncHandler(async (req, res) => {
 exports.getAllMeetings = asyncHandler(async (req, res) => {
   const meetings = await Meeting.aggregate([
     {
+      $match: { isActive: true },
+    },
+
+    {
       $lookup: {
         from: "batches",
         localField: "batch",
@@ -58,6 +62,7 @@ exports.getAllMeetings = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$batch" },
+
     {
       $lookup: {
         from: "trainers",
@@ -67,6 +72,7 @@ exports.getAllMeetings = asyncHandler(async (req, res) => {
       },
     },
     { $unwind: "$trainer" },
+
     {
       $lookup: {
         from: "courses",
@@ -81,6 +87,7 @@ exports.getAllMeetings = asyncHandler(async (req, res) => {
         preserveNullAndEmptyArrays: true,
       },
     },
+
     { $sort: { createdAt: -1 } },
   ]);
 

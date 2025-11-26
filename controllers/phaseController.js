@@ -50,7 +50,8 @@ exports.createPhase = asyncHandler(async (req, res) => {
 });
 
 exports.getAllPhases = asyncHandler(async (req, res) => {
-  const phases = await Phase.find();
+  const phases = await Phase.find({ isActive: true }).sort({ createdAt: -1 });
+
   return sendResponse(
     res,
     200,

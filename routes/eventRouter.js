@@ -1,6 +1,10 @@
 const express = require("express");
-const router = express.Router();
+const eventRouter = express.Router();
+
 const upload = require("../utils/multer");
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const {
   createEvent,
   getAllEvents,
@@ -14,10 +18,31 @@ const eventUploads = upload.fields([
   { name: "gallery", maxCount: 10 },
 ]);
 
-router.post("/", eventUploads, createEvent);
-router.get("/", getAllEvents);
-router.get("/:id", getEventById);
-router.put("/:id", eventUploads, updateEvent);
-router.delete("/:id", deleteEvent);
+eventRouter.post(
+  "/",
+  protect,
+  checkAccess("event", "create"),
+  eventUploads,
+  createEvent
+);
 
-module.exports = router;
+eventRouter.get("/", protect, checkAccess("event", "read"), getAllEvents);
+
+eventRouter.get("/:id", protect, checkAccess("event", "read"), getEventById);
+
+eventRouter.put(
+  "/:id",
+  protect,
+  checkAccess("event", "update"),
+  eventUploads,
+  updateEvent
+);
+
+eventRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("event", "delete"),
+  deleteEvent
+);
+
+module.exports = eventRouter;

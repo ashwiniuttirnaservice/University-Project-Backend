@@ -22,11 +22,9 @@ const getUserProfile = asyncHandler(async (req, res) => {
     .populate("coursesInterested", "title duration")
     .lean();
 
-  // Map batch info into enrolledCourses
   const enrolledCoursesWithBatch = [];
   if (enrollment?.enrolledCourses?.length) {
     for (const course of enrollment.enrolledCourses) {
-      // Find the batch where this student is assigned for this course
       const batch = await Batch.findOne({
         students: { $elemMatch: { studentId } },
         coursesAssigned: course._id,
@@ -110,7 +108,10 @@ const getUserProfileTrainer = asyncHandler(async (req, res) => {
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find().select("-password");
+  const users = await User.find({ isActive: true })
+    .select("-password")
+    .sort({ createdAt: -1 });
+
   return sendResponse(res, 200, true, "All users fetched successfully", users);
 });
 

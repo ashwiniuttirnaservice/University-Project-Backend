@@ -1,5 +1,9 @@
 const express = require("express");
-const router = express.Router();
+const sessionCategoryRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const {
   createSessionCategory,
   getAllSessionCategories,
@@ -8,10 +12,39 @@ const {
   deleteSessionCategory,
 } = require("../controllers/sessionCategoryController");
 
-router.post("/", createSessionCategory);
-router.get("/", getAllSessionCategories);
-router.get("/:id", getSessionCategoryById);
-router.put("/:id", updateSessionCategory);
-router.delete("/:id", deleteSessionCategory);
+sessionCategoryRouter.post(
+  "/",
+  protect,
+  checkAccess("sessionCategory", "create"),
+  createSessionCategory
+);
 
-module.exports = router;
+sessionCategoryRouter.get(
+  "/",
+  protect,
+  checkAccess("sessionCategory", "read"),
+  getAllSessionCategories
+);
+
+sessionCategoryRouter.get(
+  "/:id",
+  protect,
+  checkAccess("sessionCategory", "read"),
+  getSessionCategoryById
+);
+
+sessionCategoryRouter.put(
+  "/:id",
+  protect,
+  checkAccess("sessionCategory", "update"),
+  updateSessionCategory
+);
+
+sessionCategoryRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("sessionCategory", "delete"),
+  deleteSessionCategory
+);
+
+module.exports = sessionCategoryRouter;

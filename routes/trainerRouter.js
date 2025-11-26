@@ -1,4 +1,10 @@
 const express = require("express");
+const trainerRouter = express.Router();
+
+const upload = require("../utils/multer");
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const {
   registerTrainer,
   getAllTrainers,
@@ -10,12 +16,11 @@ const {
   getTrainerSummary,
   getTrainerById,
 } = require("../controllers/trainerController");
-const upload = require("../utils/multer");
-
-const trainerRouter = express.Router();
 
 trainerRouter.post(
   "/register",
+  protect,
+  checkAccess("trainer", "create"),
   upload.fields([
     { name: "resume", maxCount: 1 },
     { name: "idProofTrainer", maxCount: 1 },
@@ -23,14 +28,39 @@ trainerRouter.post(
   ]),
   registerTrainer
 );
-trainerRouter.get("/approved", getApprovedTrainers);
 
-trainerRouter.get("/all", getAllTrainers);
-trainerRouter.get("/all-profile", getAllTrainer);
-trainerRouter.put("/approve/:trainerId", updateTrainerApproval);
+trainerRouter.get(
+  "/approved",
+  protect,
+  checkAccess("trainer", "read"),
+  getApprovedTrainers
+);
+
+trainerRouter.get(
+  "/all",
+  protect,
+  checkAccess("trainer", "read"),
+  getAllTrainers
+);
+
+trainerRouter.get(
+  "/all-profile",
+  protect,
+  checkAccess("trainer", "read"),
+  getAllTrainer
+);
+
+trainerRouter.put(
+  "/approve/:trainerId",
+  protect,
+  checkAccess("trainer", "update"),
+  updateTrainerApproval
+);
 
 trainerRouter.put(
   "/update/:trainerId",
+  protect,
+  checkAccess("trainer", "update"),
   upload.fields([
     { name: "resume", maxCount: 1 },
     { name: "idProofTrainer", maxCount: 1 },
@@ -39,9 +69,25 @@ trainerRouter.put(
   updateTrainer
 );
 
-trainerRouter.get("/summary", getTrainerSummary);
-trainerRouter.get("/:trainerId", getTrainerById);
+trainerRouter.get(
+  "/summary",
+  protect,
+  checkAccess("trainer", "read"),
+  getTrainerSummary
+);
 
-trainerRouter.delete("/delete/:trainerId", deleteTrainer);
+trainerRouter.get(
+  "/:trainerId",
+  protect,
+  checkAccess("trainer", "read"),
+  getTrainerById
+);
+
+trainerRouter.delete(
+  "/delete/:trainerId",
+  protect,
+  checkAccess("trainer", "delete"),
+  deleteTrainer
+);
 
 module.exports = trainerRouter;

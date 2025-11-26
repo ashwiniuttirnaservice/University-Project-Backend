@@ -53,7 +53,36 @@ exports.createHackathon = asyncHandler(async (req, res) => {
 });
 
 exports.getAllHackathons = asyncHandler(async (req, res) => {
-  const hackathons = await Hackathon.find().populate("sponsorships");
+  const hackathons = await Hackathon.aggregate([
+    {
+      $match: {
+        isActive: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "sponsorships",
+        localField: "sponsorships",
+        foreignField: "_id",
+        as: "sponsorships",
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        description: 1,
+        startDate: 1,
+        endDate: 1,
+        prizePool: 1,
+        isActive: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        sponsorships: 1,
+      },
+    },
+    { $sort: { createdAt: -1 } },
+  ]);
+
   return sendResponse(
     res,
     200,

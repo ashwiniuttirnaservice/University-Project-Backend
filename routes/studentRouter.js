@@ -1,4 +1,10 @@
 const express = require("express");
+const studentRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+const upload = require("../utils/multer");
+
 const {
   registerCandidate,
   registerStudent,
@@ -8,14 +14,17 @@ const {
   deleteStudent,
 } = require("../controllers/studentController");
 
-const upload = require("../utils/multer");
-
-const studentRouter = express.Router();
-
-studentRouter.post("/candidate", registerCandidate);
+studentRouter.post(
+  "/candidate",
+  protect,
+  checkAccess("student", "create"),
+  registerCandidate
+);
 
 studentRouter.post(
   "/register",
+  protect,
+  checkAccess("student", "create"),
   upload.fields([
     { name: "profilePhotoStudent", maxCount: 1 },
     { name: "idProofStudent", maxCount: 1 },
@@ -23,12 +32,24 @@ studentRouter.post(
   registerStudent
 );
 
-studentRouter.get("/all", getAllStudents);
+studentRouter.get(
+  "/all",
+  protect,
+  checkAccess("student", "read"),
+  getAllStudents
+);
 
-studentRouter.get("/:studentId", getStudentById);
+studentRouter.get(
+  "/:studentId",
+  protect,
+  checkAccess("student", "read"),
+  getStudentById
+);
 
 studentRouter.put(
   "/update/:studentId",
+  protect,
+  checkAccess("student", "update"),
   upload.fields([
     { name: "profilePhotoStudent", maxCount: 1 },
     { name: "idProofStudent", maxCount: 1 },
@@ -36,6 +57,11 @@ studentRouter.put(
   updateStudent
 );
 
-studentRouter.delete("/delete/:studentId", deleteStudent);
+studentRouter.delete(
+  "/delete/:studentId",
+  protect,
+  checkAccess("student", "delete"),
+  deleteStudent
+);
 
 module.exports = studentRouter;

@@ -1,5 +1,6 @@
 const express = require("express");
-const router = express.Router();
+const contactInfoRouter = express.Router();
+
 const {
   createContactInfo,
   getAllContactInfo,
@@ -7,16 +8,44 @@ const {
   updateContactInfo,
   deleteContactInfo,
 } = require("../controllers/contactInfoController");
+
 const upload = require("../utils/multer");
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
 
-router.post("/", upload.single("logo"), createContactInfo);
+contactInfoRouter.post(
+  "/",
+  protect,
+  checkAccess("contactInfo", "create"),
+  upload.single("logo"),
+  createContactInfo
+);
+contactInfoRouter.get(
+  "/",
+  protect,
+  checkAccess("contactInfo", "read"),
+  getAllContactInfo
+);
+contactInfoRouter.get(
+  "/:id",
+  protect,
+  checkAccess("contactInfo", "read"),
+  getContactInfoById
+);
 
-router.get("/", getAllContactInfo);
+contactInfoRouter.put(
+  "/:id",
+  protect,
+  checkAccess("contactInfo", "update"),
+  upload.single("logo"),
+  updateContactInfo
+);
 
-router.get("/:id", getContactInfoById);
+contactInfoRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("contactInfo", "delete"),
+  deleteContactInfo
+);
 
-router.put("/:id", upload.single("logo"), updateContactInfo);
-
-router.delete("/:id", deleteContactInfo);
-
-module.exports = router;
+module.exports = contactInfoRouter;

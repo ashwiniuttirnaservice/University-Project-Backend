@@ -32,6 +32,7 @@ const registerTrainer = asyncHandler(async (req, res) => {
     summary,
     certifications,
     achievements,
+    skills,
     courses,
     batches,
     branches,
@@ -52,17 +53,23 @@ const registerTrainer = asyncHandler(async (req, res) => {
     linkedinProfile,
     title,
     summary,
+
     certifications:
       typeof certifications === "string"
         ? JSON.parse(certifications)
         : certifications,
+
     achievements:
       typeof achievements === "string"
         ? JSON.parse(achievements)
         : achievements,
+
+    skills: typeof skills === "string" ? JSON.parse(skills) : skills,
+
     courses: parseObjectIdArray(courses),
     batches: parseObjectIdArray(batches),
     branches: parseObjectIdArray(branches)[0] || null,
+
     resume: req.files?.resume?.[0]?.filename || "",
     idProofTrainer: req.files?.idProofTrainer?.[0]?.filename || "",
     profilePhotoTrainer: req.files?.profilePhotoTrainer?.[0]?.filename || "",
@@ -80,7 +87,10 @@ const registerTrainer = asyncHandler(async (req, res) => {
 });
 
 const getAllTrainers = asyncHandler(async (req, res) => {
-  const trainers = await Trainer.find().populate("courses").populate("batches");
+  const trainers = await Trainer.find({ isActive: true })
+    .populate("courses")
+    .populate("batches")
+    .sort({ createdAt: -1 });
 
   return sendResponse(
     res,
@@ -123,6 +133,7 @@ const updateTrainerApproval = asyncHandler(async (req, res) => {
 
 const updateTrainer = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
+
   const trainer = await Trainer.findById(trainerId);
   if (!trainer) return sendError(res, 404, "Trainer not found");
 
@@ -141,6 +152,10 @@ const updateTrainer = asyncHandler(async (req, res) => {
 
   if (updateData.achievements && typeof updateData.achievements === "string") {
     updateData.achievements = JSON.parse(updateData.achievements);
+  }
+
+  if (updateData.skills && typeof updateData.skills === "string") {
+    updateData.skills = JSON.parse(updateData.skills);
   }
 
   delete updateData.testimonials;

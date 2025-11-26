@@ -50,9 +50,8 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
     createdLectures
   );
 });
-
 exports.getAllLectures = asyncHandler(async (req, res) => {
-  const lectures = await Lecture.find()
+  const lectures = await Lecture.find({ isActive: true })
     .populate("course")
     .populate("chapter")
     .populate("batches")

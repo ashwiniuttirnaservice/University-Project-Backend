@@ -1,68 +1,52 @@
 const jwt = require("jsonwebtoken");
-const asyncHandler = require("./asyncHandler.js");
+const asyncHandler = require("./asyncHandler");
+const { sendError } = require("../utils/apiResponse");
 
 const protect = asyncHandler(async (req, res, next) => {
-  let token;
+  let token = req.cookies?.jwt;
 
-  // 1️⃣ Read token from cookie
-  token = req.cookies?.jwt;
-
-  // 2️⃣ Read token from Authorization header
   if (
     !token &&
     req.headers.authorization &&
     req.headers.authorization.startsWith("Bearer")
   ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-    } catch (error) {
-      console.error("Bearer token parse error:", error);
-      res.status(401);
-      throw new Error("Not authorized, token format galat hai");
-    }
+    token = req.headers.authorization.split(" ")[1];
   }
 
   if (!token) {
-    res.status(401);
-    throw new Error("Not authorized, token missing");
+    return sendError(res, 401, false, "Not authorized, token missing");
   }
 
   try {
-    // 3️⃣ Decode token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // 4️⃣ Attach user info from token directly (no DB call)
     req.user = {
-      studentId: decoded.studentId || null,
-      courseId: decoded.courseId || null,
+      id: decoded.id || null,
       role: decoded.role || null,
     };
 
-    if (!req.user.studentId || !req.user.role) {
-      res.status(401);
-      throw new Error("Not authorized, invalid token payload");
+    if (!req.user.role) {
+      return sendError(res, 401, false, "User role missing in token");
     }
 
     next();
-  } catch (error) {
-    console.error(error);
-    res.status(401);
-    throw new Error("Not authorized, token fail ho gaya");
+  } catch (err) {
+    return sendError(res, 401, false, "Token invalid or expired");
   }
 });
 
-// ✅ Role-based authorization
 const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user) {
-      res.status(401);
-      throw new Error("Not authorized, user nahi mila");
+      return sendError(res, 401, false, "Not authorized, no user found");
     }
 
     if (!roles.includes(req.user.role)) {
-      res.status(403);
-      throw new Error(
-        `User role '${req.user.role}' is not authorized for this route`
+      return sendError(
+        res,
+        403,
+        false,
+        `User role '${req.user.role}' is not allowed`
       );
     }
 
@@ -70,14 +54,9 @@ const authorize = (...roles) => {
   };
 };
 
-// ✅ Admin shortcut
 const admin = (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
-    next();
-  } else {
-    res.status(401);
-    throw new Error("Not authorized as admin");
-  }
+  if (req.user && req.user.role === "admin") return next();
+  return sendError(res, 401, false, "Not authorized as admin");
 };
 
 module.exports = { protect, authorize, admin };

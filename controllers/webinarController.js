@@ -53,7 +53,10 @@ exports.createWebinar = asyncHandler(async (req, res) => {
 });
 
 exports.getAllWebinars = asyncHandler(async (req, res) => {
-  const webinars = await Webinar.find().populate("createdBy", "name email");
+  const webinars = await Webinar.find({ isActive: true })
+    .populate("createdBy", "name email")
+    .sort({ createdAt: -1 });
+
   return sendResponse(
     res,
     200,

@@ -1,6 +1,7 @@
 const express = require("express");
-
 const authRoutes = require("./authRoutes");
+const moduleRoutes = require("./moduleRoutes.js");
+const roleRoutes = require("./roleRoutes.js");
 const branchRoutes = require("./branchRoutes");
 const courseRoutes = require("./courseRouter.js");
 const PhaseRouter = require("./phaseRouter.js");
@@ -31,13 +32,15 @@ const SponsorshipRouter = require("./sponsorshipRouter.js");
 const HackathonRouter = require("./hackathonRoutes.js");
 const meetingRouter = require("./meetingRoutes.js");
 const attendanceRouter = require("./attendanceRoutes.js");
+const reportRouter = require("./reportRoutes.js");
 const ContactinfoRouter = require("./contactInfoRoutes.js");
 const indexRouter = express.Router();
 
 indexRouter.get("/", (req, res) => {
   res.send("LMS API is alive and running...");
 });
-
+indexRouter.use("/module", moduleRoutes);
+indexRouter.use("/role", roleRoutes);
 indexRouter.use("/auth", authRoutes);
 indexRouter.use("/branches", branchRoutes);
 indexRouter.use("/courses", courseRoutes);
@@ -57,6 +60,7 @@ indexRouter.use("/batches", batcheRouter);
 indexRouter.use("/contact", contactRouter);
 indexRouter.use("/meetings", meetingRouter);
 indexRouter.use("/attendance", attendanceRouter);
+indexRouter.use("/report", reportRouter);
 indexRouter.use("/trainer", trainerRouter);
 indexRouter.use("/student", studentRouter);
 indexRouter.use("/session-category", sessionCategoryRouter);

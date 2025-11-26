@@ -1,5 +1,9 @@
 const express = require("express");
-const router = express.Router();
+const courseRouter = express.Router();
+
+const upload = require("../utils/multer");
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
 
 const {
   createCourse,
@@ -10,15 +14,38 @@ const {
   deleteCourse,
 } = require("../controllers/courseController");
 
-router.post("/", createCourse);
-router.post("/:id/clone", cloneCourse);
+courseRouter.post(
+  "/",
+  protect,
+  checkAccess("course", "create"),
+  upload.single("trainingPlan"),
+  createCourse
+);
 
-router.get("/all", getAllCourse);
+courseRouter.post(
+  "/:id/clone",
+  protect,
+  checkAccess("course", "create"),
+  cloneCourse
+);
 
-router.get("/:id", getCourseById);
+courseRouter.get("/all", protect, checkAccess("course", "read"), getAllCourse);
 
-router.put("/:id", updateCourse);
+courseRouter.get("/:id", protect, checkAccess("course", "read"), getCourseById);
 
-router.delete("/:id", deleteCourse);
+courseRouter.put(
+  "/:id",
+  protect,
+  checkAccess("course", "update"),
+  upload.single("trainingPlan"),
+  updateCourse
+);
 
-module.exports = router;
+courseRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("course", "delete"),
+  deleteCourse
+);
+
+module.exports = courseRouter;

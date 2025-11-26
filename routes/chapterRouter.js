@@ -1,12 +1,57 @@
 const express = require("express");
-const router = express.Router();
+const chapterRouter = express.Router();
+
 const chapterController = require("../controllers/chapterController");
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
 
-router.post("/", chapterController.createChapter);
-router.get("/course/:courseId", chapterController.getChaptersByCourse);
-router.get("/", chapterController.getAllChapters);
-router.get("/:id", chapterController.getChapterById);
-router.put("/:id", chapterController.updateChapter);
-router.delete("/:id", chapterController.deleteChapter);
+chapterRouter.post(
+  "/",
+  protect,
+  checkAccess("chapter", "create"),
+  chapterController.createChapter
+);
 
-module.exports = router;
+chapterRouter.get(
+  "/course/:courseId",
+  protect,
+  checkAccess("chapter", "read"),
+  chapterController.getChaptersByCourse
+);
+
+chapterRouter.get(
+  "/",
+  protect,
+  checkAccess("chapter", "read"),
+  chapterController.getAllChapters
+);
+
+chapterRouter.get(
+  "/all",
+  protect,
+  checkAccess("chapter", "read"),
+  chapterController.getAllChapters1
+);
+
+chapterRouter.get(
+  "/:id",
+  protect,
+  checkAccess("chapter", "read"),
+  chapterController.getChapterById
+);
+
+chapterRouter.put(
+  "/:id",
+  protect,
+  checkAccess("chapter", "update"),
+  chapterController.updateChapter
+);
+
+chapterRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("chapter", "delete"),
+  chapterController.deleteChapter
+);
+
+module.exports = chapterRouter;

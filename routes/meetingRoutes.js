@@ -1,28 +1,50 @@
 const express = require("express");
-const router = express.Router();
+const meetingRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const meetingController = require("../controllers/meetingController");
 
-router.post(
+meetingRouter.post(
   "/",
-
+  protect,
+  checkAccess("meeting", "create"),
   meetingController.createMeeting
 );
+meetingRouter.get(
+  "/",
+  protect,
+  checkAccess("meeting", "read"),
+  meetingController.getAllMeetings
+);
 
-router.get("/", meetingController.getAllMeetings);
-
-router.get("/:id", meetingController.getMeetingById);
-
-router.get("/batch/:batchId", meetingController.getMeetingsByBatch);
-router.put(
+meetingRouter.get(
   "/:id",
+  protect,
+  checkAccess("meeting", "read"),
+  meetingController.getMeetingById
+);
 
+meetingRouter.get(
+  "/batch/:batchId",
+  protect,
+  checkAccess("meeting", "read"),
+  meetingController.getMeetingsByBatch
+);
+
+meetingRouter.put(
+  "/:id",
+  protect,
+  checkAccess("meeting", "update"),
   meetingController.updateMeeting
 );
 
-router.delete(
+meetingRouter.delete(
   "/:id",
-
+  protect,
+  checkAccess("meeting", "delete"),
   meetingController.deleteMeeting
 );
 
-module.exports = router;
+module.exports = meetingRouter;

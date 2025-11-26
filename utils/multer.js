@@ -6,6 +6,9 @@ const getFolderPath = (fieldname) => {
   switch (fieldname) {
     case "Logo":
       return "uploads/contact/logo/";
+    case "trainingPlan":
+      return "uploads/course/training-plan/";
+
     case "profilePhotoTrainer":
       return "uploads/trainer/trainer-profilephoto/";
     case "idProofTrainer":
@@ -39,9 +42,16 @@ const getFolderPath = (fieldname) => {
       return "uploads/iqtests/certificates/";
     case "report":
       return "uploads/iqtests/reports/";
-
     case "submissionFile":
-      return "uploads/assignment-submissions/";
+      return "uploads/assignment-submissions/initial/";
+
+    case "files":
+      return "uploads/assignment-submissions/resubmit/";
+
+    case "mistakePhotos":
+      return "uploads/assignment-submissions/mistakes/";
+    case "excelFile":
+      return "uploads/excel/";
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }

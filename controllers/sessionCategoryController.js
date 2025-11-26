@@ -15,7 +15,10 @@ exports.createSessionCategory = asyncHandler(async (req, res) => {
 });
 
 exports.getAllSessionCategories = asyncHandler(async (req, res) => {
-  const categories = await SessionCategory.find().sort({ createdAt: -1 });
+  const categories = await SessionCategory.find({ isActive: true }).sort({
+    createdAt: -1,
+  });
+
   return sendResponse(
     res,
     200,

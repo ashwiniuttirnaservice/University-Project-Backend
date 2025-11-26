@@ -95,6 +95,12 @@ const studentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  role: {
+    type: String,
+    enum: ["admin", "trainer", "student"],
+    default: "student",
+  },
+
   isActive: {
     type: Boolean,
     default: true,

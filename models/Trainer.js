@@ -137,6 +137,16 @@ const trainerSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    role: {
+      type: String,
+      enum: ["admin", "trainer", "student"],
+      default: "trainer",
+    },
+
     registeredAt: {
       type: Date,
       default: Date.now,

@@ -12,18 +12,19 @@ const AssignmentSchema = new mongoose.Schema(
     submissions: [
       {
         student: { type: mongoose.Schema.Types.ObjectId, ref: "Enrollment" },
-        fileUrl: { type: String },
+        files: [{ type: String }],
+
+        mistakePhotos: [{ type: String }],
         remarks: { type: String },
         status: {
           type: String,
-          enum: ["submitted", "reviewed", "completed"],
+
           default: "submitted",
         },
         score: { type: Number, default: 0 },
         submittedAt: { type: Date, default: Date.now },
       },
     ],
-
     status: {
       type: String,
       enum: ["active", "inactive"],

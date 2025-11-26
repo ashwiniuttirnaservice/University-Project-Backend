@@ -12,6 +12,9 @@ const courseSchema = new mongoose.Schema(
       required: false,
     },
 
+    startDate: { type: Date, required: false },
+    endDate: { type: Date, required: false },
+
     rating: { type: Number, default: 4.9 },
     enrolledCount: { type: Number, default: 1200 },
 
@@ -47,6 +50,18 @@ const courseSchema = new mongoose.Schema(
     fees: {
       type: String,
     },
+
+    cloudLabsLink: {
+      type: String,
+      default: null,
+    },
+
+    trainingPlan: {
+      folderName: { type: String, default: null },
+      fileName: { type: String, default: null },
+      originalName: { type: String, default: null },
+      fileType: { type: String, default: null },
+    },
     videolectures: [
       { type: mongoose.Schema.Types.ObjectId, ref: "VideoLecture" },
     ],
@@ -56,6 +71,7 @@ const courseSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Trainer",
+        required: false,
       },
     ],
     batches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],

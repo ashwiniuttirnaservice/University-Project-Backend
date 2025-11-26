@@ -27,7 +27,37 @@ exports.createWeek = asyncHandler(async (req, res) => {
 });
 
 exports.getAllWeeks = asyncHandler(async (req, res) => {
-  const weeks = await Week.find().populate("phase").populate("chapters");
+  const weeks = await Week.aggregate([
+    {
+      $match: { isActive: true },
+    },
+    {
+      $lookup: {
+        from: "phases",
+        localField: "phase",
+        foreignField: "_id",
+        as: "phase",
+      },
+    },
+    {
+      $unwind: {
+        path: "$phase",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "chapters",
+        localField: "chapters",
+        foreignField: "_id",
+        as: "chapters",
+      },
+    },
+    {
+      $sort: { createdAt: -1 },
+    },
+  ]);
+
   return sendResponse(res, 200, true, "All weeks fetched successfully", weeks);
 });
 
