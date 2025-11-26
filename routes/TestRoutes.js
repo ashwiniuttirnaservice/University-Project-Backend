@@ -1,4 +1,9 @@
 const express = require("express");
+const testRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const {
   uploadMiddleware,
   uploadExcel,
@@ -8,17 +13,38 @@ const {
   getTestListForAdmin,
   getAllTests,
 } = require("../controllers/TestController");
-const router = express.Router();
 
-router.post("/upload-excel", uploadMiddleware, uploadExcel);
+testRouter.post(
+  "/upload-excel",
+  protect,
+  checkAccess("test", "create"),
+  uploadMiddleware,
+  uploadExcel
+);
 
-router.post("/create", createTest);
-router.get("/", getAllTests);
+testRouter.post("/create", protect, checkAccess("test", "create"), createTest);
 
-router.get("/questions/:id", getQuestionsForAdmin);
+testRouter.get("/", protect, checkAccess("test", "read"), getAllTests);
 
-router.delete("/:id", deleteTestById);
+testRouter.get(
+  "/questions/:id",
+  protect,
+  checkAccess("test", "read"),
+  getQuestionsForAdmin
+);
 
-router.post("/list", getTestListForAdmin);
+testRouter.post(
+  "/list",
+  protect,
+  checkAccess("test", "read"),
+  getTestListForAdmin
+);
 
-module.exports = router;
+testRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("test", "delete"),
+  deleteTestById
+);
+
+module.exports = testRouter;

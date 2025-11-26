@@ -11,8 +11,16 @@ const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
 
+const parseJSON = (value) => {
+  try {
+    return typeof value === "string" ? JSON.parse(value) : value;
+  } catch (err) {
+    return value;
+  }
+};
+
 exports.createCourse = asyncHandler(async (req, res) => {
-  const {
+  let {
     title,
     description,
     duration,
@@ -26,8 +34,28 @@ exports.createCourse = asyncHandler(async (req, res) => {
     features,
     trainer,
     fees,
+    startDate,
+    endDate,
     isActive,
+    cloudLabsLink,
   } = req.body;
+
+  learningOutcomes = parseJSON(learningOutcomes);
+  benefits = parseJSON(benefits);
+  keyFeatures = parseJSON(keyFeatures);
+  features = parseJSON(features);
+  trainer = parseJSON(trainer);
+
+  let trainingPlan = null;
+
+  if (req.file) {
+    trainingPlan = {
+      folderName: req.file.destination,
+      fileName: req.file.filename,
+      originalName: req.file.originalname,
+      fileType: req.file.mimetype,
+    };
+  }
 
   const course = await Course.create({
     title,
@@ -42,8 +70,12 @@ exports.createCourse = asyncHandler(async (req, res) => {
     keyFeatures,
     features,
     fees,
+    startDate,
+    endDate,
     trainer,
     isActive,
+    cloudLabsLink,
+    trainingPlan,
   });
 
   return sendResponse(
@@ -91,7 +123,13 @@ exports.getCourseById = asyncHandler(async (req, res) => {
 });
 
 exports.updateCourse = asyncHandler(async (req, res) => {
-  const {
+  const { id } = req.params;
+
+  if (!id) {
+    return sendError(res, 400, false, "Course ID is required.");
+  }
+
+  let {
     title,
     description,
     duration,
@@ -101,46 +139,73 @@ exports.updateCourse = asyncHandler(async (req, res) => {
     overview,
     learningOutcomes,
     benefits,
-    fees,
     keyFeatures,
     features,
     trainer,
+    fees,
+    startDate,
+    endDate,
     isActive,
+    cloudLabsLink,
   } = req.body;
 
-  const course = await Course.findByIdAndUpdate(
-    req.params.id,
-    {
-      title,
-      description,
-      duration,
-      branch,
-      rating,
-      enrolledCount,
-      overview,
-      learningOutcomes,
-      benefits,
-      fees,
-      keyFeatures,
-      features,
-      trainer,
-      isActive,
-    },
-    { new: true, runValidators: true }
+  learningOutcomes = parseJSON(learningOutcomes);
+  benefits = parseJSON(benefits);
+  keyFeatures = parseJSON(keyFeatures);
+  features = parseJSON(features);
+  trainer = parseJSON(trainer);
+
+  let updateData = {
+    title,
+    description,
+    duration,
+    branch,
+    rating,
+    enrolledCount,
+    overview,
+    learningOutcomes,
+    benefits,
+    keyFeatures,
+    features,
+    trainer,
+    fees,
+    startDate,
+    endDate,
+    isActive,
+    cloudLabsLink,
+  };
+
+  Object.keys(updateData).forEach(
+    (key) => updateData[key] === undefined && delete updateData[key]
   );
 
+  if (req.file) {
+    updateData.trainingPlan = {
+      folderName: req.file.destination,
+      fileName: req.file.filename,
+      originalName: req.file.originalname,
+      fileType: req.file.mimetype,
+    };
+  }
+
+  const course = await Course.findByIdAndUpdate(id, updateData, {
+    new: true,
+    runValidators: true,
+  });
+
   if (!course) {
-    return sendError(res, 404, false, "Training Program not found");
+    return sendError(res, 404, false, "Training Program not found.");
   }
 
   return sendResponse(
     res,
     200,
     true,
-    "Training Program updated successfully",
+    "Training Program updated successfully.",
     course
   );
 });
+
 exports.deleteCourse = asyncHandler(async (req, res) => {
   const course = await Course.findById(req.params.id);
 
@@ -161,12 +226,13 @@ exports.deleteCourse = asyncHandler(async (req, res) => {
 });
 
 exports.getAllCourse = asyncHandler(async (req, res) => {
-  const courses = await Course.find({})
+  const courses = await Course.find({ isActive: true })
     .select(
       "title duration features.certificate features.codingExercises features.recordedLectures batches"
     )
     .populate({
       path: "batches",
+      match: { isActive: true },
       select: "batchName startDate endDate mode status",
     })
     .lean();
@@ -284,6 +350,8 @@ exports.cloneCourse = asyncHandler(async (req, res) => {
     features: originalCourse.features,
     trainer: originalCourse.trainer,
     fees: originalCourse.fees,
+    startDate: originalCourse.startDate,
+    endDate: originalCourse.endDate,
     isActive: false,
   };
 

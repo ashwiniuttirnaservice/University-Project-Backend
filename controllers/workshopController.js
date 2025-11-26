@@ -56,9 +56,39 @@ exports.createWorkshop = async (req, res) => {
 };
 
 exports.getAllWorkshops = asyncHandler(async (req, res) => {
-  const workshops = await Workshop.aggregate([{ $sort: { createdAt: -1 } }]);
+  const workshops = await Workshop.aggregate([
+    { $match: { isActive: true } },
 
-  sendResponse(res, 200, true, "Workshops fetched successfully", workshops);
+    {
+      $lookup: {
+        from: "phases",
+        localField: "phaseId",
+        foreignField: "_id",
+        as: "phase",
+      },
+    },
+    { $unwind: { path: "$phase", preserveNullAndEmptyArrays: true } },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "trainerId",
+        foreignField: "_id",
+        as: "trainer",
+      },
+    },
+    { $unwind: { path: "$trainer", preserveNullAndEmptyArrays: true } },
+
+    { $sort: { createdAt: -1 } },
+  ]);
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Workshops fetched successfully",
+    workshops
+  );
 });
 
 exports.getWorkshopById = asyncHandler(async (req, res) => {

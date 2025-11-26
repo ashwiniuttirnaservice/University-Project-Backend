@@ -35,6 +35,10 @@ exports.createNote = asyncHandler(async (req, res) => {
 exports.getAllNotes = asyncHandler(async (req, res) => {
   const notes = await Note.aggregate([
     {
+      $match: { isActive: true },
+    },
+
+    {
       $lookup: {
         from: "chapters",
         localField: "chapter",
@@ -42,7 +46,9 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
         as: "chapter",
       },
     },
+
     { $unwind: "$chapter" },
+
     { $sort: { uploadedAt: -1 } },
   ]);
 
@@ -57,7 +63,6 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
   }
 
   const notes = await Note.aggregate([
-    // Join Chapter
     {
       $lookup: {
         from: "chapters",
@@ -68,7 +73,6 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
     },
     { $unwind: "$chapterData" },
 
-    // Join Week (to reach Phase)
     {
       $lookup: {
         from: "weeks",
@@ -79,7 +83,6 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
     },
     { $unwind: "$weekData" },
 
-    // Join Phase
     {
       $lookup: {
         from: "phases",
@@ -90,14 +93,12 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
     },
     { $unwind: "$phaseData" },
 
-    // Match specific Course
     {
       $match: {
         "phaseData.course": new mongoose.Types.ObjectId(courseId),
       },
     },
 
-    // Final shape: only notes + chapter info
     {
       $project: {
         _id: 1,

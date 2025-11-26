@@ -10,7 +10,6 @@ const EnrollmentSchema = new mongoose.Schema(
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Student",
-      required: true,
     },
     assignmentSubmissions: [
       {
@@ -50,6 +49,10 @@ const EnrollmentSchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
 
     fullName: {
       type: String,
@@ -67,6 +70,17 @@ const EnrollmentSchema = new mongoose.Schema(
       required: true,
       trim: true,
       lowercase: true,
+    },
+
+    designation: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+
+    profilePhotoStudent: {
+      type: String,
+      default: "",
     },
 
     collegeName: {

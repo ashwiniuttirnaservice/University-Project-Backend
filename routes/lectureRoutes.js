@@ -1,23 +1,54 @@
 const express = require("express");
-const router = express.Router();
+const lectureRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const lectureController = require("../controllers/lectureController");
 const upload = require("../utils/multer");
 
-router.post(
+lectureRouter.post(
   "/",
+  protect,
+  checkAccess("lecture", "create"),
   upload.array("contentUrl", 10),
   lectureController.createMultipleLectures
 );
 
-router.get("/course/:courseId", lectureController.getLecturesByCourse);
+lectureRouter.get(
+  "/course/:courseId",
+  protect,
+  checkAccess("lecture", "read"),
+  lectureController.getLecturesByCourse
+);
 
-router.get("/", lectureController.getAllLectures);
-router.get("/:id", lectureController.getLectureById);
-router.put(
+lectureRouter.get(
+  "/",
+  protect,
+  checkAccess("lecture", "read"),
+  lectureController.getAllLectures
+);
+
+lectureRouter.get(
   "/:id",
+  protect,
+  checkAccess("lecture", "read"),
+  lectureController.getLectureById
+);
+
+lectureRouter.put(
+  "/:id",
+  protect,
+  checkAccess("lecture", "update"),
   upload.single("contentUrl"),
   lectureController.updateLecture
 );
-router.delete("/:id", lectureController.deleteLecture);
 
-module.exports = router;
+lectureRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("lecture", "delete"),
+  lectureController.deleteLecture
+);
+
+module.exports = lectureRouter;

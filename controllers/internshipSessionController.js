@@ -37,9 +37,11 @@ exports.createSession = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 201, true, "Internship session created", session);
 });
-
 exports.getAllSessions = asyncHandler(async (req, res) => {
-  const sessions = await InternshipSession.find().sort({ createdAt: -1 });
+  const sessions = await InternshipSession.find({ isActive: true }).sort({
+    createdAt: -1,
+  });
+
   return sendResponse(
     res,
     200,

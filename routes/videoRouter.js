@@ -1,4 +1,9 @@
 const express = require("express");
+const videoLectureRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const {
   createVideoLecture,
   getAllVideoLectures,
@@ -7,16 +12,39 @@ const {
   deleteVideoLecture,
 } = require("../controllers/videoController");
 
-const router = express.Router();
+videoLectureRouter.post(
+  "/",
+  protect,
+  checkAccess("videoLecture", "create"),
+  createVideoLecture
+);
 
-router.post("/", createVideoLecture);
+videoLectureRouter.get(
+  "/",
+  protect,
+  checkAccess("videoLecture", "read"),
+  getAllVideoLectures
+);
 
-router.get("/", getAllVideoLectures);
+videoLectureRouter.get(
+  "/:id",
+  protect,
+  checkAccess("videoLecture", "read"),
+  getVideoLectureById
+);
 
-router.get("/:id", getVideoLectureById);
+videoLectureRouter.put(
+  "/:id",
+  protect,
+  checkAccess("videoLecture", "update"),
+  updateVideoLecture
+);
 
-router.put("/:id", updateVideoLecture);
+videoLectureRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("videoLecture", "delete"),
+  deleteVideoLecture
+);
 
-router.delete("/:id", deleteVideoLecture);
-
-module.exports = router;
+module.exports = videoLectureRouter;

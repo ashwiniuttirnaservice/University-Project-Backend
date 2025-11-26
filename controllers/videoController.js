@@ -31,6 +31,10 @@ exports.createVideoLecture = asyncHandler(async (req, res) => {
 exports.getAllVideoLectures = asyncHandler(async (req, res) => {
   const lectures = await VideoLecture.aggregate([
     {
+      $match: { isActive: true },
+    },
+
+    {
       $lookup: {
         from: "courses",
         localField: "course",
@@ -38,7 +42,14 @@ exports.getAllVideoLectures = asyncHandler(async (req, res) => {
         as: "courseDetails",
       },
     },
-    { $unwind: "$courseDetails" },
+
+    {
+      $unwind: {
+        path: "$courseDetails",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
     { $sort: { createdAt: -1 } },
   ]);
 
@@ -106,18 +117,15 @@ exports.updateVideoLecture = asyncHandler(async (req, res) => {
 exports.deleteVideoLecture = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  // Validate ObjectId
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return sendError(res, 400, false, "Invalid Video Lecture ID");
   }
 
-  // Find the lecture
   const lecture = await VideoLecture.findById(id);
   if (!lecture) {
     return sendError(res, 404, false, "Video Lecture not found");
   }
 
-  // Soft delete
   lecture.isActive = false;
   await lecture.save();
 

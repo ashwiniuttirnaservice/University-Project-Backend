@@ -1,4 +1,6 @@
 const express = require("express");
+const workshopRouter = express.Router();
+
 const {
   createWorkshop,
   getAllWorkshops,
@@ -7,13 +9,42 @@ const {
   deleteWorkshop,
 } = require("../controllers/workshopController");
 
-const router = express.Router();
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
 
-router.get("/", getAllWorkshops);
-router.get("/:id", getWorkshopById);
+workshopRouter.get(
+  "/",
+  protect,
+  checkAccess("workshop", "read"),
+  getAllWorkshops
+);
 
-router.post("/", createWorkshop);
-router.put("/:id", updateWorkshop);
-router.delete("/:id", deleteWorkshop);
+workshopRouter.get(
+  "/:id",
+  protect,
+  checkAccess("workshop", "read"),
+  getWorkshopById
+);
 
-module.exports = router;
+workshopRouter.post(
+  "/",
+  protect,
+  checkAccess("workshop", "create"),
+  createWorkshop
+);
+
+workshopRouter.put(
+  "/:id",
+  protect,
+  checkAccess("workshop", "update"),
+  updateWorkshop
+);
+
+workshopRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("workshop", "delete"),
+  deleteWorkshop
+);
+
+module.exports = workshopRouter;

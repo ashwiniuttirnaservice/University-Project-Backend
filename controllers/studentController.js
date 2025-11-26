@@ -107,6 +107,10 @@ exports.registerStudent = asyncHandler(async (req, res) => {
 exports.getAllStudents = asyncHandler(async (req, res) => {
   const students = await Student.aggregate([
     {
+      $match: { isActive: true },
+    },
+
+    {
       $lookup: {
         from: "branches",
         localField: "branch",
@@ -114,7 +118,10 @@ exports.getAllStudents = asyncHandler(async (req, res) => {
         as: "branch",
       },
     },
-    { $unwind: { path: "$branch", preserveNullAndEmptyArrays: true } },
+    {
+      $unwind: { path: "$branch", preserveNullAndEmptyArrays: true },
+    },
+
     {
       $lookup: {
         from: "courses",
@@ -123,11 +130,14 @@ exports.getAllStudents = asyncHandler(async (req, res) => {
         as: "enrolledCourses",
       },
     },
+
     {
       $project: {
         password: 0,
       },
     },
+
+    { $sort: { createdAt: -1 } },
   ]);
 
   return sendResponse(res, 200, true, "All students fetched", students);

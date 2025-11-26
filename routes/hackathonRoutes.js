@@ -1,15 +1,44 @@
 const express = require("express");
-const router = express.Router();
+const hackathonRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const hackathonController = require("../controllers/hackathonController");
 
-router.post("/", hackathonController.createHackathon);
+hackathonRouter.post(
+  "/",
+  protect,
+  checkAccess("hackathon", "create"),
+  hackathonController.createHackathon
+);
 
-router.get("/", hackathonController.getAllHackathons);
+hackathonRouter.get(
+  "/",
+  protect,
+  checkAccess("hackathon", "read"),
+  hackathonController.getAllHackathons
+);
 
-router.get("/:id", hackathonController.getHackathonById);
+hackathonRouter.get(
+  "/:id",
+  protect,
+  checkAccess("hackathon", "read"),
+  hackathonController.getHackathonById
+);
 
-router.put("/:id", hackathonController.updateHackathon);
+hackathonRouter.put(
+  "/:id",
+  protect,
+  checkAccess("hackathon", "update"),
+  hackathonController.updateHackathon
+);
 
-router.delete("/:id", hackathonController.deleteHackathon);
+hackathonRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("hackathon", "delete"),
+  hackathonController.deleteHackathon
+);
 
-module.exports = router;
+module.exports = hackathonRouter;

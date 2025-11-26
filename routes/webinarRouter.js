@@ -1,24 +1,46 @@
 const express = require("express");
-const router = express.Router();
+const webinarRouter = express.Router();
+
 const webinarController = require("../controllers/webinarController");
 const upload = require("../utils/multer");
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
 
-router.post(
+webinarRouter.post(
   "/",
+  protect,
+  checkAccess("webinar", "create"),
   upload.single("speakerPhoto"),
   webinarController.createWebinar
 );
 
-router.get("/", webinarController.getAllWebinars);
+webinarRouter.get(
+  "/",
+  protect,
+  checkAccess("webinar", "read"),
+  webinarController.getAllWebinars
+);
 
-router.get("/:id", webinarController.getWebinarById);
-
-router.put(
+webinarRouter.get(
   "/:id",
+  protect,
+  checkAccess("webinar", "read"),
+  webinarController.getWebinarById
+);
+
+webinarRouter.put(
+  "/:id",
+  protect,
+  checkAccess("webinar", "update"),
   upload.single("speakerPhoto"),
   webinarController.updateWebinar
 );
 
-router.delete("/:id", webinarController.deleteWebinar);
+webinarRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("webinar", "delete"),
+  webinarController.deleteWebinar
+);
 
-module.exports = router;
+module.exports = webinarRouter;

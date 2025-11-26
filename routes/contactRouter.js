@@ -6,7 +6,7 @@ const {
 
 const router = express.Router();
 
-router.post("/", sendContactMessage); // For frontend form
-router.get("/", getAllContactMessages); // For admin dashboard
+router.post("/", sendContactMessage);
+router.get("/", getAllContactMessages);
 
 module.exports = router;

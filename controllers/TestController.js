@@ -138,17 +138,17 @@ const createTest = asyncHandler(async (req, res) => {
 });
 
 const getAllTests = asyncHandler(async (req, res) => {
-  const tests = await TestList.find().sort({ createdAt: -1 });
+  const tests = await TestList.find({ isActive: true }).sort({ createdAt: -1 });
 
   if (!tests || tests.length === 0) {
-    return sendResponse(res, 200, true, "No Assessment  found", []);
+    return sendResponse(res, 200, true, "No Assessment found", []);
   }
 
   return sendResponse(
     res,
     200,
     true,
-    "All Assessment  fetched successfully",
+    "All Assessment fetched successfully",
     tests
   );
 });

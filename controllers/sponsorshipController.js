@@ -80,12 +80,13 @@ exports.createSponsorship = asyncHandler(async (req, res) => {
 });
 
 exports.getSponsorships = asyncHandler(async (req, res) => {
-  const sponsorships = await Sponsorship.find()
+  const sponsorships = await Sponsorship.find({ isActive: true })
     .populate("sessionCategory", "name type desc isActive")
     .populate(
       "hackathon",
       "title theme description startDate endDate venue mode eligibility maxTeamSize minTeamSize isActive"
-    );
+    )
+    .sort({ createdAt: -1 });
 
   return sendResponse(
     res,

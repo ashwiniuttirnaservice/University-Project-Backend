@@ -1,5 +1,8 @@
 const express = require("express");
-const router = express.Router();
+const internshipSessionRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
 
 const {
   createSession,
@@ -9,14 +12,39 @@ const {
   deleteSession,
 } = require("../controllers/internshipSessionController");
 
-router.post("/", createSession);
+internshipSessionRouter.post(
+  "/",
+  protect,
+  checkAccess("internshipSession", "create"),
+  createSession
+);
 
-router.get("/", getAllSessions);
+internshipSessionRouter.get(
+  "/",
+  protect,
+  checkAccess("internshipSession", "read"),
+  getAllSessions
+);
 
-router.get("/:id", getSessionById);
+internshipSessionRouter.get(
+  "/:id",
+  protect,
+  checkAccess("internshipSession", "read"),
+  getSessionById
+);
 
-router.put("/:id", updateSession);
+internshipSessionRouter.put(
+  "/:id",
+  protect,
+  checkAccess("internshipSession", "update"),
+  updateSession
+);
 
-router.delete("/:id", deleteSession);
+internshipSessionRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("internshipSession", "delete"),
+  deleteSession
+);
 
-module.exports = router;
+module.exports = internshipSessionRouter;

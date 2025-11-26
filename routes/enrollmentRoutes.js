@@ -1,4 +1,10 @@
 const express = require("express");
+const enrollmentRouter = express.Router();
+
+const upload = require("../utils/multer");
+const checkAccess = require("../middleware/checkAccess");
+const { protect } = require("../middleware/authMiddleware");
+
 const {
   enrollInCourse,
   getMyEnrollments,
@@ -12,33 +18,98 @@ const {
   unenrollFromCourse,
   markContentAsComplete,
   markContentAsIncomplete,
-} = require("../controllers/enrollmentController.js");
-const { protect, authorize } = require("../middleware/authMiddleware.js");
+  uploadEnrollmentExcel,
+} = require("../controllers/enrollmentController");
 
-const enrollmentRouter = express.Router();
-enrollmentRouter.post("/enroll", createEnrollment);
-enrollmentRouter.post("/admin/enroll", createStudentEnrollmentByAdmin);
-enrollmentRouter.put("/:id", updateStudentEnrollmentByAdmin);
-enrollmentRouter.get("/", getAllEnrollmentsAdmin);
-enrollmentRouter.get("/:id", getEnrollmentById);
-enrollmentRouter.route("/").post(enrollInCourse);
-enrollmentRouter.delete("/:id", deleteEnrollment);
-enrollmentRouter.get("/my", protect, getMyEnrollments);
+enrollmentRouter.post(
+  "/enroll",
+  protect,
+  checkAccess("enrollment", "create"),
+  createEnrollment
+);
 
-enrollmentRouter
-  .route("/:enrollmentId/complete")
-  .post(protect, authorize("student"), markContentAsComplete);
+enrollmentRouter.post(
+  "/admin/enroll",
+  protect,
+  checkAccess("enrollment", "create"),
+  upload.single("profilePhotoStudent"),
+  createStudentEnrollmentByAdmin
+);
 
-enrollmentRouter
-  .route("/:enrollmentId/incomplete")
-  .post(protect, authorize("student"), markContentAsIncomplete);
+enrollmentRouter.put(
+  "/:id",
+  protect,
+  checkAccess("enrollment", "update"),
+  upload.single("profilePhotoStudent"),
+  updateStudentEnrollmentByAdmin
+);
+enrollmentRouter.get(
+  "/",
+  protect,
+  checkAccess("enrollment", "read"),
+  getAllEnrollmentsAdmin
+);
+enrollmentRouter.get(
+  "/:id",
+  protect,
+  checkAccess("enrollment", "read"),
+  getEnrollmentById
+);
 
-enrollmentRouter
-  .route("/:id")
-  .delete(protect, authorize("student", "admin"), unenrollFromCourse);
+enrollmentRouter.post(
+  "/",
+  protect,
+  checkAccess("enrollment", "create"),
+  enrollInCourse
+);
 
-enrollmentRouter
-  .route("/details/:id")
-  .get(protect, authorize("admin"), getEnrollmentByIdAdmin);
+enrollmentRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("enrollment", "delete"),
+  deleteEnrollment
+);
+
+enrollmentRouter.get(
+  "/my",
+  protect,
+  checkAccess("enrollment", "read"),
+  getMyEnrollments
+);
+
+enrollmentRouter.post(
+  "/:enrollmentId/complete",
+  protect,
+  checkAccess("enrollment", "update"),
+  markContentAsComplete
+);
+
+enrollmentRouter.post(
+  "/:enrollmentId/incomplete",
+  protect,
+  checkAccess("enrollment", "update"),
+  markContentAsIncomplete
+);
+enrollmentRouter.delete(
+  "/:id/unenroll",
+  protect,
+  checkAccess("enrollment", "delete"),
+  unenrollFromCourse
+);
+
+enrollmentRouter.get(
+  "/details/:id",
+  protect,
+  checkAccess("enrollment", "read"),
+  getEnrollmentByIdAdmin
+);
+
+enrollmentRouter.post(
+  "/upload",
+  protect,
+  checkAccess("enrollment", "create"),
+  upload.single("excelFile"),
+  uploadEnrollmentExcel
+);
 
 module.exports = enrollmentRouter;

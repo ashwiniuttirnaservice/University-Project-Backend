@@ -13,16 +13,56 @@ const {
   getBatchesForStudent,
 } = require("../controllers/batchController");
 
-const batchRouter = express.Router();
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
 
-batchRouter.route("/").get(getAllBatches).post(createBatch);
-batchRouter.get("/all-batches-student", getBatchesByCourseAndStudent);
-batchRouter.get("/all", getAllBatches1);
-batchRouter.post("/student-batche", assignStudentToBatch);
-batchRouter.get("/student/:studentId", getBatchesForStudent);
-batchRouter.get("/:courseId", getBatchesByCourseId);
-batchRouter.get("/trainer/:trainerId", getBatchesByTrainerId);
-batchRouter.get("/batches/:id", getBatchById);
+const router = express.Router();
 
-batchRouter.route("/:id").put(updateBatch).delete(deleteBatch);
-module.exports = batchRouter;
+router.post("/", protect, checkAccess("batch", "create"), createBatch);
+
+router.get("/", protect, checkAccess("batch", "read"), getAllBatches);
+
+router.get("/all", protect, checkAccess("batch", "read"), getAllBatches1);
+
+router.post(
+  "/student-batch",
+  protect,
+  checkAccess("batch", "update"),
+  assignStudentToBatch
+);
+
+router.get(
+  "/student/:studentId",
+  protect,
+  checkAccess("batch", "read"),
+  getBatchesForStudent
+);
+
+router.get(
+  "/all-batches-student",
+  protect,
+  checkAccess("batch", "read"),
+  getBatchesByCourseAndStudent
+);
+
+router.get(
+  "/trainer/:trainerId",
+  protect,
+  checkAccess("batch", "read"),
+  getBatchesByTrainerId
+);
+
+router.get(
+  "/course/:courseId",
+  protect,
+  checkAccess("batch", "read"),
+  getBatchesByCourseId
+);
+
+router.get("/:id", protect, checkAccess("batch", "read"), getBatchById);
+
+router.put("/:id", protect, checkAccess("batch", "update"), updateBatch);
+
+router.delete("/:id", protect, checkAccess("batch", "delete"), deleteBatch);
+
+module.exports = router;

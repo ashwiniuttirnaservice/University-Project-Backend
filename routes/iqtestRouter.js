@@ -1,4 +1,9 @@
 const express = require("express");
+const iqtestRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const {
   getAllIQTests,
   getQuestionsForUser,
@@ -8,12 +13,41 @@ const {
   getCompletedIQTestsForUser,
 } = require("../controllers/iqtestController");
 
-const router = express.Router();
+iqtestRouter.get("/all", protect, checkAccess("iqtest", "read"), getAllIQTests);
 
-router.get("/all", getAllIQTests);
-router.post("/questions", getQuestionsForUser);
-router.put("/update-answer", updateUserAnswer);
-router.post("/submit", submitExam);
-router.post("/in-progress", getAllInProgressIQTests);
-router.post("/completed", getCompletedIQTestsForUser);
-module.exports = router;
+iqtestRouter.post(
+  "/questions",
+  protect,
+  checkAccess("iqtest", "read"),
+  getQuestionsForUser
+);
+
+iqtestRouter.put(
+  "/update-answer",
+  protect,
+  checkAccess("iqtest", "update"),
+  updateUserAnswer
+);
+
+iqtestRouter.post(
+  "/submit",
+  protect,
+  checkAccess("iqtest", "create"),
+  submitExam
+);
+
+iqtestRouter.post(
+  "/in-progress",
+  protect,
+  checkAccess("iqtest", "read"),
+  getAllInProgressIQTests
+);
+
+iqtestRouter.post(
+  "/completed",
+  protect,
+  checkAccess("iqtest", "read"),
+  getCompletedIQTestsForUser
+);
+
+module.exports = iqtestRouter;

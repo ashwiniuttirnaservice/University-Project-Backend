@@ -3,8 +3,6 @@ const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const path = require("path");
 
-// @desc    Create new Contact Info
-// @route   POST /api/contact-info
 exports.createContactInfo = asyncHandler(async (req, res) => {
   const {
     companyName,
@@ -41,8 +39,6 @@ exports.createContactInfo = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Get all contact info
-// @route   GET /api/contact-info
 exports.getAllContactInfo = asyncHandler(async (req, res) => {
   const contactInfos = await ContactInfo.find({ isActive: true });
   sendResponse(
@@ -54,8 +50,6 @@ exports.getAllContactInfo = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Get contact info by ID
-// @route   GET /api/contact-info/:id
 exports.getContactInfoById = asyncHandler(async (req, res) => {
   const contactInfo = await ContactInfo.findById(req.params.id);
   if (!contactInfo) return sendError(res, 404, "Contact Info not found");
@@ -68,8 +62,6 @@ exports.getContactInfoById = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Update contact info by ID
-// @route   PUT /api/contact-info/:id
 exports.updateContactInfo = asyncHandler(async (req, res) => {
   const {
     companyName,
@@ -112,8 +104,6 @@ exports.updateContactInfo = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc    Delete contact info by ID
-// @route   DELETE /api/contact-info/:id
 exports.deleteContactInfo = asyncHandler(async (req, res) => {
   const contactInfo = await ContactInfo.findById(req.params.id);
   if (!contactInfo) return sendError(res, 404, "Contact Info not found");

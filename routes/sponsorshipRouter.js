@@ -1,24 +1,47 @@
 const express = require("express");
-const router = express.Router();
-const sponsorshipController = require("../controllers/sponsorshipController");
-const upload = require("../utils/multer");
+const sponsorshipRouter = express.Router();
 
-router.post(
+const upload = require("../utils/multer");
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
+const sponsorshipController = require("../controllers/sponsorshipController");
+
+sponsorshipRouter.post(
   "/",
+  protect,
+  checkAccess("sponsorship", "create"),
   upload.single("logo"),
   sponsorshipController.createSponsorship
 );
 
-router.get("/", sponsorshipController.getSponsorships);
+sponsorshipRouter.get(
+  "/",
+  protect,
+  checkAccess("sponsorship", "read"),
+  sponsorshipController.getSponsorships
+);
 
-router.get("/:id", sponsorshipController.getSponsorshipById);
-
-router.put(
+sponsorshipRouter.get(
   "/:id",
+  protect,
+  checkAccess("sponsorship", "read"),
+  sponsorshipController.getSponsorshipById
+);
+
+sponsorshipRouter.put(
+  "/:id",
+  protect,
+  checkAccess("sponsorship", "update"),
   upload.single("logo"),
   sponsorshipController.updateSponsorship
 );
 
-router.delete("/:id", sponsorshipController.deleteSponsorship);
+sponsorshipRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("sponsorship", "delete"),
+  sponsorshipController.deleteSponsorship
+);
 
-module.exports = router;
+module.exports = sponsorshipRouter;

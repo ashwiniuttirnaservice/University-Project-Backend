@@ -1,12 +1,51 @@
 const express = require("express");
-const router = express.Router();
+const phaseRouter = express.Router();
+
+const { protect } = require("../middleware/authMiddleware");
+const checkAccess = require("../middleware/checkAccess");
+
 const phaseController = require("../controllers/phaseController");
 
-router.post("/", phaseController.createPhase);
-router.get("/", phaseController.getAllPhases);
-router.get("/:courseId", phaseController.getPhasesByCourseId);
-router.get("/p1/:id", phaseController.getPhaseById);
-router.put("/:id", phaseController.updatePhase);
-router.delete("/:id", phaseController.deletePhase);
+phaseRouter.post(
+  "/",
+  protect,
+  checkAccess("phase", "create"),
+  phaseController.createPhase
+);
 
-module.exports = router;
+phaseRouter.get(
+  "/",
+  protect,
+  checkAccess("phase", "read"),
+  phaseController.getAllPhases
+);
+
+phaseRouter.get(
+  "/course/:courseId",
+  protect,
+  checkAccess("phase", "read"),
+  phaseController.getPhasesByCourseId
+);
+
+phaseRouter.get(
+  "/:id",
+  protect,
+  checkAccess("phase", "read"),
+  phaseController.getPhaseById
+);
+
+phaseRouter.put(
+  "/:id",
+  protect,
+  checkAccess("phase", "update"),
+  phaseController.updatePhase
+);
+
+phaseRouter.delete(
+  "/:id",
+  protect,
+  checkAccess("phase", "delete"),
+  phaseController.deletePhase
+);
+
+module.exports = phaseRouter;

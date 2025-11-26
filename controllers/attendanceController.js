@@ -3,7 +3,7 @@ const Attendance = require("../models/Attendance");
 const Meeting = require("../models/Meeting");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
+const Batch = require("../models/Batch");
 const Enrollment = require("../models/Enrollment.js");
 exports.markAttendance = asyncHandler(async (req, res) => {
   const { meetingId } = req.params;
@@ -415,4 +415,232 @@ exports.deleteAttendance = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "Attendance record not found");
 
   return sendResponse(res, 200, true, "Attendance deleted successfully", null);
+});
+
+exports.getAllAttendance1 = asyncHandler(async (req, res) => {
+  const attendance = await Attendance.aggregate([
+    {
+      $match: { isActive: true },
+    },
+
+    {
+      $lookup: {
+        from: "users",
+        localField: "student",
+        foreignField: "_id",
+        as: "student",
+      },
+    },
+    {
+      $unwind: {
+        path: "$student",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $lookup: {
+        from: "batches",
+        localField: "batch",
+        foreignField: "_id",
+        as: "batch",
+      },
+    },
+    {
+      $unwind: {
+        path: "$batch",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $lookup: {
+        from: "meetings",
+        localField: "meeting",
+        foreignField: "_id",
+        as: "meeting",
+      },
+    },
+    {
+      $unwind: {
+        path: "$meeting",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $sort: { createdAt: -1 },
+    },
+  ]);
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "All attendance records fetched",
+    attendance
+  );
+});
+
+const ExcelJS = require("exceljs");
+exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
+  const { batchId, start, end } = req.query;
+
+  if (!batchId || !start || !end) {
+    return sendError(
+      res,
+      400,
+      false,
+      "BatchId, start date and end date are required."
+    );
+  }
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  endDate.setHours(23, 59, 59, 999);
+
+  // Fetch batch with students
+  const batch = await Batch.findById(batchId).populate(
+    "students.studentId",
+    "fullName email"
+  );
+
+  if (!batch) return sendError(res, 404, false, "Batch not found");
+
+  const attendanceData = await Attendance.aggregate([
+    {
+      $match: {
+        batch: new mongoose.Types.ObjectId(batchId),
+        createdAt: { $gte: startDate, $lte: endDate },
+      },
+    },
+
+    // Meeting join
+    {
+      $lookup: {
+        from: "meetings",
+        localField: "meeting",
+        foreignField: "_id",
+        as: "meeting",
+      },
+    },
+    { $unwind: "$meeting" },
+
+    // Trainer join (Correct)
+    {
+      $lookup: {
+        from: "users",
+        localField: "meeting.trainer",
+        foreignField: "_id",
+        as: "trainer",
+      },
+    },
+    { $unwind: { path: "$trainer", preserveNullAndEmptyArrays: true } },
+
+    // Sort by date
+    {
+      $sort: { "meeting.startTime": 1 },
+    },
+  ]);
+
+  if (!attendanceData.length) {
+    return sendError(
+      res,
+      404,
+      false,
+      "No attendance found for selected date range."
+    );
+  }
+
+  // Extract sorted dates
+  const dateList = attendanceData.map((a) =>
+    new Date(a.meeting.startTime).toLocaleDateString("en-IN")
+  );
+
+  const workbook = new ExcelJS.Workbook();
+  const dailySheet = workbook.addWorksheet("Daily Attendance");
+
+  const info = attendanceData[0];
+
+  // Header
+  dailySheet.addRow(["Program", info.meeting?.title || "N/A"]);
+  dailySheet.addRow(["Faculty", info.trainer?.fullName || "N/A"]);
+  dailySheet.addRow(["Date Range", `${start} to ${end}`]);
+  dailySheet.addRow([]);
+  dailySheet.addRow([]);
+
+  // Header row
+  const header = ["Sl. No", "Full Name", ...dateList];
+  dailySheet.addRow(header);
+
+  // Map students
+  const studentMap = {};
+  batch.students.forEach((item) => {
+    const stu = item.studentId;
+    studentMap[stu._id.toString()] = {
+      name: stu.fullName,
+      records: new Array(dateList.length).fill("A"),
+    };
+  });
+
+  // Fill attendance
+  attendanceData.forEach((record, dateIndex) => {
+    record.attendees.forEach((att) => {
+      const stuId = att.student.toString();
+      if (studentMap[stuId]) {
+        studentMap[stuId].records[dateIndex] = att.present
+          ? "P"
+          : att.late
+          ? "L"
+          : "A";
+      }
+    });
+  });
+
+  // Add each student row
+  let i = 1;
+  for (let key in studentMap) {
+    dailySheet.addRow([i++, studentMap[key].name, ...studentMap[key].records]);
+  }
+
+  // Summary Sheet
+  const summary = workbook.addWorksheet("Summary Report");
+  summary.addRow([
+    "Participant",
+    "Sessions Attended",
+    "% Attendance",
+    "Status",
+  ]);
+
+  for (let key in studentMap) {
+    const data = studentMap[key];
+    const attended = data.records.filter((x) => x === "P" || x === "L").length;
+    const total = data.records.length;
+    const percent = ((attended / total) * 100).toFixed(2);
+
+    let status = "Poor";
+    if (percent >= 90) status = "Excellent";
+    else if (percent >= 70) status = "Good";
+    else if (percent >= 50) status = "Average";
+
+    summary.addRow([
+      data.name,
+      `${attended} / ${total}`,
+      `${percent}%`,
+      status,
+    ]);
+  }
+
+  // Send file
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename=attendance_${start}_${end}.xlsx`
+  );
+
+  await workbook.xlsx.write(res);
+  res.end();
 });

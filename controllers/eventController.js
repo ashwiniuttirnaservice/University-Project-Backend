@@ -79,11 +79,45 @@ exports.createEvent = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 201, true, "Event created successfully", event);
 });
-
 exports.getAllEvents = asyncHandler(async (req, res) => {
-  const events = await Event.find()
-    .populate("category", "name slug")
-    .sort({ createdAt: -1 });
+  const events = await Event.aggregate([
+    {
+      $match: {
+        isActive: true,
+      },
+    },
+    {
+      $lookup: {
+        from: "categories",
+        localField: "category",
+        foreignField: "_id",
+        as: "category",
+      },
+    },
+    {
+      $unwind: {
+        path: "$category",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $project: {
+        title: 1,
+        description: 1,
+        date: 1,
+        location: 1,
+        createdAt: 1,
+        updatedAt: 1,
+        isActive: 1,
+        category: {
+          _id: 1,
+          name: "$category.name",
+          slug: "$category.slug",
+        },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+  ]);
 
   return sendResponse(res, 200, true, "Events fetched successfully", events);
 });

@@ -142,3 +142,52 @@ exports.deleteChapter = asyncHandler(async (req, res) => {
     chapter
   );
 });
+exports.getAllChapters1 = asyncHandler(async (req, res) => {
+  const chapters = await Chapter.aggregate([
+    {
+      $match: { isActive: true },
+    },
+
+    {
+      $lookup: {
+        from: "courses",
+        localField: "courseId",
+        foreignField: "_id",
+        as: "course",
+      },
+    },
+    {
+      $unwind: {
+        path: "$course",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $lookup: {
+        from: "modules",
+        localField: "moduleId",
+        foreignField: "_id",
+        as: "module",
+      },
+    },
+    {
+      $unwind: {
+        path: "$module",
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    {
+      $sort: { createdAt: -1 },
+    },
+  ]);
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "All chapters fetched successfully",
+    chapters
+  );
+});

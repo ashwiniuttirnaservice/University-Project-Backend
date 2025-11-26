@@ -58,13 +58,11 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
   if (!assignmentId || !mongoose.Types.ObjectId.isValid(assignmentId)) {
     return sendError(res, 400, false, "Valid assignmentId is required");
   }
-
   if (!enrollmentId || !mongoose.Types.ObjectId.isValid(enrollmentId)) {
     return sendError(res, 400, false, "Valid enrollmentId is required");
   }
-
-  if (!req.file) {
-    return sendError(res, 400, false, "Please upload your assignment file");
+  if (!req.files || req.files.length === 0) {
+    return sendError(res, 400, false, "Please upload at least one file");
   }
 
   const assignment = await Assignment.findById(assignmentId);
@@ -76,7 +74,6 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
   const alreadySubmitted = assignment.submissions?.some(
     (s) => s.student.toString() === enrollmentId
   );
-
   if (alreadySubmitted) {
     return sendError(
       res,
@@ -86,13 +83,14 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
     );
   }
 
-  const filename = path.basename(req.file.path);
+  const files = req.files.map((f) => path.basename(f.path));
 
   assignment.submissions.push({
     student: enrollmentId,
-    fileUrl: filename,
+    files,
     remarks: remarks || "",
     status: "submitted",
+    submittedAt: new Date(),
   });
 
   await assignment.save();
@@ -111,7 +109,7 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
 });
 
 exports.getAllAssignments = asyncHandler(async (req, res) => {
-  const assignments = await Assignment.find()
+  const assignments = await Assignment.find({ isActive: true })
     .populate("course")
     .populate("chapter")
     .populate("submissions.student");
@@ -119,70 +117,8 @@ exports.getAllAssignments = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "All assignments fetched", assignments);
 });
 
-exports.getAssignmentsByCourse = asyncHandler(async (req, res) => {
-  const { courseId } = req.params;
-
-  if (!mongoose.Types.ObjectId.isValid(courseId)) {
-    return sendError(res, 400, false, "Invalid Course ID");
-  }
-
-  const assignments = await Assignment.aggregate([
-    {
-      $lookup: {
-        from: "chapters",
-        localField: "chapter",
-        foreignField: "_id",
-        as: "chapter",
-      },
-    },
-    { $unwind: "$chapter" },
-    {
-      $lookup: {
-        from: "weeks",
-        localField: "chapter.week",
-        foreignField: "_id",
-        as: "week",
-      },
-    },
-    { $unwind: "$week" },
-    {
-      $lookup: {
-        from: "phases",
-        localField: "week.phase",
-        foreignField: "_id",
-        as: "phase",
-      },
-    },
-    { $unwind: "$phase" },
-    { $match: { "phase.course": new mongoose.Types.ObjectId(courseId) } },
-    {
-      $project: {
-        title: 1,
-        description: 1,
-        deadline: 1,
-        fileUrl: 1,
-        status: 1,
-        "chapter._id": 1,
-        "chapter.title": 1,
-      },
-    },
-  ]);
-
-  if (!assignments.length)
-    return sendError(res, 404, false, "No assignments found for this course");
-
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Assignments fetched successfully",
-    assignments
-  );
-});
-
 exports.getAssignmentById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return sendError(res, 400, false, "Invalid assignment ID");
   }
@@ -197,6 +133,61 @@ exports.getAssignmentById = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Assignment fetched", assignment);
 });
 
+exports.getAssignmentsByCourse = asyncHandler(async (req, res) => {
+  const { courseId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(courseId)) {
+    return sendError(res, 400, false, "Invalid Course ID");
+  }
+
+  const assignments = await Assignment.find({
+    course: courseId,
+    isActive: true,
+  })
+    .populate("chapter")
+    .populate("submissions.student");
+
+  if (!assignments.length)
+    return sendError(res, 404, false, "No assignments found for this course");
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Assignments fetched successfully",
+    assignments
+  );
+});
+
+exports.getAssignmentSubmissions = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid assignment ID");
+  }
+
+  const assignment = await Assignment.findById(id).populate({
+    path: "submissions.student",
+    select: "fullName email",
+  });
+
+  if (!assignment) return sendError(res, 404, false, "Assignment not found");
+
+  const submissionLog = assignment.submissions.map((s) => ({
+    participant: s.student?.fullName || "Unknown",
+    submittedOn: s.submittedAt ? s.submittedAt.toISOString().split("T")[0] : "",
+    status: s.status,
+    file: s.fileUrl,
+    marks: s.score,
+  }));
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Submission log fetched successfully",
+    submissionLog
+  );
+});
+
 exports.updateAssignment = asyncHandler(async (req, res) => {
   const { title, description, deadline, status, score } = req.body;
   const updateData = { title, description, deadline, status, score };
@@ -206,10 +197,7 @@ exports.updateAssignment = asyncHandler(async (req, res) => {
   const assignment = await Assignment.findByIdAndUpdate(
     req.params.id,
     updateData,
-    {
-      new: true,
-      runValidators: true,
-    }
+    { new: true, runValidators: true }
   );
 
   if (!assignment) return sendError(res, 404, false, "Assignment not found");
@@ -217,9 +205,82 @@ exports.updateAssignment = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Assignment updated", assignment);
 });
 
+const XLSX = require("xlsx");
+
+const fs = require("fs");
+
+exports.downloadSubmissionLogExcelByStudent = asyncHandler(async (req, res) => {
+  const { assignmentId, studentId } = req.params;
+
+  // --------- Validate IDs ---------
+  if (!mongoose.Types.ObjectId.isValid(assignmentId)) {
+    return sendError(res, 400, false, "Invalid assignment ID");
+  }
+  if (!mongoose.Types.ObjectId.isValid(studentId)) {
+    return sendError(res, 400, false, "Invalid student ID");
+  }
+
+  // --------- Fetch Assignment + Populate Student ---------
+  const assignment = await Assignment.findById(assignmentId).populate({
+    path: "submissions.student",
+    select: "fullName email",
+  });
+
+  if (!assignment) {
+    return sendError(res, 404, false, "Assignment not found");
+  }
+
+  // --------- Fetch Student ---------
+  const student = await Enrollment.findById(studentId).select("fullName");
+  if (!student) {
+    return sendError(res, 404, false, "Student not found");
+  }
+
+  // --------- Find Submission of this Student ---------
+  const submission = assignment.submissions.find(
+    (s) => s.student?._id?.toString() === studentId
+  );
+
+  // --------- Prepare Excel Data ---------
+  const data = [
+    {
+      Participant: student.fullName,
+      "Submitted On": submission?.submittedAt
+        ? submission.submittedAt.toISOString().split("T")[0]
+        : "",
+      Status: submission?.status || "pending",
+      File: submission?.files?.length ? submission.files.join(", ") : "",
+      Marks: submission?.score || "",
+    },
+  ];
+
+  // --------- Generate Excel ---------
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(data);
+  XLSX.utils.book_append_sheet(wb, ws, "Submission");
+
+  // --------- Create Temp Folder ---------
+  const tempDir = path.join(__dirname, "../temp");
+  if (!fs.existsSync(tempDir)) {
+    fs.mkdirSync(tempDir, { recursive: true });
+  }
+
+  // --------- Save File ---------
+  const fileName = `Assignment_${assignmentId}_Student_${studentId}.xlsx`;
+  const filePath = path.join(tempDir, fileName);
+  XLSX.writeFile(wb, filePath);
+
+  // --------- Download & Delete Temp File ---------
+  res.download(filePath, fileName, (err) => {
+    if (err) {
+      console.log("Excel download error:", err);
+    }
+    fs.unlinkSync(filePath);
+  });
+});
+
 exports.deleteAssignment = asyncHandler(async (req, res) => {
   const { id } = req.params;
-
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return sendError(res, 400, false, "Invalid assignment ID");
   }
@@ -228,6 +289,7 @@ exports.deleteAssignment = asyncHandler(async (req, res) => {
   if (!assignment) return sendError(res, 404, false, "Assignment not found");
 
   assignment.isActive = false;
+  assignment.status = "inactive";
   await assignment.save();
 
   return sendResponse(
@@ -236,5 +298,84 @@ exports.deleteAssignment = asyncHandler(async (req, res) => {
     true,
     "Assignment soft deleted successfully",
     assignment
+  );
+});
+
+exports.gradeAssignment = asyncHandler(async (req, res) => {
+  const { assignmentId, submissionId, score, status, remarks } = req.body;
+
+  if (!assignmentId || !mongoose.Types.ObjectId.isValid(assignmentId)) {
+    return sendError(res, 400, false, "Valid assignmentId is required");
+  }
+
+  if (!submissionId || !mongoose.Types.ObjectId.isValid(submissionId)) {
+    return sendError(res, 400, false, "Valid submissionId is required");
+  }
+
+  const assignment = await Assignment.findById(assignmentId);
+  if (!assignment) return sendError(res, 404, false, "Assignment not found");
+
+  const submission = assignment.submissions.id(submissionId);
+  if (!submission) return sendError(res, 404, false, "Submission not found");
+
+  if (req.files && req.files.length > 0) {
+    const photos = req.files.map((f) => path.basename(f.path));
+
+    if (!submission.mistakePhotos) submission.mistakePhotos = [];
+    submission.mistakePhotos.push(...photos);
+  }
+
+  if (score !== undefined) submission.score = score;
+  if (status) submission.status = status;
+  if (remarks) submission.remarks = remarks;
+
+  await assignment.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Submission graded successfully",
+    submission
+  );
+});
+
+exports.resubmitAssignment = asyncHandler(async (req, res) => {
+  const { assignmentId, submissionId, remarks } = req.body;
+
+  if (!assignmentId || !mongoose.Types.ObjectId.isValid(assignmentId)) {
+    return sendError(res, 400, false, "Valid assignmentId is required");
+  }
+  if (!submissionId || !mongoose.Types.ObjectId.isValid(submissionId)) {
+    return sendError(res, 400, false, "Valid submissionId is required");
+  }
+
+  if (!req.files || req.files.length === 0) {
+    return sendError(res, 400, false, "Please upload at least one file");
+  }
+
+  const assignment = await Assignment.findById(assignmentId);
+  if (!assignment) return sendError(res, 404, false, "Assignment not found");
+
+  const submission = assignment.submissions.id(submissionId);
+  if (!submission) return sendError(res, 404, false, "Submission not found");
+
+  const uploadedFiles = req.files.map((f) => path.basename(f.path));
+
+  submission.files.push(...uploadedFiles);
+
+  submission.remarks = remarks || submission.remarks;
+
+  submission.status = "resubmitted";
+  submission.submittedAt = new Date();
+
+  await assignment.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Assignment re-submitted successfully (files added)",
+    submission
   );
 });
