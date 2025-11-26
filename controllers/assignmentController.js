@@ -212,7 +212,6 @@ const fs = require("fs");
 exports.downloadSubmissionLogExcelByStudent = asyncHandler(async (req, res) => {
   const { assignmentId, studentId } = req.params;
 
-  // --------- Validate IDs ---------
   if (!mongoose.Types.ObjectId.isValid(assignmentId)) {
     return sendError(res, 400, false, "Invalid assignment ID");
   }
@@ -220,61 +219,79 @@ exports.downloadSubmissionLogExcelByStudent = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid student ID");
   }
 
-  // --------- Fetch Assignment + Populate Student ---------
-  const assignment = await Assignment.findById(assignmentId).populate({
-    path: "submissions.student",
-    select: "fullName email",
-  });
+  const assignment = await Assignment.findById(assignmentId).populate([
+    {
+      path: "submissions.student",
+      select: "fullName email",
+    },
+    {
+      path: "course",
+      select: "title",
+    },
+  ]);
 
-  if (!assignment) {
-    return sendError(res, 404, false, "Assignment not found");
-  }
+  if (!assignment) return sendError(res, 404, false, "Assignment not found");
 
-  // --------- Fetch Student ---------
   const student = await Enrollment.findById(studentId).select("fullName");
-  if (!student) {
-    return sendError(res, 404, false, "Student not found");
-  }
+  if (!student) return sendError(res, 404, false, "Student not found");
 
-  // --------- Find Submission of this Student ---------
   const submission = assignment.submissions.find(
     (s) => s.student?._id?.toString() === studentId
   );
 
-  // --------- Prepare Excel Data ---------
-  const data = [
-    {
-      Participant: student.fullName,
-      "Submitted On": submission?.submittedAt
-        ? submission.submittedAt.toISOString().split("T")[0]
-        : "",
-      Status: submission?.status || "pending",
-      File: submission?.files?.length ? submission.files.join(", ") : "",
-      Marks: submission?.score || "",
-    },
+  const submittedDate = submission?.submittedAt
+    ? submission.submittedAt.toISOString().split("T")[0]
+    : "";
+
+  const deadlineDate = assignment.deadline
+    ? assignment.deadline.toISOString().split("T")[0]
+    : "";
+
+  // 👉 UPDATED SHEET 1
+  const sheet1Data = [
+    ["Training Name", assignment.course?.title || ""],
+    ["Assignment Title", assignment.title],
+    ["Deadline", deadlineDate],
+    [],
+    ["Participant", "Submitted On", "Status", "Marks"],
+    [
+      student.fullName || "",
+      submittedDate,
+      submission?.status || "pending",
+      submission?.score || "",
+    ],
   ];
 
-  // --------- Generate Excel ---------
+  const ws1 = XLSX.utils.aoa_to_sheet(sheet1Data);
+
+  // 👉 UPDATED SHEET 2
+  const sheet2Data = [
+    ["Training Name", assignment.course?.title || ""],
+    ["Participant", "Submitted On", "Status", "Marks"],
+    [
+      student.fullName || "",
+      submittedDate,
+      submission?.status || "pending",
+      submission?.score || "",
+    ],
+  ];
+
+  const ws2 = XLSX.utils.aoa_to_sheet(sheet2Data);
+
   const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.json_to_sheet(data);
-  XLSX.utils.book_append_sheet(wb, ws, "Submission");
+  XLSX.utils.book_append_sheet(wb, ws1, "Submission");
+  XLSX.utils.book_append_sheet(wb, ws2, "Summary Report");
 
-  // --------- Create Temp Folder ---------
   const tempDir = path.join(__dirname, "../temp");
-  if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-  }
+  if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
-  // --------- Save File ---------
   const fileName = `Assignment_${assignmentId}_Student_${studentId}.xlsx`;
   const filePath = path.join(tempDir, fileName);
+
   XLSX.writeFile(wb, filePath);
 
-  // --------- Download & Delete Temp File ---------
   res.download(filePath, fileName, (err) => {
-    if (err) {
-      console.log("Excel download error:", err);
-    }
+    if (err) console.log("Excel download error:", err);
     fs.unlinkSync(filePath);
   });
 });

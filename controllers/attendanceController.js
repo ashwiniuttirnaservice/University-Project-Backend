@@ -499,7 +499,6 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
   const endDate = new Date(end);
   endDate.setHours(23, 59, 59, 999);
 
-  // Fetch batch with students
   const batch = await Batch.findById(batchId).populate(
     "students.studentId",
     "fullName email"
@@ -515,7 +514,6 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
       },
     },
 
-    // Meeting join
     {
       $lookup: {
         from: "meetings",
@@ -526,10 +524,9 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
     },
     { $unwind: "$meeting" },
 
-    // Trainer join (Correct)
     {
       $lookup: {
-        from: "users",
+        from: "trainers",
         localField: "meeting.trainer",
         foreignField: "_id",
         as: "trainer",
@@ -537,7 +534,6 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
     },
     { $unwind: { path: "$trainer", preserveNullAndEmptyArrays: true } },
 
-    // Sort by date
     {
       $sort: { "meeting.startTime": 1 },
     },
@@ -552,7 +548,6 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
     );
   }
 
-  // Extract sorted dates
   const dateList = attendanceData.map((a) =>
     new Date(a.meeting.startTime).toLocaleDateString("en-IN")
   );
@@ -562,18 +557,16 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
 
   const info = attendanceData[0];
 
-  // Header
   dailySheet.addRow(["Program", info.meeting?.title || "N/A"]);
   dailySheet.addRow(["Faculty", info.trainer?.fullName || "N/A"]);
+  dailySheet.addRow(["Start Time", batch.time?.start || "N/A"]);
+  dailySheet.addRow(["End Time", batch.time?.end || "N/A"]);
   dailySheet.addRow(["Date Range", `${start} to ${end}`]);
   dailySheet.addRow([]);
   dailySheet.addRow([]);
 
-  // Header row
-  const header = ["Sl. No", "Full Name", ...dateList];
-  dailySheet.addRow(header);
+  dailySheet.addRow(["Sl. No", "Full Name", ...dateList]);
 
-  // Map students
   const studentMap = {};
   batch.students.forEach((item) => {
     const stu = item.studentId;
@@ -583,7 +576,6 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
     };
   });
 
-  // Fill attendance
   attendanceData.forEach((record, dateIndex) => {
     record.attendees.forEach((att) => {
       const stuId = att.student.toString();
@@ -597,13 +589,11 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
     });
   });
 
-  // Add each student row
   let i = 1;
   for (let key in studentMap) {
     dailySheet.addRow([i++, studentMap[key].name, ...studentMap[key].records]);
   }
 
-  // Summary Sheet
   const summary = workbook.addWorksheet("Summary Report");
   summary.addRow([
     "Participant",
@@ -631,7 +621,6 @@ exports.downloadAttendanceExcel = asyncHandler(async (req, res) => {
     ]);
   }
 
-  // Send file
   res.setHeader(
     "Content-Type",
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"

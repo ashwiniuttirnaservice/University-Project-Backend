@@ -10,7 +10,7 @@ const sponsorshipController = require("../controllers/sponsorshipController");
 sponsorshipRouter.post(
   "/",
   protect,
-  checkAccess("sponsorship", "create"),
+  checkAccess("session", "create"),
   upload.single("logo"),
   sponsorshipController.createSponsorship
 );
@@ -18,21 +18,21 @@ sponsorshipRouter.post(
 sponsorshipRouter.get(
   "/",
   protect,
-  checkAccess("sponsorship", "read"),
+  checkAccess("session", "read"),
   sponsorshipController.getSponsorships
 );
 
 sponsorshipRouter.get(
   "/:id",
   protect,
-  checkAccess("sponsorship", "read"),
+  checkAccess("session", "read"),
   sponsorshipController.getSponsorshipById
 );
 
 sponsorshipRouter.put(
   "/:id",
   protect,
-  checkAccess("sponsorship", "update"),
+  checkAccess("session", "update"),
   upload.single("logo"),
   sponsorshipController.updateSponsorship
 );
@@ -40,7 +40,7 @@ sponsorshipRouter.put(
 sponsorshipRouter.delete(
   "/:id",
   protect,
-  checkAccess("sponsorship", "delete"),
+  checkAccess("session", "delete"),
   sponsorshipController.deleteSponsorship
 );
 

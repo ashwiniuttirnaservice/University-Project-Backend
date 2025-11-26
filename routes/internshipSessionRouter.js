@@ -15,35 +15,35 @@ const {
 internshipSessionRouter.post(
   "/",
   protect,
-  checkAccess("internshipSession", "create"),
+  checkAccess("session", "create"),
   createSession
 );
 
 internshipSessionRouter.get(
   "/",
   protect,
-  checkAccess("internshipSession", "read"),
+  checkAccess("session", "read"),
   getAllSessions
 );
 
 internshipSessionRouter.get(
   "/:id",
   protect,
-  checkAccess("internshipSession", "read"),
+  checkAccess("session", "read"),
   getSessionById
 );
 
 internshipSessionRouter.put(
   "/:id",
   protect,
-  checkAccess("internshipSession", "update"),
+  checkAccess("session", "update"),
   updateSession
 );
 
 internshipSessionRouter.delete(
   "/:id",
   protect,
-  checkAccess("internshipSession", "delete"),
+  checkAccess("session", "delete"),
   deleteSession
 );
 

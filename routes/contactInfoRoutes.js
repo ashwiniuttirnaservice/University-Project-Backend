@@ -17,19 +17,17 @@ contactInfoRouter.post(
   "/",
   protect,
   checkAccess("contactInfo", "create"),
-  upload.single("logo"),
+  upload.single("CompanyLogo"),
   createContactInfo
 );
 contactInfoRouter.get(
   "/",
-  protect,
-  checkAccess("contactInfo", "read"),
+
   getAllContactInfo
 );
 contactInfoRouter.get(
   "/:id",
-  protect,
-  checkAccess("contactInfo", "read"),
+
   getContactInfoById
 );
 

@@ -8,42 +8,42 @@ const checkAccess = require("../middleware/checkAccess");
 weekRouter.post(
   "/",
   protect,
-  checkAccess("week", "create"),
+  checkAccess("Curriculum", "create"),
   weekController.createWeek
 );
 
 weekRouter.get(
   "/",
   protect,
-  checkAccess("week", "read"),
+  checkAccess("Curriculum", "read"),
   weekController.getAllWeeks
 );
 
 weekRouter.get(
   "/course/:courseId",
   protect,
-  checkAccess("week", "read"),
+  checkAccess("Curriculum", "read"),
   weekController.getWeeksByCourseId
 );
 
 weekRouter.get(
   "/:id",
   protect,
-  checkAccess("week", "read"),
+  checkAccess("Curriculum", "read"),
   weekController.getWeekById
 );
 
 weekRouter.put(
   "/:id",
   protect,
-  checkAccess("week", "update"),
+  checkAccess("Curriculum", "update"),
   weekController.updateWeek
 );
 
 weekRouter.delete(
   "/:id",
   protect,
-  checkAccess("week", "delete"),
+  checkAccess("Curriculum", "delete"),
   weekController.deleteWeek
 );
 

@@ -13,40 +13,40 @@ const {
   getCompletedIQTestsForUser,
 } = require("../controllers/iqtestController");
 
-iqtestRouter.get("/all", protect, checkAccess("iqtest", "read"), getAllIQTests);
+iqtestRouter.get("/all", protect, checkAccess("test", "read"), getAllIQTests);
 
 iqtestRouter.post(
   "/questions",
   protect,
-  checkAccess("iqtest", "read"),
+  checkAccess("test", "read"),
   getQuestionsForUser
 );
 
 iqtestRouter.put(
   "/update-answer",
   protect,
-  checkAccess("iqtest", "update"),
+  checkAccess("test", "update"),
   updateUserAnswer
 );
 
 iqtestRouter.post(
   "/submit",
   protect,
-  checkAccess("iqtest", "create"),
+  checkAccess("test", "create"),
   submitExam
 );
 
 iqtestRouter.post(
   "/in-progress",
   protect,
-  checkAccess("iqtest", "read"),
+  checkAccess("test", "read"),
   getAllInProgressIQTests
 );
 
 iqtestRouter.post(
   "/completed",
   protect,
-  checkAccess("iqtest", "read"),
+  checkAccess("test", "read"),
   getCompletedIQTestsForUser
 );
 

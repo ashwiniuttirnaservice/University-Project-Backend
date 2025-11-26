@@ -4,8 +4,8 @@ const fs = require("fs");
 
 const getFolderPath = (fieldname) => {
   switch (fieldname) {
-    case "Logo":
-      return "uploads/contact/logo/";
+    case "CompanyLogo":
+      return "uploads/contact/company-logo/";
     case "trainingPlan":
       return "uploads/course/training-plan/";
 
@@ -52,6 +52,8 @@ const getFolderPath = (fieldname) => {
       return "uploads/assignment-submissions/mistakes/";
     case "excelFile":
       return "uploads/excel/";
+    case "materialFiles":
+      return "uploads/prerequisite/materials/";
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }

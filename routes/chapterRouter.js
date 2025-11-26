@@ -8,49 +8,49 @@ const checkAccess = require("../middleware/checkAccess");
 chapterRouter.post(
   "/",
   protect,
-  checkAccess("chapter", "create"),
+  checkAccess("Curriculum", "create"),
   chapterController.createChapter
 );
 
 chapterRouter.get(
   "/course/:courseId",
   protect,
-  checkAccess("chapter", "read"),
+  checkAccess("Curriculum", "read"),
   chapterController.getChaptersByCourse
 );
 
 chapterRouter.get(
   "/",
   protect,
-  checkAccess("chapter", "read"),
+  checkAccess("Curriculum", "read"),
   chapterController.getAllChapters
 );
 
 chapterRouter.get(
   "/all",
   protect,
-  checkAccess("chapter", "read"),
+  checkAccess("Curriculum", "read"),
   chapterController.getAllChapters1
 );
 
 chapterRouter.get(
   "/:id",
   protect,
-  checkAccess("chapter", "read"),
+  checkAccess("Curriculum", "read"),
   chapterController.getChapterById
 );
 
 chapterRouter.put(
   "/:id",
   protect,
-  checkAccess("chapter", "update"),
+  checkAccess("Curriculum", "update"),
   chapterController.updateChapter
 );
 
 chapterRouter.delete(
   "/:id",
   protect,
-  checkAccess("chapter", "delete"),
+  checkAccess("Curriculum", "delete"),
   chapterController.deleteChapter
 );
 
