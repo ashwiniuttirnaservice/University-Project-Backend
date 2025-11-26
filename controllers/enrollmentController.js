@@ -582,32 +582,58 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Participant ID is required");
   }
 
+  // Find existing enrollment
   const existingEnrollment = await Enrollment.findById(id);
   if (!existingEnrollment) {
     return sendError(res, 404, false, "Participant not found");
   }
 
+  // Handle profile photo
   let profilePhotoStudent = existingEnrollment.profilePhotoStudent;
-
   if (req.file) {
     profilePhotoStudent = req.file.filename;
   }
 
-  let student = await Student.findById(existingEnrollment.studentId);
-  if (!student) {
-    return sendError(res, 404, false, "Student not found");
+  // ---------------------------------------------------------
+  // ✔ FIX: Student may be missing → auto-create student
+  // ---------------------------------------------------------
+  let student = null;
+
+  if (existingEnrollment.studentId) {
+    student = await Student.findById(existingEnrollment.studentId);
   }
 
+  if (!student) {
+    // Create student if missing
+    student = await Student.create({
+      fullName: fullName || existingEnrollment.fullName,
+      mobileNo: mobileNo || existingEnrollment.mobileNo,
+      email: email || existingEnrollment.email,
+    });
+
+    existingEnrollment.studentId = student._id;
+  }
+
+  // ---------------------------------------------------------
+  // Update Student details
+  // ---------------------------------------------------------
   student.fullName = fullName || student.fullName;
   student.mobileNo = mobileNo || student.mobileNo;
   student.email = email || student.email;
   await student.save();
 
-  const newCoursesInterested = coursesInterested
+  // ---------------------------------------------------------
+  // Accept both Array OR CSV string
+  // ---------------------------------------------------------
+  const newCoursesInterested = Array.isArray(coursesInterested)
+    ? coursesInterested
+    : coursesInterested
     ? coursesInterested.split(",")
     : existingEnrollment.coursesInterested.map((id) => id.toString());
 
-  const newEnrolledBatches = enrolledBatches
+  const newEnrolledBatches = Array.isArray(enrolledBatches)
+    ? enrolledBatches
+    : enrolledBatches
     ? enrolledBatches.split(",")
     : existingEnrollment.enrolledBatches.map((id) => id.toString());
 
@@ -615,6 +641,9 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     id.toString()
   );
 
+  // ---------------------------------------------------------
+  // Update Enrollment
+  // ---------------------------------------------------------
   existingEnrollment.fullName = student.fullName;
   existingEnrollment.mobileNo = student.mobileNo;
   existingEnrollment.email = student.email;
@@ -622,6 +651,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     designation || existingEnrollment.designation;
   existingEnrollment.collegeName =
     collegeName || existingEnrollment.collegeName;
+
   existingEnrollment.profilePhotoStudent = profilePhotoStudent;
 
   existingEnrollment.coursesInterested = newCoursesInterested.map(
@@ -635,6 +665,9 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
   existingEnrollment.updatedAt = new Date();
   await existingEnrollment.save();
 
+  // ---------------------------------------------------------
+  // Update Batch: Removed & Added
+  // ---------------------------------------------------------
   const removedBatches = oldBatchIds.filter(
     (id) => !newEnrolledBatches.includes(id)
   );
@@ -643,6 +676,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     (id) => !oldBatchIds.includes(id)
   );
 
+  // Remove student from old batches
   if (removedBatches.length > 0) {
     await Batch.updateMany(
       { _id: { $in: removedBatches } },
@@ -656,6 +690,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     );
   }
 
+  // Add student to new batches
   for (const batchId of addedBatches) {
     await Batch.findByIdAndUpdate(
       batchId,
@@ -675,6 +710,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     );
   }
 
+  // Always sync student info inside batches
   await Batch.updateMany(
     { "students.studentId": student._id },
     {
