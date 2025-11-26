@@ -9,42 +9,42 @@ const phaseController = require("../controllers/phaseController");
 phaseRouter.post(
   "/",
   protect,
-  checkAccess("phase", "create"),
+  checkAccess("Curriculum", "create"),
   phaseController.createPhase
 );
 
 phaseRouter.get(
   "/",
   protect,
-  checkAccess("phase", "read"),
+  checkAccess("Curriculum", "read"),
   phaseController.getAllPhases
 );
 
 phaseRouter.get(
   "/course/:courseId",
   protect,
-  checkAccess("phase", "read"),
+  checkAccess("Curriculum", "read"),
   phaseController.getPhasesByCourseId
 );
 
 phaseRouter.get(
   "/:id",
   protect,
-  checkAccess("phase", "read"),
+  checkAccess("Curriculum", "read"),
   phaseController.getPhaseById
 );
 
 phaseRouter.put(
   "/:id",
   protect,
-  checkAccess("phase", "update"),
+  checkAccess("Curriculum", "update"),
   phaseController.updatePhase
 );
 
 phaseRouter.delete(
   "/:id",
   protect,
-  checkAccess("phase", "delete"),
+  checkAccess("Curriculum", "delete"),
   phaseController.deletePhase
 );
 

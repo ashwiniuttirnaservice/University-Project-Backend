@@ -10,7 +10,7 @@ const contactInfoSchema = new mongoose.Schema(
       type: String,
     },
     address: {
-      line1: { type: String, required: true },
+      line1: { type: String, required: false },
       landmark: { type: String },
       area: { type: String },
       city: { type: String, default: "Nashik" },
@@ -22,13 +22,13 @@ const contactInfoSchema = new mongoose.Schema(
     },
     email: {
       type: String,
-      required: true,
+      required: false,
       lowercase: true,
     },
     phoneNumbers: [
       {
         type: String,
-        required: true,
+        required: false,
       },
     ],
     workingHours: {

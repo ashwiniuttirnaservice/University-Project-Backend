@@ -21,19 +21,19 @@ const eventUploads = upload.fields([
 eventRouter.post(
   "/",
   protect,
-  checkAccess("event", "create"),
+  checkAccess("session", "create"),
   eventUploads,
   createEvent
 );
 
-eventRouter.get("/", protect, checkAccess("event", "read"), getAllEvents);
+eventRouter.get("/", protect, checkAccess("session", "read"), getAllEvents);
 
-eventRouter.get("/:id", protect, checkAccess("event", "read"), getEventById);
+eventRouter.get("/:id", protect, checkAccess("session", "read"), getEventById);
 
 eventRouter.put(
   "/:id",
   protect,
-  checkAccess("event", "update"),
+  checkAccess("session", "update"),
   eventUploads,
   updateEvent
 );
@@ -41,7 +41,7 @@ eventRouter.put(
 eventRouter.delete(
   "/:id",
   protect,
-  checkAccess("event", "delete"),
+  checkAccess("session", "delete"),
   deleteEvent
 );
 

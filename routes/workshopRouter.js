@@ -15,35 +15,35 @@ const checkAccess = require("../middleware/checkAccess");
 workshopRouter.get(
   "/",
   protect,
-  checkAccess("workshop", "read"),
+  checkAccess("session", "read"),
   getAllWorkshops
 );
 
 workshopRouter.get(
   "/:id",
   protect,
-  checkAccess("workshop", "read"),
+  checkAccess("session", "read"),
   getWorkshopById
 );
 
 workshopRouter.post(
   "/",
   protect,
-  checkAccess("workshop", "create"),
+  checkAccess("session", "create"),
   createWorkshop
 );
 
 workshopRouter.put(
   "/:id",
   protect,
-  checkAccess("workshop", "update"),
+  checkAccess("session", "update"),
   updateWorkshop
 );
 
 workshopRouter.delete(
   "/:id",
   protect,
-  checkAccess("workshop", "delete"),
+  checkAccess("session", "delete"),
   deleteWorkshop
 );
 

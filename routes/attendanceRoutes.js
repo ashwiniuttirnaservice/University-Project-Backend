@@ -63,8 +63,8 @@ router.delete(
 
 router.get(
   "/download",
-  protect,
-  checkAccess("attendance", "read"),
+  // protect,
+  // checkAccess("attendance", "read"),
   attendanceController.downloadAttendanceExcel
 );
 

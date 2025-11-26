@@ -15,35 +15,35 @@ const {
 sessionCategoryRouter.post(
   "/",
   protect,
-  checkAccess("sessionCategory", "create"),
+  checkAccess("session", "create"),
   createSessionCategory
 );
 
 sessionCategoryRouter.get(
   "/",
   protect,
-  checkAccess("sessionCategory", "read"),
+  checkAccess("session", "read"),
   getAllSessionCategories
 );
 
 sessionCategoryRouter.get(
   "/:id",
   protect,
-  checkAccess("sessionCategory", "read"),
+  checkAccess("session", "read"),
   getSessionCategoryById
 );
 
 sessionCategoryRouter.put(
   "/:id",
   protect,
-  checkAccess("sessionCategory", "update"),
+  checkAccess("session", "update"),
   updateSessionCategory
 );
 
 sessionCategoryRouter.delete(
   "/:id",
   protect,
-  checkAccess("sessionCategory", "delete"),
+  checkAccess("session", "delete"),
   deleteSessionCategory
 );
 
