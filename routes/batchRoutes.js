@@ -59,7 +59,7 @@ router.get(
   getBatchesByCourseId
 );
 
-router.get("/:id", protect, checkAccess("batch", "read"), getBatchById);
+router.get("/batches/:id", protect, checkAccess("batch", "read"), getBatchById);
 
 router.put("/:id", protect, checkAccess("batch", "update"), updateBatch);
 
