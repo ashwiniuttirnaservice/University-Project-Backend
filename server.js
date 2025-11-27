@@ -20,6 +20,7 @@ const allowedOrigins = [
   "https://www.lms.codedrift.co",
   "https://lms.codedrift.co",
   "https://uat-lms.codedrift.co",
+  "https://uat-lms.codedrift.co/",
   "https://uat-api.codedrift.co",
   "https://www.uat-api.codedrift.co",
   "https://codedrift.co",
@@ -36,7 +37,8 @@ const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.includes(origin)) {
+    // if (allowedOrigins.includes(origin)) {
+    if (origin.includes('codedrift.co')) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));
