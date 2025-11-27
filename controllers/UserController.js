@@ -57,8 +57,6 @@ const getUserProfile = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { getUserProfile };
-
 const getUserProfileTrainer = asyncHandler(async (req, res) => {
   const user = await User.findById(req.user._id).select("-password");
 
