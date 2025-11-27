@@ -143,7 +143,6 @@ const getAllTests = asyncHandler(async (req, res) => {
   if (!tests || tests.length === 0) {
     return sendResponse(res, 200, true, "No Assessment found", []);
   }
-
   return sendResponse(
     res,
     200,
