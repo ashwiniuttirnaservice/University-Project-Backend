@@ -33,12 +33,32 @@ const allowedOrigins = [
   "http://localhost:6021",
 ];
 
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     if (!origin) return callback(null, true);
+
+//     // if (allowedOrigins.includes(origin)) {
+//     if (origin.includes("codedrift.co")) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"],
+//   optionsSuccessStatus: 200,
+// };
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
 
-    // if (allowedOrigins.includes(origin)) {
-    if (origin.includes('codedrift.co')) {
+    const allowed =
+      origin.includes("codedrift.co") ||
+      origin.startsWith("http://localhost") ||
+      origin.startsWith("http://127.0.0.1");
+
+    if (allowed) {
       callback(null, true);
     } else {
       callback(new Error("Not allowed by CORS"));

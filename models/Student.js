@@ -62,6 +62,12 @@ const studentSchema = new mongoose.Schema({
 
     trim: true,
   },
+  assignmentSubmissions: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Assignment",
+    },
+  ],
   coursesInterested: [
     {
       type: mongoose.Schema.Types.ObjectId,

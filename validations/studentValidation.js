@@ -1,97 +1,118 @@
 const Joi = require("joi");
-const mongoose = require("mongoose");
 
-const studentSchema = Joi.object({
-  fullName: Joi.string().trim().min(2).max(100).required(),
-
-  email: Joi.string().email().required().messages({
-    "string.email": "Valid email is required",
-    "any.required": "Email is required",
-  }),
-
-  mobileNo: Joi.string()
-    .pattern(/^[6-9]\d{9}$/)
-    .required()
-    .messages({
-      "string.pattern.base":
-        "Mobile number must be a valid 10-digit Indian number",
+// Validation for Student (create/update)
+const validateStudent = (data, isUpdate = false) => {
+  const schema = Joi.object({
+    fullName: Joi.string().trim().optional().messages({
+      "string.base": "Full name must be a string.",
+      "string.empty": "Full name cannot be empty.",
     }),
 
-  dob: Joi.date().less("now").messages({
-    "date.less": "Date of birth must be in the past",
-  }),
+    email: Joi.string().email().optional().messages({
+      "string.email": "Email must be a valid email address.",
+      "string.empty": "Email cannot be empty.",
+    }),
 
-  gender: Joi.string().valid("Male", "Female", "Other").optional(),
-
-  selectedProgram: Joi.string()
-    .valid(
-      "Full Stack Web Development - 02-June-2025 Onwards (90 Days)",
-      "Full Stack Mobile Development - 02-June-2025 Onwards (90 Days)"
-    )
-    .default("Full Stack Web Development - 02-June-2025 Onwards (90 Days)"),
-
-  address: Joi.object({
-    add1: Joi.string().allow("").optional(),
-    add2: Joi.string().allow("").optional(),
-    taluka: Joi.string().allow("").optional(),
-    dist: Joi.string().allow("").optional(),
-    state: Joi.string().allow("").optional(),
-    pincode: Joi.string()
-      .pattern(/^\d{6}$/)
+    mobileNo: Joi.string()
+      .pattern(/^[6-9]\d{9}$/)
       .optional()
       .messages({
-        "string.pattern.base": "Pincode must be a 6-digit number",
+        "string.pattern.base":
+          "Mobile number must be 10 digits starting with 6-9.",
+        "string.empty": "Mobile number cannot be empty.",
       }),
-  }).optional(),
 
-  currentEducation: Joi.string().optional(),
+    dob: Joi.date().optional().messages({
+      "date.base": "Date of birth must be a valid date.",
+    }),
 
-  status: Joi.string().valid("Active", "Inactive", "Pending").optional(),
+    gender: Joi.string().valid("Male", "Female", "Other").optional().messages({
+      "any.only": "Gender must be 'Male', 'Female', or 'Other'.",
+      "string.empty": "Gender cannot be empty.",
+    }),
 
-  boardUniversityCollege: Joi.string().optional(),
+    selectedProgram: Joi.string()
+      .valid(
+        "Full Stack Web Development - 02-June-2025 Onwards (90 Days)",
+        "Full Stack Mobile Development - 02-June-2025 Onwards (90 Days)"
+      )
+      .optional()
+      .messages({
+        "any.only": "Selected program must be a valid program option.",
+        "string.empty": "Selected program cannot be empty.",
+      }),
 
-  branch: Joi.string()
-    .custom((value, helpers) => {
-      if (value && !mongoose.Types.ObjectId.isValid(value)) {
-        return helpers.error("any.invalid");
-      }
-      return value;
-    }, "ObjectId Validation")
-    .optional(),
+    address: Joi.object({
+      add1: Joi.string().optional(),
+      add2: Joi.string().optional(),
+      taluka: Joi.string().optional(),
+      dist: Joi.string().optional(),
+      state: Joi.string().optional(),
+      pincode: Joi.string()
+        .pattern(/^\d{6}$/)
+        .optional()
+        .messages({
+          "string.pattern.base": "Pincode must be 6 digits.",
+        }),
+    }).optional(),
 
-  enrolledCourses: Joi.array()
-    .items(
-      Joi.string().custom((value, helpers) => {
-        if (!mongoose.Types.ObjectId.isValid(value)) {
-          return helpers.error("any.invalid");
-        }
-        return value;
-      }, "ObjectId Validation")
-    )
-    .optional(),
+    currentEducation: Joi.string().optional().messages({
+      "string.base": "Current education must be a string.",
+    }),
 
-  collegeName: Joi.string().allow("").optional(),
+    status: Joi.string().optional().messages({
+      "string.base": "Status must be a string.",
+    }),
 
-  coursesInterested: Joi.array().items(Joi.string()).optional(),
+    boardUniversityCollege: Joi.string().optional().messages({
+      "string.base": "Board/University/College must be a string.",
+    }),
 
-  preferredBatchTiming: Joi.string().allow("").optional(),
+    branch: Joi.string().optional().messages({
+      "string.base": "Branch ID must be a valid string ObjectId.",
+    }),
 
-  preferredMode: Joi.string().valid("Online", "Offline", "Hybrid").optional(),
+    enrolledCourses: Joi.array().items(Joi.string()).optional().messages({
+      "array.base": "Enrolled courses must be an array of course IDs.",
+    }),
 
-  idProofStudent: Joi.string().uri().optional(),
+    coursesInterested: Joi.array().items(Joi.string()).optional().messages({
+      "array.base": "Courses interested must be an array of course IDs.",
+    }),
 
-  profilePhotoStudent: Joi.string().uri().optional(),
+    preferredBatchTiming: Joi.string().optional().messages({
+      "string.base": "Preferred batch timing must be a string.",
+    }),
 
-  password: Joi.string().min(6).required().messages({
-    "string.min": "Password must be at least 6 characters",
-    "any.required": "Password is required",
-  }),
+    preferredMode: Joi.string().optional().messages({
+      "string.base": "Preferred mode must be a string.",
+    }),
 
-  registeredAt: Joi.date().default(Date.now),
-});
+    idProofStudent: Joi.string().optional().messages({
+      "string.base": "ID proof must be a string.",
+    }),
 
-const validateStudent = (data) => {
-  return studentSchema.validate(data, { abortEarly: true });
+    profilePhotoStudent: Joi.string().optional().messages({
+      "string.base": "Profile photo must be a string URL/path.",
+    }),
+
+    password: Joi.string().optional().messages({
+      "string.base": "Password must be a string.",
+    }),
+
+    role: Joi.string()
+      .valid("admin", "trainer", "student")
+      .optional()
+      .messages({
+        "any.only": "Role must be 'admin', 'trainer', or 'student'.",
+      }),
+
+    isActive: Joi.boolean().optional().messages({
+      "boolean.base": "isActive must be true or false.",
+    }),
+  });
+
+  return schema.validate(data, { abortEarly: true });
 };
 
 module.exports = { validateStudent };

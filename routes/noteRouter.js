@@ -17,8 +17,8 @@ const {
 
 noteRouter.post(
   "/",
-  protect,
-  checkAccess("note", "create"),
+  // protect,
+  // checkAccess("note", "create"),
   upload.single("file"),
   createNote
 );

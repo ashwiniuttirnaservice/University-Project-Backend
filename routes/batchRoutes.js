@@ -11,14 +11,16 @@ const {
   assignStudentToBatch,
   getAllBatches1,
   getBatchesForStudent,
+  uploadEnrollmentExcel,
 } = require("../controllers/batchController");
-
+const upload = require("../utils/multer");
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
 
 const router = express.Router();
-
-router.post("/", protect, checkAccess("batch", "create"), createBatch);
+// protect, checkAccess("batch", "create")
+router.post("/", createBatch);
+router.post("/upload-excel", upload.single("excelFile"), uploadEnrollmentExcel);
 
 router.get("/", protect, checkAccess("batch", "read"), getAllBatches);
 

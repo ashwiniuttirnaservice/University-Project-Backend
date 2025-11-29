@@ -937,7 +937,8 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     ? [req.body.enrolledBatches]
     : [];
 
-  const formattedData = [];
+  const formattedEnrollmentData = [];
+  const formattedStudentData = [];
 
   for (const row of rows) {
     let interestedCourseIds = [];
@@ -955,11 +956,12 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     const finalEnrolledCourses = [
       ...new Set([...enrolledCourseIds, ...bodyEnrolledCourses]),
     ];
+
     const finalEnrolledBatches = [
       ...new Set([...enrolledBatchIds, ...bodyEnrolledBatches]),
     ];
 
-    formattedData.push({
+    formattedEnrollmentData.push({
       fullName: row.fullName || "",
       mobileNo: row.mobileNo || "",
       email: row.email || "",
@@ -969,15 +971,59 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       designation: row.designation || "",
       collegeName: row.collegeName || "",
     });
+
+    formattedStudentData.push({
+      fullName: row.fullName || "",
+      email: row.email || "",
+      mobileNo: row.mobileNo || "",
+      dob: row.dob || null,
+      gender: row.gender || "",
+      selectedProgram: row.selectedProgram || undefined,
+
+      address: {
+        add1: row.add1 || "",
+        add2: row.add2 || "",
+        taluka: row.taluka || "",
+        dist: row.dist || "",
+        state: row.state || "",
+        pincode: row.pincode || "",
+      },
+
+      currentEducation: row.currentEducation || "",
+      status: row.status || "",
+      boardUniversityCollege: row.boardUniversityCollege || "",
+
+      branch: row.branchId || null, // Must send branchId in excel if needed
+
+      enrolledCourses: finalEnrolledCourses,
+      coursesInterested: interestedCourseIds,
+
+      collegeName: row.collegeName || "",
+      preferredBatchTiming: row.preferredBatchTiming || "",
+      preferredMode: row.preferredMode || "",
+      idProofStudent: row.idProofStudent || "",
+      profilePhotoStudent: row.profilePhotoStudent || "",
+
+      password: "", // No password for excel entries
+      role: "student",
+      isActive: true,
+    });
   }
 
-  await Enrollment.insertMany(formattedData);
+  // 🔥 Insert in Enrollment
+  await Enrollment.insertMany(formattedEnrollmentData);
+
+  // 🔥 Insert in Students
+  await Student.insertMany(formattedStudentData);
 
   return sendResponse(
     res,
     200,
     true,
-    "Excel uploaded successfully.",
-    formattedData
+    "Excel uploaded successfully. Enrollment + Students saved.",
+    {
+      enrollment: formattedEnrollmentData,
+      students: formattedStudentData,
+    }
   );
 });

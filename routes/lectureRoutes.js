@@ -11,7 +11,7 @@ lectureRouter.post(
   "/",
   protect,
   checkAccess("lecture", "create"),
-  upload.array("contentUrl", 10),
+  upload.single("contentUrl"),
   lectureController.createMultipleLectures
 );
 

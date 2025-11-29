@@ -63,13 +63,11 @@ const trainerSchema = new mongoose.Schema(
       required: false,
     },
 
-    // --- Availability ---
     availableTiming: {
       type: String,
       required: true,
     },
 
-    // --- Login & Profile ---
     password: {
       type: String,
       required: true,
@@ -105,7 +103,6 @@ const trainerSchema = new mongoose.Schema(
     //   },
     // ],
 
-    // --- Approval Workflow ---
     isApproved: {
       type: Boolean,
       default: false,
@@ -123,7 +120,6 @@ const trainerSchema = new mongoose.Schema(
       type: Date,
     },
 
-    // --- Relations ---
     courses: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -132,7 +128,6 @@ const trainerSchema = new mongoose.Schema(
     ],
     batches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
 
-    // --- Status ---
     isActive: {
       type: Boolean,
       default: true,

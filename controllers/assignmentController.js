@@ -1,6 +1,7 @@
 const Assignment = require("../models/Assignment");
 const Chapter = require("../models/Chapter");
 const Enrollment = require("../models/Enrollment");
+const Student = require("../models/Student");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
@@ -53,14 +54,26 @@ exports.createAssignments = asyncHandler(async (req, res) => {
 });
 
 exports.submitAssignment = asyncHandler(async (req, res) => {
-  const { assignmentId, enrollmentId, remarks } = req.body;
+  const { assignmentId, studentId, enrollmentId, remarks } = req.body;
 
   if (!assignmentId || !mongoose.Types.ObjectId.isValid(assignmentId)) {
     return sendError(res, 400, false, "Valid assignmentId is required");
   }
-  if (!enrollmentId || !mongoose.Types.ObjectId.isValid(enrollmentId)) {
-    return sendError(res, 400, false, "Valid enrollmentId is required");
+
+  if (
+    (!studentId || !mongoose.Types.ObjectId.isValid(studentId)) &&
+    (!enrollmentId || !mongoose.Types.ObjectId.isValid(enrollmentId))
+  ) {
+    return sendError(
+      res,
+      400,
+      false,
+      "Provide at least studentId or enrollmentId"
+    );
   }
+
+  const idToUse = studentId || enrollmentId;
+
   if (!req.files || req.files.length === 0) {
     return sendError(res, 400, false, "Please upload at least one file");
   }
@@ -68,12 +81,22 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
   const assignment = await Assignment.findById(assignmentId);
   if (!assignment) return sendError(res, 404, false, "Assignment not found");
 
-  const enrollment = await Enrollment.findById(enrollmentId);
-  if (!enrollment) return sendError(res, 404, false, "Enrollment not found");
+  let student = null;
+  if (studentId) {
+    student = await Student.findById(studentId);
+    if (!student) return sendError(res, 404, false, "Student not found");
+  }
+
+  let enrollment = null;
+  if (enrollmentId) {
+    enrollment = await Enrollment.findById(enrollmentId);
+    if (!enrollment) return sendError(res, 404, false, "Enrollment not found");
+  }
 
   const alreadySubmitted = assignment.submissions?.some(
-    (s) => s.student.toString() === enrollmentId
+    (s) => s.student.toString() === idToUse
   );
+
   if (alreadySubmitted) {
     return sendError(
       res,
@@ -86,7 +109,7 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
   const files = req.files.map((f) => path.basename(f.path));
 
   assignment.submissions.push({
-    student: enrollmentId,
+    student: idToUse,
     files,
     remarks: remarks || "",
     status: "submitted",
@@ -95,9 +118,17 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
 
   await assignment.save();
 
-  await Enrollment.findByIdAndUpdate(enrollmentId, {
-    $push: { assignmentSubmissions: assignment._id },
-  });
+  if (studentId) {
+    await Student.findByIdAndUpdate(studentId, {
+      $push: { assignmentSubmissions: assignment._id },
+    });
+  }
+
+  if (enrollmentId) {
+    await Enrollment.findByIdAndUpdate(enrollmentId, {
+      $push: { assignmentSubmissions: assignment._id },
+    });
+  }
 
   return sendResponse(
     res,

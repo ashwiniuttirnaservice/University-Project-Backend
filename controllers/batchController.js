@@ -528,3 +528,128 @@ exports.deleteBatch = asyncHandler(async (req, res) => {
     "Batch deleted (soft delete) successfully"
   );
 });
+const xlsx = require("xlsx");
+
+exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    return sendError(res, 400, false, "No Excel file uploaded");
+  }
+
+  const filePath = req.file.path;
+  const workbook = xlsx.readFile(filePath);
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const rows = xlsx.utils.sheet_to_json(worksheet);
+
+  if (!rows || rows.length === 0) {
+    return sendError(res, 400, false, "No student data found in Excel");
+  }
+
+  const parseIds = (input) => {
+    if (!input) return [];
+    if (typeof input === "string") {
+      try {
+        input = JSON.parse(input); // parse if stringified array
+      } catch (e) {
+        input = [input]; // single string
+      }
+    }
+    // Flatten and convert to ObjectId
+    return [].concat(...input).map((id) => new mongoose.Types.ObjectId(id));
+  };
+
+  const enrolledCourseIds = parseIds(req.body.enrolledCourses);
+  const enrolledBatchIds = parseIds(req.body.enrolledBatches);
+
+  if (!enrolledCourseIds.length) {
+    return sendError(res, 400, false, "Course is required");
+  }
+
+  const summary = {
+    createdStudents: 0,
+    existingStudents: 0,
+    newEnrollments: 0,
+    skippedEnrollments: 0,
+    addedToBatch: 0,
+    emailsSent: 0,
+  };
+
+  for (const row of rows) {
+    const fullName = (row.fullName || "").trim();
+    const email = (row.email || "").trim().toLowerCase();
+    const mobileNo = (row.mobileNo || "").toString().trim();
+
+    if (!email) continue;
+
+    let student = await Student.findOne({ email });
+
+    if (!student) {
+      const rawPassword = Math.random().toString(36).slice(-8);
+
+      student = await Student.create({
+        fullName,
+        email,
+        mobileNo,
+        collegeName: row.collegeName || "",
+        designation: row.designation || "",
+        password: rawPassword,
+        role: "student",
+        isActive: true,
+      });
+
+      summary.createdStudents++;
+      summary.emailsSent++;
+    } else {
+      summary.existingStudents++;
+    }
+
+    let enrollmentDoc = await Enrollment.findOne({
+      studentId: student._id,
+      enrolledCourses: { $all: enrolledCourseIds },
+      enrolledBatches: { $all: enrolledBatchIds },
+    });
+
+    if (enrollmentDoc) {
+      summary.skippedEnrollments++;
+    } else {
+      enrollmentDoc = await Enrollment.create({
+        studentId: student._id,
+        fullName: student.fullName,
+        mobileNo: student.mobileNo,
+        email: student.email,
+        designation: student.designation,
+        collegeName: student.collegeName,
+        enrolledCourses: enrolledCourseIds,
+        enrolledBatches: enrolledBatchIds,
+      });
+      summary.newEnrollments++;
+    }
+
+    for (const batchId of enrolledBatchIds) {
+      const batchUpdate = await Batch.findByIdAndUpdate(
+        batchId,
+        {
+          $addToSet: {
+            students: {
+              studentId: student._id,
+              fullName: student.fullName,
+              email: student.email,
+            },
+            enrolledIds: enrollmentDoc._id,
+          },
+        },
+        { new: true }
+      );
+
+      if (batchUpdate) summary.addedToBatch++;
+    }
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Excel upload completed successfully",
+    summary
+  );
+});

@@ -15,11 +15,17 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
     description,
     batches,
     status,
-    contentUrl,
   } = req.body;
 
   if (!chapter || !mongoose.Types.ObjectId.isValid(chapter)) {
     return sendError(res, 400, false, "Valid chapter ID is required");
+  }
+
+  let contentUrl = null;
+  if (req.file) {
+    contentUrl = `${req.file.filename}`;
+  } else if (req.body.contentUrl) {
+    contentUrl = req.body.contentUrl;
   }
 
   const lecturesData = [
@@ -46,10 +52,11 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
     res,
     201,
     true,
-    "Lecture created successfully (YouTube link or URL)",
+    "Lecture created successfully",
     createdLectures
   );
 });
+
 exports.getAllLectures = asyncHandler(async (req, res) => {
   const lectures = await Lecture.find({ isActive: true })
     .populate("course")

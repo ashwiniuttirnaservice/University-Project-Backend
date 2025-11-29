@@ -8,6 +8,12 @@ const PrerequisiteSchema = new mongoose.Schema(
       required: true,
     },
 
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      required: true,
+    },
+
     title: {
       type: String,
       required: true,
@@ -19,31 +25,22 @@ const PrerequisiteSchema = new mongoose.Schema(
       default: "",
     },
 
-    videoLinks: [
-      {
-        type: String,
-      },
-    ],
-
-    materialFiles: [
-      {
-        fileName: String,
-        filePath: String,
-        fileType: String,
-      },
-    ],
-
     topics: [
       {
-        type: String,
+        name: {
+          type: String,
+          required: true,
+        },
+
+        videoLinks: {
+          type: String,
+        },
+
+        materialFiles: {
+          type: String,
+        },
       },
     ],
-
-    type: {
-      type: String,
-      enum: ["video", "pdf", "mixed"],
-      default: "video",
-    },
 
     isActive: {
       type: Boolean,
