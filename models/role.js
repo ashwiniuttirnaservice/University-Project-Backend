@@ -4,11 +4,6 @@ const permissionSchema = new mongoose.Schema(
   {
     module: { type: String, required: true },
 
-    // module: {
-    //   type: mongoose.Schema.Types.ObjectId,
-    //   ref: "Module",
-    //   required: true,
-    // },
     actions: [
       {
         type: String,

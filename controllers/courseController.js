@@ -235,6 +235,10 @@ exports.getAllCourse = asyncHandler(async (req, res) => {
       match: { isActive: true },
       select: "batchName startDate endDate mode status",
     })
+    .populate({
+      path: "trainer",
+      select: "fullName email ",
+    })
     .lean();
 
   if (!courses.length) {

@@ -5,14 +5,15 @@ const {
   createFeedback,
   getAllFeedback,
   getFeedbackByCourse,
+  getFeedbackByBatch,
+  getFeedbackByStudent,
 } = require("../controllers/feedbackController");
 
 router.post("/", upload.single("profile"), createFeedback);
 
-// Get all feedback
 router.get("/", getAllFeedback);
 
-// Get feedback by courseId
 router.get("/:courseId", getFeedbackByCourse);
-
+router.get("/:batchId", getFeedbackByBatch);
+router.get("/:studentId", getFeedbackByStudent);
 module.exports = router;

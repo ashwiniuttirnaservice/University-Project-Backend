@@ -2,7 +2,6 @@ const Prerequisite = require("../models/Prerequisite");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
-
 exports.createPrerequisite = asyncHandler(async (req, res) => {
   const { courseId, batchId, title, description, topics } = req.body;
 
@@ -18,21 +17,23 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
   let parsedTopics = [];
   try {
     parsedTopics = topics ? JSON.parse(topics) : [];
-  } catch (err) {
+  } catch {
     return sendError(res, 400, false, "Invalid topics JSON format");
   }
 
-  const uploadedFiles = req.files?.materialFiles
-    ? req.files.materialFiles.map((file) => file.filename)
-    : [];
+  const uploadedFiles = [];
+  if (req.files) {
+    if (Array.isArray(req.files)) uploadedFiles.push(...req.files);
+    else Object.values(req.files).forEach((arr) => uploadedFiles.push(...arr));
+  }
 
-  const finalTopics = parsedTopics.map((topic, index) => ({
-    ...topic,
-    videoLinks: Array.isArray(topic.videoLinks)
-      ? topic.videoLinks[0]
-      : topic.videoLinks,
-    materialFiles: uploadedFiles[index] || "",
-  }));
+  const finalTopics = parsedTopics.map((topic) => {
+    const filesForTopic = topic.materialFiles.map((fileName) => {
+      const file = uploadedFiles.find((f) => f.originalname === fileName);
+      return file ? file.filename : fileName;
+    });
+    return { ...topic, materialFiles: filesForTopic };
+  });
 
   const prerequisite = await Prerequisite.create({
     courseId,
@@ -52,10 +53,9 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
 });
 
 exports.getAllPrerequisites = asyncHandler(async (req, res) => {
-  const prerequisites = await Prerequisite.find({ isActive: true })
-    .populate("courseId")
-    .populate("batchId")
-    .sort({ createdAt: -1 });
+  const prerequisites = await Prerequisite.find({ isActive: true }).sort({
+    createdAt: -1,
+  });
 
   return sendResponse(
     res,
@@ -73,9 +73,7 @@ exports.getPrerequisiteById = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid prerequisite ID");
   }
 
-  const prerequisite = await Prerequisite.findById(id)
-    .populate("courseId")
-    .populate("batchId");
+  const prerequisite = await Prerequisite.findById(id);
 
   if (!prerequisite) {
     return sendError(res, 404, false, "Prerequisite not found");
@@ -92,48 +90,55 @@ exports.getPrerequisiteById = asyncHandler(async (req, res) => {
 
 exports.updatePrerequisite = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const { courseId, batchId, title, description, topics } = req.body;
 
-  if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, 400, false, "Invalid prerequisite ID");
+  if (!id) {
+    return sendError(res, 400, false, "Prerequisite ID is required");
   }
 
-  const { courseId, batchId, title, description, topics } = req.body;
+  const existing = await Prerequisite.findById(id);
+  if (!existing) {
+    return sendError(res, 404, false, "Prerequisite not found");
+  }
 
   let parsedTopics = [];
   try {
     parsedTopics = topics ? JSON.parse(topics) : [];
-  } catch (error) {
+  } catch {
     return sendError(res, 400, false, "Invalid topics JSON format");
   }
 
-  const uploadedFiles = req.files?.materialFiles
-    ? req.files.materialFiles.map((file) => file.filename)
-    : [];
-
-  const finalTopics = parsedTopics.map((topic, index) => ({
-    ...topic,
-    videoLinks: Array.isArray(topic.videoLinks)
-      ? topic.videoLinks[0]
-      : topic.videoLinks,
-    materialFiles: uploadedFiles[index] || topic.materialFiles || "",
-  }));
-
-  const updated = await Prerequisite.findByIdAndUpdate(
-    id,
-    { courseId, batchId, title, description, topics: finalTopics },
-    { new: true }
-  );
-
-  if (!updated) {
-    return sendError(res, 404, false, "Prerequisite not found");
+  const uploadedFiles = [];
+  if (req.files) {
+    if (Array.isArray(req.files)) uploadedFiles.push(...req.files);
+    else Object.values(req.files).forEach((arr) => uploadedFiles.push(...arr));
   }
+
+  let fileIndex = 0;
+  const finalTopics = parsedTopics.map((topic) => {
+    const filesForTopic = topic.materialFiles
+      .map(() => {
+        const file = uploadedFiles[fileIndex++];
+        return file ? file.filename : null;
+      })
+      .filter(Boolean);
+    return { ...topic, materialFiles: filesForTopic };
+  });
+
+  existing.courseId = courseId || existing.courseId;
+  existing.batchId = batchId || existing.batchId;
+  existing.title = title || existing.title;
+  existing.description = description || existing.description;
+  if (finalTopics.length > 0) existing.topics = finalTopics;
+
+  await existing.save();
 
   return sendResponse(
     res,
     200,
     true,
     "Prerequisite updated successfully",
-    updated
+    existing
   );
 });
 

@@ -36,9 +36,11 @@ const PrerequisiteSchema = new mongoose.Schema(
           type: String,
         },
 
-        materialFiles: {
-          type: String,
-        },
+        materialFiles: [
+          {
+            type: String,
+          },
+        ],
       },
     ],
 

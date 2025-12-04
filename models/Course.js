@@ -20,23 +20,23 @@ const courseSchema = new mongoose.Schema(
 
     overview: {
       type: String,
-      required: true,
+      required: false,
     },
     learningOutcomes: [
       {
         type: String,
-        required: true,
+        required: false,
       },
     ],
     benefits: [
       {
         type: String,
-        required: true,
+        required: false,
       },
     ],
     keyFeatures: [
       {
-        title: { type: String, required: true },
+        title: { type: String, required: false },
         description: { type: String },
         subPoints: [{ type: String }],
       },

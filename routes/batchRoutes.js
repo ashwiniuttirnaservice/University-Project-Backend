@@ -13,29 +13,32 @@ const {
   getBatchesForStudent,
   uploadEnrollmentExcel,
 } = require("../controllers/batchController");
+
 const upload = require("../utils/multer");
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
+const roleFilter = require("../middleware/roleFilter");
 
 const router = express.Router();
-// protect, checkAccess("batch", "create")
-router.post("/", createBatch);
+
+router.post("/", protect, checkAccess("batch", "create"), createBatch);
+
 router.post("/upload-excel", upload.single("excelFile"), uploadEnrollmentExcel);
 
 router.get("/", protect, checkAccess("batch", "read"), getAllBatches);
 
-router.get("/all", protect, checkAccess("batch", "read"), getAllBatches1);
-
-router.post(
-  "/student-batch",
+router.get(
+  "/all",
   protect,
-  checkAccess("batch", "update"),
-  assignStudentToBatch
+  roleFilter,
+  checkAccess("batch", "read"),
+  getAllBatches1
 );
 
 router.get(
   "/student/:studentId",
   protect,
+  roleFilter,
   checkAccess("batch", "read"),
   getBatchesForStudent
 );
@@ -43,6 +46,7 @@ router.get(
 router.get(
   "/all-batches-student",
   protect,
+  roleFilter,
   checkAccess("batch", "read"),
   getBatchesByCourseAndStudent
 );
@@ -50,6 +54,7 @@ router.get(
 router.get(
   "/trainer/:trainerId",
   protect,
+
   checkAccess("batch", "read"),
   getBatchesByTrainerId
 );
@@ -57,11 +62,18 @@ router.get(
 router.get(
   "/course/:courseId",
   protect,
+
   checkAccess("batch", "read"),
   getBatchesByCourseId
 );
 
-router.get("/batches/:id", protect, checkAccess("batch", "read"), getBatchById);
+router.get(
+  "/batches/:id",
+  protect,
+
+  checkAccess("batch", "read"),
+  getBatchById
+);
 
 router.put("/:id", protect, checkAccess("batch", "update"), updateBatch);
 

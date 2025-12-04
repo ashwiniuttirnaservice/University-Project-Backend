@@ -87,89 +87,69 @@ exports.loginUser = asyncHandler(async (req, res) => {
     const admin = await User.findOne({ email, role: "admin" }).select(
       "+password"
     );
-    if (admin && admin.password === password) {
-      const token = generateToken(admin._id, admin.role);
-      return sendResponse(res, 200, true, "Admin login successful", {
-        token,
-        user: {
-          _id: admin._id,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          email: admin.email,
-          role: admin.role,
-        },
-      });
+    if (!admin || admin.password !== password) {
+      return sendError(res, 401, false, "Invalid email or password for admin.");
     }
-    return sendError(res, 401, false, "Invalid email or password for admin.");
+
+    const token = generateToken(admin._id, admin.role);
+    return sendResponse(res, 200, true, "Admin login successful", {
+      token,
+      user: {
+        _id: admin._id,
+        firstName: admin.firstName,
+        lastName: admin.lastName,
+        email: admin.email,
+        role: admin.role,
+      },
+    });
   }
 
   if (role === "trainer") {
     const trainer = await Trainer.findOne({ email }).select("+password");
-    if (trainer && trainer.password === password) {
-      let user = await User.findOne({ email });
-      if (!user) {
-        user = await User.create({
-          trainerId: trainer._id,
-          firstName: trainer.fullName.split(" ")[0],
-          lastName: trainer.fullName.split(" ").slice(1).join(" "),
-          email: trainer.email,
-          role: "trainer",
-          password: trainer.password,
-        });
-      }
-
-      const token = generateToken(user._id, "trainer");
-
-      return sendResponse(res, 200, true, "Trainer login successful", {
-        token,
-        user: {
-          _id: user._id,
-          trainerId: trainer._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: "trainer",
-        },
-      });
+    if (!trainer || trainer.password !== password) {
+      return sendError(
+        res,
+        401,
+        false,
+        "Invalid email or password for trainer."
+      );
     }
-    return sendError(res, 401, false, "Invalid email or password for trainer.");
+
+    const token = generateToken(trainer._id, "trainer");
+    return sendResponse(res, 200, true, "Trainer login successful", {
+      token,
+      user: {
+        _id: trainer._id,
+        firstName: trainer.fullName.split(" ")[0],
+        lastName: trainer.fullName.split(" ").slice(1).join(" "),
+        email: trainer.email,
+        role: "trainer",
+      },
+    });
   }
 
   if (role === "student") {
     const student = await Student.findOne({ email }).select("+password");
-
-    if (!student) {
-      return sendError(res, 404, false, "Student not found");
+    if (!student || student.password !== password) {
+      return sendError(
+        res,
+        401,
+        false,
+        "Invalid email or password for student."
+      );
     }
 
-    if (student.password === password) {
-      let user = await User.findOne({ email });
-      if (!user) {
-        user = await User.create({
-          firstName: student.fullName.split(" ")[0],
-          lastName: student.fullName.split(" ").slice(1).join(" "),
-          email: student.email,
-          role: "student",
-          password: student.password,
-        });
-      }
-
-      const token = generateToken(user._id, "student");
-
-      return sendResponse(res, 200, true, "Student login successful", {
-        token,
-        user: {
-          _id: user._id,
-          studentId: student._id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          role: "student",
-        },
-      });
-    }
-
-    return sendError(res, 401, false, "Invalid email or password for student.");
+    const token = generateToken(student._id, "student");
+    return sendResponse(res, 200, true, "Student login successful", {
+      token,
+      user: {
+        _id: student._id,
+        firstName: student.fullName.split(" ")[0],
+        lastName: student.fullName.split(" ").slice(1).join(" "),
+        email: student.email,
+        role: "student",
+      },
+    });
   }
 
   return sendError(res, 400, false, "Invalid role specified.");

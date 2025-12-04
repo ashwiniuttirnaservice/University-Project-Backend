@@ -922,7 +922,6 @@ exports.getEnrollmentById = asyncHandler(async (req, res) => {
 });
 
 const XLSX = require("xlsx");
-
 exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
   const rows = req.body.excelData;
 
@@ -933,14 +932,29 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
   const bodyEnrolledCourses = req.body.enrolledCourses
     ? [req.body.enrolledCourses]
     : [];
+
   const bodyEnrolledBatches = req.body.enrolledBatches
     ? [req.body.enrolledBatches]
     : [];
 
-  const formattedEnrollmentData = [];
-  const formattedStudentData = [];
+  let summary = {
+    enrollmentSaved: 0,
+    studentsSaved: 0,
+    addedToBatch: 0,
+    duplicates: 0,
+  };
 
   for (const row of rows) {
+    const email = row.email?.trim();
+
+    const existingStudent = await Student.findOne({ email });
+    const existingEnrollment = await Enrollment.findOne({ email });
+
+    if (existingStudent || existingEnrollment) {
+      summary.duplicates++;
+      continue;
+    }
+
     let interestedCourseIds = [];
     let enrolledCourseIds = [];
     let enrolledBatchIds = [];
@@ -961,10 +975,10 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       ...new Set([...enrolledBatchIds, ...bodyEnrolledBatches]),
     ];
 
-    formattedEnrollmentData.push({
+    const enrollmentDoc = await Enrollment.create({
       fullName: row.fullName || "",
       mobileNo: row.mobileNo || "",
-      email: row.email || "",
+      email,
       coursesInterested: interestedCourseIds,
       enrolledCourses: finalEnrolledCourses,
       enrolledBatches: finalEnrolledBatches,
@@ -972,9 +986,11 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       collegeName: row.collegeName || "",
     });
 
-    formattedStudentData.push({
+    summary.enrollmentSaved++;
+
+    const student = await Student.create({
       fullName: row.fullName || "",
-      email: row.email || "",
+      email,
       mobileNo: row.mobileNo || "",
       dob: row.dob || null,
       gender: row.gender || "",
@@ -993,7 +1009,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       status: row.status || "",
       boardUniversityCollege: row.boardUniversityCollege || "",
 
-      branch: row.branchId || null, // Must send branchId in excel if needed
+      branch: row.branchId || null,
 
       enrolledCourses: finalEnrolledCourses,
       coursesInterested: interestedCourseIds,
@@ -1004,26 +1020,37 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       idProofStudent: row.idProofStudent || "",
       profilePhotoStudent: row.profilePhotoStudent || "",
 
-      password: "", // No password for excel entries
+      password: "",
       role: "student",
       isActive: true,
     });
+
+    summary.studentsSaved++;
+
+    for (const batchId of finalEnrolledBatches) {
+      const batchUpdate = await Batch.findByIdAndUpdate(
+        batchId,
+        {
+          $addToSet: {
+            students: {
+              studentId: student._id,
+              fullName: student.fullName,
+              email: student.email,
+            },
+            enrolledIds: enrollmentDoc._id,
+          },
+        },
+        { new: true }
+      );
+
+      if (batchUpdate) summary.addedToBatch++;
+    }
   }
 
-  // 🔥 Insert in Enrollment
-  await Enrollment.insertMany(formattedEnrollmentData);
-
-  // 🔥 Insert in Students
-  await Student.insertMany(formattedStudentData);
-
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Excel uploaded successfully. Enrollment + Students saved.",
-    {
-      enrollment: formattedEnrollmentData,
-      students: formattedStudentData,
-    }
-  );
+  return sendResponse(res, 200, true, "Excel uploaded successfully.", {
+    enrollmentSaved: summary.enrollmentSaved,
+    studentsSaved: summary.studentsSaved,
+    addedToBatch: summary.addedToBatch,
+    duplicates: summary.duplicates,
+  });
 });

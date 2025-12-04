@@ -4,7 +4,7 @@ const courseRouter = express.Router();
 const upload = require("../utils/multer");
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
-
+const roleFilter = require("../middleware/roleFilter");
 const {
   createCourse,
   cloneCourse,
@@ -29,7 +29,13 @@ courseRouter.post(
   cloneCourse
 );
 
-courseRouter.get("/all", protect, checkAccess("course", "read"), getAllCourse);
+courseRouter.get(
+  "/all",
+  protect,
+  roleFilter,
+  checkAccess("course", "read"),
+  getAllCourse
+);
 
 courseRouter.get("/:id", protect, checkAccess("course", "read"), getCourseById);
 

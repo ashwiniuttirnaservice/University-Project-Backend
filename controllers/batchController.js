@@ -91,10 +91,14 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
 });
 
 exports.getAllBatches1 = asyncHandler(async (req, res) => {
+  const matchStage =
+    req.roleFilter && Object.keys(req.roleFilter).length > 0
+      ? { $match: req.roleFilter }
+      : { $match: { isActive: true } };
+  console.log("Role Filter:", req.roleFilter);
+
   const batches = await Batch.aggregate([
-    {
-      $match: { isActive: true },
-    },
+    matchStage,
     {
       $lookup: {
         from: "courses",
@@ -549,12 +553,11 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     if (!input) return [];
     if (typeof input === "string") {
       try {
-        input = JSON.parse(input); // parse if stringified array
+        input = JSON.parse(input);
       } catch (e) {
-        input = [input]; // single string
+        input = [input];
       }
     }
-    // Flatten and convert to ObjectId
     return [].concat(...input).map((id) => new mongoose.Types.ObjectId(id));
   };
 
@@ -571,7 +574,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     newEnrollments: 0,
     skippedEnrollments: 0,
     addedToBatch: 0,
-    emailsSent: 0,
+    duplicatesSkipped: 0,
   };
 
   for (const row of rows) {
@@ -581,7 +584,27 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     if (!email) continue;
 
-    let student = await Student.findOne({ email });
+    // **************************************************
+    // 1️⃣ CHECK FULL DUPLICATE: Student + Enrollment exist
+    // **************************************************
+    const existingStudent = await Student.findOne({ email });
+    const existingEnrollment = existingStudent
+      ? await Enrollment.findOne({
+          studentId: existingStudent._id,
+          enrolledCourses: { $all: enrolledCourseIds },
+          enrolledBatches: { $all: enrolledBatchIds },
+        })
+      : null;
+
+    if (existingStudent && existingEnrollment) {
+      summary.duplicatesSkipped++;
+      continue; // 🔥 FULL SKIP – DO NOT CREATE ANYTHING
+    }
+
+    // **************************************************
+    // 2️⃣ STUDENT CREATE / USE EXISTING
+    // **************************************************
+    let student = existingStudent;
 
     if (!student) {
       const rawPassword = Math.random().toString(36).slice(-8);
@@ -598,20 +621,16 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       });
 
       summary.createdStudents++;
-      summary.emailsSent++;
     } else {
       summary.existingStudents++;
     }
 
-    let enrollmentDoc = await Enrollment.findOne({
-      studentId: student._id,
-      enrolledCourses: { $all: enrolledCourseIds },
-      enrolledBatches: { $all: enrolledBatchIds },
-    });
+    // **************************************************
+    // 3️⃣ ENROLLMENT CREATE
+    // **************************************************
+    let enrollmentDoc = existingEnrollment;
 
-    if (enrollmentDoc) {
-      summary.skippedEnrollments++;
-    } else {
+    if (!enrollmentDoc) {
       enrollmentDoc = await Enrollment.create({
         studentId: student._id,
         fullName: student.fullName,
@@ -622,9 +641,15 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
         enrolledCourses: enrolledCourseIds,
         enrolledBatches: enrolledBatchIds,
       });
+
       summary.newEnrollments++;
+    } else {
+      summary.skippedEnrollments++;
     }
 
+    // **************************************************
+    // 4️⃣ BATCH UPDATE
+    // **************************************************
     for (const batchId of enrolledBatchIds) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,
@@ -645,6 +670,9 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     }
   }
 
+  // **************************************************
+  // 5️⃣ FINAL RESPONSE
+  // **************************************************
   return sendResponse(
     res,
     200,

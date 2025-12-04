@@ -5,11 +5,7 @@ const { sendError } = require("../utils/apiResponse");
 const protect = asyncHandler(async (req, res, next) => {
   let token = req.cookies?.jwt;
 
-  if (
-    !token &&
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
+  if (!token && req.headers.authorization?.startsWith("Bearer")) {
     token = req.headers.authorization.split(" ")[1];
   }
 
@@ -21,7 +17,8 @@ const protect = asyncHandler(async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     req.user = {
-      id: decoded.id || decoded.studentId || null,
+      id: decoded.id || null,
+      trainerId: decoded.trainerId || decoded.id || null,
       studentId: decoded.studentId || decoded.id || null,
       role: decoded.role || null,
     };
@@ -35,6 +32,8 @@ const protect = asyncHandler(async (req, res, next) => {
     return sendError(res, 401, false, "Token invalid or expired");
   }
 });
+
+module.exports = protect;
 
 const authorize = (...roles) => {
   return (req, res, next) => {
