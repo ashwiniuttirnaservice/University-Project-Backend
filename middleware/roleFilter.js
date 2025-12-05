@@ -10,11 +10,11 @@ const roleFilter = (req, res, next) => {
       req.roleFilter = {};
     } else if (role === "trainer" && trainerId) {
       req.roleFilter = {
-        trainersAssigned: new mongoose.Types.ObjectId(trainerId),
+        trainer: new mongoose.Types.ObjectId(trainerId),
       };
     } else if (role === "student" && studentId) {
       req.roleFilter = {
-        studentsAssigned: new mongoose.Types.ObjectId(studentId),
+        "batches.students": new mongoose.Types.ObjectId(studentId),
       };
     }
 

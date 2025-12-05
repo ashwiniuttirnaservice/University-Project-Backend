@@ -7,6 +7,7 @@ const Batch = require("../models/Batch");
 const Enrollment = require("../models/Enrollment.js");
 exports.markAttendance = asyncHandler(async (req, res) => {
   const { meetingId } = req.params;
+  console.log("PARAMS:", req.params);
   const { attendees } = req.body;
 
   const meeting = await Meeting.findById(meetingId);
@@ -85,65 +86,23 @@ exports.markAttendance = asyncHandler(async (req, res) => {
 });
 
 exports.getAllAttendance = asyncHandler(async (req, res) => {
-  const records = await Attendance.aggregate([
-    {
-      $lookup: {
-        from: "meetings",
-        localField: "meeting",
-        foreignField: "_id",
-        as: "meeting",
-      },
-    },
-    { $unwind: "$meeting" },
-    {
-      $lookup: {
-        from: "batches",
-        localField: "batch",
-        foreignField: "_id",
-        as: "batch",
-      },
-    },
-    { $unwind: "$batch" },
-    {
-      $lookup: {
-        from: "trainers",
-        localField: "trainer",
-        foreignField: "_id",
-        as: "trainer",
-      },
-    },
-    { $unwind: "$trainer" },
+  const filter =
+    req.roleFilter && Object.keys(req.roleFilter).length > 0
+      ? { ...req.roleFilter, isActive: true }
+      : { isActive: true };
 
-    { $unwind: "$attendees" },
-
-    {
-      $lookup: {
-        from: "students",
-        localField: "attendees.student",
-        foreignField: "_id",
-        as: "attendees.studentDetails",
-      },
-    },
-    { $unwind: "$attendees.studentDetails" },
-
-    {
-      $group: {
-        _id: "$_id",
-        meeting: { $first: "$meeting" },
-        batch: { $first: "$batch" },
-        trainer: { $first: "$trainer" },
-        course: { $first: "$course" },
-        markedByTrainer: { $first: "$markedByTrainer" },
-        markedAt: { $first: "$markedAt" },
-        isActive: { $first: "$isActive" },
-        createdAt: { $first: "$createdAt" },
-        updatedAt: { $first: "$updatedAt" },
-        attendees: { $push: "$attendees" },
-      },
-    },
-
-    { $sort: { createdAt: -1 } },
-  ]);
+  const records = await Attendance.find(filter)
+    .populate({
+      path: "meeting",
+      populate: { path: "course", model: "Course" },
+    })
+    .populate("batch")
+    .populate("trainer")
+    .populate({
+      path: "attendees.student",
+      model: "Student",
+    })
+    .sort({ createdAt: -1 });
 
   return sendResponse(
     res,

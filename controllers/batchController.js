@@ -17,7 +17,7 @@ exports.createBatch = asyncHandler(async (req, res) => {
     status,
     isEnrolled,
     coursesAssigned,
-    trainersAssigned,
+    trainer,
     additionalNotes,
   } = req.body;
 
@@ -31,13 +31,13 @@ exports.createBatch = asyncHandler(async (req, res) => {
     status,
     isEnrolled,
     coursesAssigned,
-    trainersAssigned,
+    trainer,
     additionalNotes,
   });
 
-  if (Array.isArray(trainersAssigned) && trainersAssigned.length > 0) {
+  if (Array.isArray(trainer) && trainer.length > 0) {
     await Trainer.updateMany(
-      { _id: { $in: trainersAssigned } },
+      { _id: { $in: trainer } },
       { $addToSet: { batches: batch._id } }
     );
   }
@@ -82,7 +82,7 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
         additionalNotes: 1,
         studentCount: 1,
         coursesAssigned: { _id: 1, title: 1 },
-        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+        trainer: { _id: 1, fullName: 1, email: 1 },
       },
     },
   ]);
@@ -95,7 +95,6 @@ exports.getAllBatches1 = asyncHandler(async (req, res) => {
     req.roleFilter && Object.keys(req.roleFilter).length > 0
       ? { $match: req.roleFilter }
       : { $match: { isActive: true } };
-  console.log("Role Filter:", req.roleFilter);
 
   const batches = await Batch.aggregate([
     matchStage,
@@ -110,9 +109,9 @@ exports.getAllBatches1 = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "trainers",
-        localField: "trainersAssigned",
+        localField: "trainer",
         foreignField: "_id",
-        as: "trainersAssigned",
+        as: "trainer",
       },
     },
     {
@@ -128,7 +127,7 @@ exports.getAllBatches1 = asyncHandler(async (req, res) => {
         studentCount: 1,
         isActive: 1,
         coursesAssigned: { _id: 1, title: 1 },
-        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+        trainer: { _id: 1, fullName: 1, email: 1 },
       },
     },
     { $sort: { createdAt: -1 } },
@@ -167,9 +166,9 @@ exports.getBatchesByCourseId = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "trainers",
-        localField: "trainersAssigned",
+        localField: "trainer",
         foreignField: "_id",
-        as: "trainersAssigned",
+        as: "trainer",
       },
     },
     {
@@ -184,7 +183,7 @@ exports.getBatchesByCourseId = asyncHandler(async (req, res) => {
         additionalNotes: 1,
         studentCount: 1,
         coursesAssigned: { _id: 1, title: 1 },
-        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+        trainer: { _id: 1, fullName: 1, email: 1 },
       },
     },
   ]);
@@ -216,9 +215,9 @@ exports.getBatchesByTrainerId = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "trainers",
-        localField: "trainersAssigned",
+        localField: "trainer",
         foreignField: "_id",
-        as: "trainersAssigned",
+        as: "trainer",
       },
     },
     {
@@ -233,7 +232,7 @@ exports.getBatchesByTrainerId = asyncHandler(async (req, res) => {
         additionalNotes: 1,
         studentCount: 1,
         coursesAssigned: { _id: 1, title: 1 },
-        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+        trainer: { _id: 1, fullName: 1, email: 1 },
       },
     },
   ]);
@@ -269,9 +268,9 @@ exports.getBatchById = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "trainers",
-        localField: "trainersAssigned",
+        localField: "trainer",
         foreignField: "_id",
-        as: "trainersAssigned",
+        as: "trainer",
       },
     },
 
@@ -293,7 +292,7 @@ exports.getBatchById = asyncHandler(async (req, res) => {
           _id: 1,
           title: 1,
         },
-        trainersAssigned: {
+        trainer: {
           _id: 1,
           fullName: 1,
           email: 1,
@@ -336,9 +335,9 @@ exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "trainers",
-        localField: "trainersAssigned",
+        localField: "trainer",
         foreignField: "_id",
-        as: "trainersAssigned",
+        as: "trainer",
       },
     },
     {
@@ -351,7 +350,7 @@ exports.getBatchesByCourseAndStudent = asyncHandler(async (req, res) => {
         endDate: 1,
         status: 1,
         coursesAssigned: { _id: 1, title: 1 },
-        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+        trainer: { _id: 1, fullName: 1, email: 1 },
       },
     },
   ]);
@@ -478,9 +477,9 @@ exports.getBatchesForStudent = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "trainers",
-        localField: "trainersAssigned",
+        localField: "trainer",
         foreignField: "_id",
-        as: "trainersAssigned",
+        as: "trainer",
       },
     },
     {
@@ -493,7 +492,7 @@ exports.getBatchesForStudent = asyncHandler(async (req, res) => {
         endDate: 1,
         status: 1,
         coursesAssigned: { _id: 1, title: 1 },
-        trainersAssigned: { _id: 1, fullName: 1, email: 1 },
+        trainer: { _id: 1, fullName: 1, email: 1 },
       },
     },
   ]);
@@ -506,13 +505,79 @@ exports.getBatchesForStudent = asyncHandler(async (req, res) => {
 });
 
 exports.updateBatch = asyncHandler(async (req, res) => {
-  const updated = await Batch.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
+  const batchId = req.params.id;
 
-  if (!updated) return sendError(res, 404, false, "Batch not found");
+  const {
+    batchName,
+    time,
+    days,
+    mode,
+    startDate,
+    endDate,
+    status,
+    isEnrolled,
+    coursesAssigned,
+    trainer,
+    additionalNotes,
+  } = req.body;
 
-  return sendResponse(res, 200, true, "Batch updated successfully", updated);
+  const updatedBatch = await Batch.findByIdAndUpdate(
+    batchId,
+    {
+      batchName,
+      time,
+      days,
+      mode,
+      startDate,
+      endDate,
+      status,
+      isEnrolled,
+      coursesAssigned,
+      trainer,
+      additionalNotes,
+    },
+    { new: true }
+  );
+
+  if (!updatedBatch) {
+    return sendError(res, 404, false, "Batch not found");
+  }
+
+  if (Array.isArray(trainer)) {
+    await Trainer.updateMany(
+      { batches: batchId },
+      { $pull: { batches: batchId } }
+    );
+
+    if (trainer.length > 0) {
+      await Trainer.updateMany(
+        { _id: { $in: trainer } },
+        { $addToSet: { batches: batchId } }
+      );
+    }
+  }
+
+  if (Array.isArray(coursesAssigned)) {
+    await Course.updateMany(
+      { batches: batchId },
+      { $pull: { batches: batchId } }
+    );
+
+    if (coursesAssigned.length > 0) {
+      await Course.updateMany(
+        { _id: { $in: coursesAssigned } },
+        { $addToSet: { batches: batchId } }
+      );
+    }
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Batch updated successfully",
+    updatedBatch
+  );
 });
 
 exports.deleteBatch = asyncHandler(async (req, res) => {
@@ -584,9 +649,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     if (!email) continue;
 
-    // **************************************************
-    // 1️⃣ CHECK FULL DUPLICATE: Student + Enrollment exist
-    // **************************************************
     const existingStudent = await Student.findOne({ email });
     const existingEnrollment = existingStudent
       ? await Enrollment.findOne({

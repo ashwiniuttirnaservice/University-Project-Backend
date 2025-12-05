@@ -69,7 +69,7 @@ exports.createFeedback = asyncHandler(async (req, res) => {
 });
 
 exports.getAllFeedback = asyncHandler(async (req, res) => {
-  const feedbacks = await Feedback.find()
+  const feedbacks = await Feedback.find({ isActive: true })
     .populate("studentId", "firstName lastName email mobileNo")
     .populate("trainerId", "fullName email")
     .populate("courseId", "title description")

@@ -3,7 +3,7 @@ const testRouter = express.Router();
 
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
-
+const roleFilter = require("../middleware/roleFilter");
 const {
   uploadMiddleware,
   uploadExcel,
@@ -24,7 +24,13 @@ testRouter.post(
 
 testRouter.post("/create", protect, checkAccess("test", "create"), createTest);
 
-testRouter.get("/", protect, checkAccess("test", "read"), getAllTests);
+testRouter.get(
+  "/",
+  protect,
+  roleFilter,
+  checkAccess("test", "read"),
+  getAllTests
+);
 
 testRouter.get(
   "/questions/:id",

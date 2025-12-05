@@ -4,14 +4,13 @@ const assignmentController = require("../controllers/assignmentController");
 const upload = require("../utils/multer");
 const checkAccess = require("../middleware/checkAccess");
 const { protect } = require("../middleware/authMiddleware");
-const { validateAssignment } = require("../validations/assignmentValidation");
-const validateRequest = require("../validations/validateMiddleware");
+const roleFilter = require("../middleware/roleFilter");
 assignmentRouter.post(
   "/create",
   protect,
   checkAccess("assignment", "create"),
   upload.array("fileUrl", 10),
-  validateRequest(validateAssignment),
+
   assignmentController.createAssignments
 );
 
@@ -19,7 +18,7 @@ assignmentRouter.post(
   "/create/single",
   protect,
   checkAccess("assignment", "create"),
-  validateRequest(validateAssignment),
+
   upload.single("fileUrl"),
   assignmentController.createAssignments
 );
@@ -28,7 +27,7 @@ assignmentRouter.put(
   "/:id",
   protect,
   checkAccess("assignment", "update"),
-  validateRequest(validateAssignment),
+
   upload.single("fileUrl"),
   assignmentController.updateAssignment
 );
@@ -43,6 +42,7 @@ assignmentRouter.delete(
 assignmentRouter.get(
   "/",
   protect,
+
   checkAccess("assignment", "read"),
   assignmentController.getAllAssignments
 );
@@ -73,7 +73,7 @@ assignmentRouter.post(
   protect,
   upload.array("mistakePhotos", 10),
   checkAccess("assignment", "update"),
-  validateRequest(validateAssignment),
+
   assignmentController.gradeAssignment
 );
 
@@ -87,7 +87,7 @@ assignmentRouter.post(
   "/submit",
   protect,
   checkAccess("assignment", "create"),
-  validateRequest(validateAssignment),
+
   upload.array("submissionFile", 10),
   assignmentController.submitAssignment
 );
@@ -95,7 +95,7 @@ assignmentRouter.post(
 assignmentRouter.post(
   "/resubmit",
   upload.array("files", 10),
-  validateRequest(validateAssignment),
+
   assignmentController.resubmitAssignment
 );
 

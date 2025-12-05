@@ -48,7 +48,7 @@ const batchSchema = new mongoose.Schema(
       },
     ],
 
-    trainersAssigned: [
+    trainer: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Trainer",

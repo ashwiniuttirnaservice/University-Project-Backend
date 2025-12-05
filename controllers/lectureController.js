@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const path = require("path");
+const Batch = require("../models/Batch");
 const Lecture = require("../models/Lecture");
 const Chapter = require("../models/Chapter");
 const asyncHandler = require("../middleware/asyncHandler");
@@ -58,7 +59,18 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
 });
 
 exports.getAllLectures = asyncHandler(async (req, res) => {
-  const lectures = await Lecture.find({ isActive: true })
+  const filter = { isActive: true };
+
+  // Trainer असल्यास batch.trainer मधे शोधायचे
+  if (req.user.role === "trainer") {
+    filter.batches = {
+      $in: await Batch.find({
+        trainer: req.user.trainerId,
+      }).distinct("_id"),
+    };
+  }
+
+  const lectures = await Lecture.find(filter)
     .populate("course")
     .populate("chapter")
     .populate("batches")

@@ -48,50 +48,33 @@ exports.createMeeting = asyncHandler(async (req, res) => {
 });
 
 exports.getAllMeetings = asyncHandler(async (req, res) => {
-  const meetings = await Meeting.aggregate([
-    {
-      $match: { isActive: true },
-    },
+  const baseFilter =
+    req.roleFilter && Object.keys(req.roleFilter).length > 0
+      ? { ...req.roleFilter, isActive: true }
+      : { isActive: true };
 
-    {
-      $lookup: {
-        from: "batches",
-        localField: "batch",
-        foreignField: "_id",
-        as: "batch",
-      },
-    },
-    { $unwind: "$batch" },
+  const meetings = await Meeting.find(baseFilter)
+    .populate({
+      path: "batch",
+      model: "Batch",
+    })
+    .populate({
+      path: "trainer",
+      model: "Trainer",
+    })
+    .populate({
+      path: "course",
+      model: "Course",
+    })
+    .sort({ createdAt: -1 });
 
-    {
-      $lookup: {
-        from: "trainers",
-        localField: "trainer",
-        foreignField: "_id",
-        as: "trainer",
-      },
-    },
-    { $unwind: "$trainer" },
-
-    {
-      $lookup: {
-        from: "courses",
-        localField: "course",
-        foreignField: "_id",
-        as: "course",
-      },
-    },
-    {
-      $unwind: {
-        path: "$course",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
-
-    { $sort: { createdAt: -1 } },
-  ]);
-
-  return sendResponse(res, 200, "Meetings fetched successfully", meetings);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Meetings fetched successfully",
+    meetings
+  );
 });
 
 const Attendance = require("../models/Attendance");

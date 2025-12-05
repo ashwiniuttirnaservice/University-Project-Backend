@@ -204,7 +204,7 @@ exports.getAllEnrollmentsAdmin = asyncHandler(async (req, res) => {
       match: { isActive: true },
       select: "batchName timing trainers",
       populate: {
-        path: "trainersAssigned",
+        path: "trainer",
         match: { isActive: true },
         select: "firstName lastName email",
       },
@@ -479,7 +479,7 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
-    coursesInterested,
+    enrolledCourses,
     enrolledBatches,
     designation,
     collegeName,
@@ -489,26 +489,23 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     !fullName ||
     !mobileNo ||
     !email ||
-    !coursesInterested ||
+    !enrolledCourses ||
     !enrolledBatches
   ) {
     return sendError(
       res,
       400,
       false,
-      "Required fields: fullName, mobileNo, email, coursesInterested, enrolledBatches"
+      "Required fields: fullName, mobileNo, email, enrolledCourses, enrolledBatches"
     );
   }
 
-  let profilePhotoStudent = "";
+  let profilePhotoStudent = req.file ? req.file.filename : "";
 
-  if (req.file) {
-    profilePhotoStudent = req.file.filename;
-  }
-
-  const interestedCoursesArray = coursesInterested.split(",");
+  const interestedCoursesArray = enrolledCourses.split(",");
   const enrolledBatchesArray = enrolledBatches.split(",");
 
+  // 🟢 Check existing student OR create new
   let student = await Student.findOne({ email });
 
   if (!student) {
@@ -521,6 +518,7 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     });
   }
 
+  // 🟢 Create Enrollment
   const enrollment = await Enrollment.create({
     studentId: student._id,
     fullName,
@@ -529,7 +527,7 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     designation,
     collegeName,
     profilePhotoStudent,
-    coursesInterested: interestedCoursesArray.map(
+    enrolledCourses: interestedCoursesArray.map(
       (id) => new mongoose.Types.ObjectId(id)
     ),
     enrolledBatches: enrolledBatchesArray.map(
@@ -538,20 +536,23 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     enrolledAt: new Date(),
   });
 
+  // 🟢 Add student to each batch (No duplicates)
   for (const batchId of enrolledBatchesArray) {
     await Batch.findByIdAndUpdate(
       batchId,
       {
-        $addToSet: { enrolledIds: student._id },
-        $inc: { studentCount: 1 },
-        $push: {
+        // 1️⃣ Student already added असेल तर पुन्हा add होणार नाही
+        $addToSet: {
+          enrolledIds: student._id, // FIX: Student ID ठेवायचा
           students: {
             studentId: student._id,
             fullName: student.fullName,
             email: student.email,
-            mobileNo: student.mobileNo,
           },
         },
+
+        // 2️⃣ StudentCount फक्त नवीन student add झाला तरच वाढेल
+        $inc: { studentCount: 1 },
       },
       { new: true }
     );

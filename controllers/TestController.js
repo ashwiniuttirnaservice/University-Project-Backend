@@ -4,7 +4,7 @@ const xlsx = require("xlsx");
 const TestList = require("../models/Test");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
+const Batch = require("../models/Batch");
 const storage = multer.memoryStorage();
 const uploadMiddleware = multer({ storage }).single("file");
 
@@ -138,11 +138,23 @@ const createTest = asyncHandler(async (req, res) => {
 });
 
 const getAllTests = asyncHandler(async (req, res) => {
-  const tests = await TestList.find().sort({ createdAt: -1 });
+  const filter = {};
+
+  // 🔥 Trainer Role Filtering
+  if (req.user.role === "trainer") {
+    const trainerBatchIds = await Batch.find({
+      trainer: req.user.trainerId,
+    }).distinct("_id");
+
+    filter.batchId = { $in: trainerBatchIds };
+  }
+
+  const tests = await TestList.find(filter).sort({ createdAt: -1 });
 
   if (!tests || tests.length === 0) {
     return sendResponse(res, 200, true, "No Assessment found", []);
   }
+
   return sendResponse(
     res,
     200,

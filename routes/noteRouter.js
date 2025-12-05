@@ -14,7 +14,7 @@ const {
   updateNote,
   deleteNote,
 } = require("../controllers/noteController");
-
+const roleFilter = require("../middleware/roleFilter");
 noteRouter.post(
   "/",
   // protect,
@@ -23,7 +23,13 @@ noteRouter.post(
   createNote
 );
 
-noteRouter.get("/", protect, checkAccess("note", "read"), getAllNotes);
+noteRouter.get(
+  "/",
+  protect,
+  roleFilter,
+  checkAccess("note", "read"),
+  getAllNotes
+);
 
 noteRouter.get("/:id", protect, checkAccess("note", "read"), getNoteById);
 

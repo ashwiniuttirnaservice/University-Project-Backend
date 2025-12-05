@@ -38,7 +38,7 @@ router.get(
 router.get(
   "/student/:studentId",
   protect,
-  roleFilter,
+
   checkAccess("batch", "read"),
   getBatchesForStudent
 );
@@ -46,7 +46,7 @@ router.get(
 router.get(
   "/all-batches-student",
   protect,
-  roleFilter,
+
   checkAccess("batch", "read"),
   getBatchesByCourseAndStudent
 );

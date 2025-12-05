@@ -44,7 +44,7 @@ exports.createCourse = asyncHandler(async (req, res) => {
   benefits = parseJSON(benefits);
   keyFeatures = parseJSON(keyFeatures);
   features = parseJSON(features);
-  trainer = parseJSON(trainer);
+  trainer = parseJSON(trainer); // trainer = ["trainer1Id", "trainer2Id"]
 
   let trainingPlan = null;
 
@@ -57,6 +57,7 @@ exports.createCourse = asyncHandler(async (req, res) => {
     };
   }
 
+  // 1️⃣ Create course
   const course = await Course.create({
     title,
     description,
@@ -77,6 +78,14 @@ exports.createCourse = asyncHandler(async (req, res) => {
     cloudLabsLink,
     trainingPlan,
   });
+
+  // 2️⃣ Add course ID to each trainer
+  if (trainer && trainer.length > 0) {
+    await Trainer.updateMany(
+      { _id: { $in: trainer } },
+      { $addToSet: { courses: course._id } } // Prevent duplicates
+    );
+  }
 
   return sendResponse(
     res,
@@ -226,20 +235,57 @@ exports.deleteCourse = asyncHandler(async (req, res) => {
 });
 
 exports.getAllCourse = asyncHandler(async (req, res) => {
-  const courses = await Course.find({ isActive: true })
-    .select(
-      "title duration features.certificate features.codingExercises features.recordedLectures batches"
-    )
-    .populate({
-      path: "batches",
-      match: { isActive: true },
-      select: "batchName startDate endDate mode status",
-    })
-    .populate({
-      path: "trainer",
-      select: "fullName email ",
-    })
-    .lean();
+  const baseMatch =
+    req.roleFilter && Object.keys(req.roleFilter).length > 0
+      ? { ...req.roleFilter, isActive: true }
+      : { isActive: true };
+
+  const courses = await Course.aggregate([
+    { $match: baseMatch },
+
+    {
+      $lookup: {
+        from: "trainers",
+        localField: "trainer",
+        foreignField: "_id",
+        as: "trainer",
+      },
+    },
+    { $unwind: { path: "$trainer", preserveNullAndEmptyArrays: true } },
+
+    {
+      $lookup: {
+        from: "batches",
+        localField: "batches",
+        foreignField: "_id",
+        pipeline: [
+          { $match: { isActive: true } },
+          {
+            $project: {
+              batchName: 1,
+              startDate: 1,
+              endDate: 1,
+              mode: 1,
+              status: 1,
+            },
+          },
+        ],
+        as: "batches",
+      },
+    },
+
+    {
+      $project: {
+        title: 1,
+        duration: 1,
+        trainer: { fullName: 1, email: 1 },
+        "features.certificate": 1,
+        "features.codingExercises": 1,
+        "features.recordedLectures": 1,
+        batches: 1,
+      },
+    },
+  ]);
 
   if (!courses.length) {
     return sendError(res, 404, false, "No Training Program found");
@@ -356,7 +402,7 @@ exports.cloneCourse = asyncHandler(async (req, res) => {
     fees: originalCourse.fees,
     startDate: originalCourse.startDate,
     endDate: originalCourse.endDate,
-    isActive: false,
+    isActive: true,
   };
 
   const clonedCourse = await Course.create(clonedCourseData);

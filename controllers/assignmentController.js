@@ -1,5 +1,6 @@
 const Assignment = require("../models/Assignment");
 const Chapter = require("../models/Chapter");
+const Batch = require("../models/Batch");
 const Enrollment = require("../models/Enrollment");
 const Student = require("../models/Student");
 const asyncHandler = require("../middleware/asyncHandler");
@@ -140,7 +141,18 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
 });
 
 exports.getAllAssignments = asyncHandler(async (req, res) => {
-  const assignments = await Assignment.find({ isActive: true })
+  const filter = { isActive: true };
+
+  // 🔥 Trainer filtering (same as you said)
+  if (req.user.role === "trainer") {
+    const trainerCourseIds = await Batch.find({
+      trainer: req.user.trainerId,
+    }).distinct("coursesAssigned");
+
+    filter.course = { $in: trainerCourseIds };
+  }
+
+  const assignments = await Assignment.find(filter)
     .populate("course")
     .populate("chapter")
     .populate("submissions.student");

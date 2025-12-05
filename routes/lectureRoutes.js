@@ -3,7 +3,7 @@ const lectureRouter = express.Router();
 
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
-
+const roleFilter = require("../middleware/roleFilter");
 const lectureController = require("../controllers/lectureController");
 const upload = require("../utils/multer");
 
@@ -25,6 +25,7 @@ lectureRouter.get(
 lectureRouter.get(
   "/",
   protect,
+  roleFilter,
   checkAccess("lecture", "read"),
   lectureController.getAllLectures
 );

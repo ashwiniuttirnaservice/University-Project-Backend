@@ -3,8 +3,9 @@ const meetingRouter = express.Router();
 
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
-
 const meetingController = require("../controllers/meetingController");
+
+const roleFilter = require("../middleware/roleFilter");
 
 meetingRouter.post(
   "/",
@@ -15,6 +16,7 @@ meetingRouter.post(
 meetingRouter.get(
   "/",
   protect,
+  roleFilter,
   checkAccess("meeting", "read"),
   meetingController.getAllMeetings
 );
@@ -29,6 +31,7 @@ meetingRouter.get(
 meetingRouter.get(
   "/batch/:batchId",
   protect,
+
   checkAccess("meeting", "read"),
   meetingController.getMeetingsByBatch
 );

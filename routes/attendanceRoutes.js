@@ -3,19 +3,19 @@ const router = express.Router();
 const attendanceController = require("../controllers/attendanceController");
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
-const validateRequest = require("../validations/validateMiddleware");
-const { validateAttendance } = require("../validations/attendanceValidation");
+
+const roleFilter = require("../middleware/roleFilter");
 router.post(
   "/mark/:meetingId",
   protect,
   checkAccess("attendance", "create"),
-  validateRequest(validateAttendance),
   attendanceController.markAttendance
 );
 
 router.get(
   "/all",
   protect,
+  roleFilter,
   checkAccess("attendance", "read"),
   attendanceController.getAllAttendance
 );

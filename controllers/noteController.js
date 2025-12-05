@@ -3,7 +3,7 @@ const Note = require("../models/Note");
 const Chapter = require("../models/Chapter");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
-
+const Batch = require("../models/Batch");
 exports.createNote = asyncHandler(async (req, res) => {
   const { course, chapter, title, content } = req.body;
 
@@ -33,11 +33,21 @@ exports.createNote = asyncHandler(async (req, res) => {
 });
 
 exports.getAllNotes = asyncHandler(async (req, res) => {
+  const matchQuery = { isActive: true };
+
+  // 🔥 Trainer role filter
+  if (req.user.role === "trainer") {
+    const trainerCourseIds = await Batch.find({
+      trainer: req.user.trainerId,
+    }).distinct("coursesAssigned");
+
+    matchQuery.course = { $in: trainerCourseIds };
+  }
+
   const notes = await Note.aggregate([
     {
-      $match: { isActive: true },
+      $match: matchQuery,
     },
-
     {
       $lookup: {
         from: "chapters",
@@ -46,9 +56,7 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
         as: "chapter",
       },
     },
-
     { $unwind: "$chapter" },
-
     { $sort: { uploadedAt: -1 } },
   ]);
 

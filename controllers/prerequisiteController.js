@@ -1,4 +1,5 @@
 const Prerequisite = require("../models/Prerequisite");
+const Batch = require("../models/Batch");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
@@ -28,10 +29,11 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
   }
 
   const finalTopics = parsedTopics.map((topic) => {
-    const filesForTopic = topic.materialFiles.map((fileName) => {
+    const filesForTopic = (topic.materialFiles || []).map((fileName) => {
       const file = uploadedFiles.find((f) => f.originalname === fileName);
       return file ? file.filename : fileName;
     });
+
     return { ...topic, materialFiles: filesForTopic };
   });
 
@@ -53,7 +55,18 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
 });
 
 exports.getAllPrerequisites = asyncHandler(async (req, res) => {
-  const prerequisites = await Prerequisite.find({ isActive: true }).sort({
+  const filter = { isActive: true };
+
+  // 🔥 Trainer role filtering
+  if (req.user.role === "trainer") {
+    const trainerBatchIds = await Batch.find({
+      trainer: req.user.trainerId,
+    }).distinct("_id");
+
+    filter.batchId = { $in: trainerBatchIds };
+  }
+
+  const prerequisites = await Prerequisite.find(filter).sort({
     createdAt: -1,
   });
 
@@ -92,18 +105,14 @@ exports.updatePrerequisite = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { courseId, batchId, title, description, topics } = req.body;
 
-  if (!id) {
-    return sendError(res, 400, false, "Prerequisite ID is required");
-  }
-
-  const existing = await Prerequisite.findById(id);
-  if (!existing) {
+  const prerequisite = await Prerequisite.findById(id);
+  if (!prerequisite) {
     return sendError(res, 404, false, "Prerequisite not found");
   }
 
   let parsedTopics = [];
   try {
-    parsedTopics = topics ? JSON.parse(topics) : [];
+    parsedTopics = topics ? JSON.parse(topics) : prerequisite.topics;
   } catch {
     return sendError(res, 400, false, "Invalid topics JSON format");
   }
@@ -114,31 +123,38 @@ exports.updatePrerequisite = asyncHandler(async (req, res) => {
     else Object.values(req.files).forEach((arr) => uploadedFiles.push(...arr));
   }
 
-  let fileIndex = 0;
-  const finalTopics = parsedTopics.map((topic) => {
-    const filesForTopic = topic.materialFiles
-      .map(() => {
-        const file = uploadedFiles[fileIndex++];
-        return file ? file.filename : null;
-      })
-      .filter(Boolean);
-    return { ...topic, materialFiles: filesForTopic };
+  const finalTopics = parsedTopics.map((topic, index) => {
+    const existingTopic = prerequisite.topics[index] || {};
+
+    const oldFiles = existingTopic.materialFiles || [];
+
+    const newFiles =
+      (topic.materialFiles || []).map((fileName) => {
+        const file = uploadedFiles.find((f) => f.originalname === fileName);
+        return file ? file.filename : fileName;
+      }) || [];
+
+    return {
+      ...existingTopic,
+      ...topic,
+      materialFiles: newFiles.length ? newFiles : oldFiles,
+    };
   });
 
-  existing.courseId = courseId || existing.courseId;
-  existing.batchId = batchId || existing.batchId;
-  existing.title = title || existing.title;
-  existing.description = description || existing.description;
-  if (finalTopics.length > 0) existing.topics = finalTopics;
+  prerequisite.courseId = courseId || prerequisite.courseId;
+  prerequisite.batchId = batchId || prerequisite.batchId;
+  prerequisite.title = title || prerequisite.title;
+  prerequisite.description = description || prerequisite.description;
+  prerequisite.topics = finalTopics;
 
-  await existing.save();
+  await prerequisite.save();
 
   return sendResponse(
     res,
     200,
     true,
     "Prerequisite updated successfully",
-    existing
+    prerequisite
   );
 });
 
