@@ -23,8 +23,7 @@ const {
 
 enrollmentRouter.post(
   "/enroll",
-  protect,
-  checkAccess("enrollment", "create"),
+
   createEnrollment
 );
 

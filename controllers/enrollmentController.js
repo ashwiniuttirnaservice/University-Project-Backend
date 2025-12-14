@@ -474,6 +474,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     enrollment,
   });
 });
+
 exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
   const {
     fullName,
@@ -500,12 +501,11 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     );
   }
 
-  let profilePhotoStudent = req.file ? req.file.filename : "";
+  const profilePhotoStudent = req.file ? req.file.filename : "";
 
-  const interestedCoursesArray = enrolledCourses.split(",");
+  const enrolledCoursesArray = enrolledCourses.split(",");
   const enrolledBatchesArray = enrolledBatches.split(",");
 
-  // 🟢 Check existing student OR create new
   let student = await Student.findOne({ email });
 
   if (!student) {
@@ -513,12 +513,28 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
       fullName,
       mobileNo,
       email,
-      isActive: true,
+      role: "student",
       status: "Enrolled",
+      isActive: true,
     });
+  } else {
+    student.fullName = fullName;
+    student.mobileNo = mobileNo;
+    student.status = "Enrolled";
+    student.isActive = true;
+
+    await student.save();
   }
 
-  // 🟢 Create Enrollment
+  const existingEnrollment = await Enrollment.findOne({
+    studentId: student._id,
+    isActive: true,
+  });
+
+  if (existingEnrollment) {
+    return sendError(res, 400, false, "Student already enrolled");
+  }
+
   const enrollment = await Enrollment.create({
     studentId: student._id,
     fullName,
@@ -527,43 +543,48 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     designation,
     collegeName,
     profilePhotoStudent,
-    enrolledCourses: interestedCoursesArray.map(
+    enrolledCourses: enrolledCoursesArray.map(
       (id) => new mongoose.Types.ObjectId(id)
     ),
     enrolledBatches: enrolledBatchesArray.map(
       (id) => new mongoose.Types.ObjectId(id)
     ),
     enrolledAt: new Date(),
+    isActive: true,
   });
 
-  // 🟢 Add student to each batch (No duplicates)
   for (const batchId of enrolledBatchesArray) {
     await Batch.findByIdAndUpdate(
       batchId,
       {
-        // 1️⃣ Student already added असेल तर पुन्हा add होणार नाही
         $addToSet: {
-          enrolledIds: student._id, // FIX: Student ID ठेवायचा
+          enrolledIds: student._id,
           students: {
             studentId: student._id,
             fullName: student.fullName,
             email: student.email,
           },
         },
-
-        // 2️⃣ StudentCount फक्त नवीन student add झाला तरच वाढेल
         $inc: { studentCount: 1 },
       },
       { new: true }
     );
   }
 
+  student.enrolledCourses = enrolledCoursesArray.map(
+    (id) => new mongoose.Types.ObjectId(id)
+  );
+  await student.save();
+
   return sendResponse(
     res,
     201,
     true,
-    "Student Participant successfully enrolled by admin",
-    { student, enrollment }
+    "Student successfully enrolled by admin",
+    {
+      student,
+      enrollment,
+    }
   );
 });
 

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Meeting = require("../models/Meeting");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
+const Batch = require("../models/Batch");
 exports.createMeeting = asyncHandler(async (req, res) => {
   const {
     title,
@@ -42,6 +42,10 @@ exports.createMeeting = asyncHandler(async (req, res) => {
     duration,
     recordingUrl,
     notification,
+  });
+
+  await Batch.findByIdAndUpdate(batch, {
+    $addToSet: { meetings: meeting._id },
   });
 
   return sendResponse(res, 201, true, "Meeting created successfully", meeting);

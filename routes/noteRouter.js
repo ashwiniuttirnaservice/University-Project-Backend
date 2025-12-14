@@ -8,6 +8,7 @@ const checkAccess = require("../middleware/checkAccess");
 
 const {
   createNote,
+  cloneNote,
   getAllNotes,
   getNoteById,
   getNotesByCourse,
@@ -21,6 +22,13 @@ noteRouter.post(
   // checkAccess("note", "create"),
   upload.single("file"),
   createNote
+);
+
+noteRouter.post(
+  "/:noteId/clone",
+
+  upload.single("file"),
+  cloneNote
 );
 
 noteRouter.get(

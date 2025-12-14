@@ -41,6 +41,7 @@ exports.createFeedback = asyncHandler(async (req, res) => {
       questions,
       suggestions,
       trainerFeedback,
+      status: 1,
       nps,
       profile: req.file ? req.file.filename : null,
     });
@@ -68,12 +69,33 @@ exports.createFeedback = asyncHandler(async (req, res) => {
   }
 });
 
-exports.getAllFeedback = asyncHandler(async (req, res) => {
+exports.getAllFeedback1 = asyncHandler(async (req, res) => {
   const feedbacks = await Feedback.find({ isActive: true })
     .populate("studentId", "firstName lastName email mobileNo")
     .populate("trainerId", "fullName email")
     .populate("courseId", "title description")
-    .populate("batchId", "batchName timing");
+    .populate("batchId", "batchName timing")
+    .sort({ createdAt: -1 });
+
+  return sendResponse(res, 200, true, "All feedback fetched", feedbacks);
+});
+exports.getAllFeedback = asyncHandler(async (req, res) => {
+  let finalFilter = { isActive: true };
+
+  if (req.roleFilter?.trainer) {
+    finalFilter.trainerId = req.roleFilter.trainer;
+  }
+
+  if (req.roleFilter?.["batches.students"]) {
+    finalFilter["batches.students"] = req.roleFilter["batches.students"];
+  }
+
+  const feedbacks = await Feedback.find(finalFilter)
+    .populate("studentId", "firstName lastName email mobileNo")
+    .populate("trainerId", "fullName email")
+    .populate("courseId", "title description")
+    .populate("batchId", "batchName timing")
+    .sort({ createdAt: -1 });
 
   return sendResponse(res, 200, true, "All feedback fetched", feedbacks);
 });

@@ -23,6 +23,8 @@ const router = express.Router();
 
 router.post("/", protect, checkAccess("batch", "create"), createBatch);
 
+router.post("/student-batche", assignStudentToBatch);
+
 router.post("/upload-excel", upload.single("excelFile"), uploadEnrollmentExcel);
 
 router.get("/", protect, checkAccess("batch", "read"), getAllBatches);
@@ -53,27 +55,17 @@ router.get(
 
 router.get(
   "/trainer/:trainerId",
-  protect,
 
-  checkAccess("batch", "read"),
   getBatchesByTrainerId
 );
 
 router.get(
   "/course/:courseId",
-  protect,
 
-  checkAccess("batch", "read"),
   getBatchesByCourseId
 );
 
-router.get(
-  "/batches/:id",
-  protect,
-
-  checkAccess("batch", "read"),
-  getBatchById
-);
+router.get("/batches/:id", protect, getBatchById);
 
 router.put("/:id", protect, checkAccess("batch", "update"), updateBatch);
 

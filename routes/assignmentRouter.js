@@ -23,6 +23,13 @@ assignmentRouter.post(
   assignmentController.createAssignments
 );
 
+assignmentRouter.post(
+  "/:assignmentId/clone",
+
+  upload.single("fileUrl"),
+  assignmentController.cloneAssignment
+);
+
 assignmentRouter.put(
   "/:id",
   protect,
@@ -56,8 +63,8 @@ assignmentRouter.get(
 
 assignmentRouter.get(
   "/course/:courseId",
-  protect,
-  checkAccess("assignment", "read"),
+  // protect,
+  // checkAccess("assignment", "read"),
   assignmentController.getAssignmentsByCourse
 );
 

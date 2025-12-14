@@ -16,15 +16,15 @@ const {
 
 studentRouter.post(
   "/candidate",
-  protect,
-  checkAccess("student", "create"),
+  // protect,
+  // checkAccess("student", "create"),
   registerCandidate
 );
 
 studentRouter.post(
   "/register",
-  protect,
-  checkAccess("student", "create"),
+  // protect,
+  // checkAccess("student", "create"),
   upload.fields([
     { name: "profilePhotoStudent", maxCount: 1 },
     { name: "idProofStudent", maxCount: 1 },
@@ -48,8 +48,7 @@ studentRouter.get(
 
 studentRouter.put(
   "/update/:studentId",
-  protect,
-  checkAccess("student", "update"),
+
   upload.fields([
     { name: "profilePhotoStudent", maxCount: 1 },
     { name: "idProofStudent", maxCount: 1 },

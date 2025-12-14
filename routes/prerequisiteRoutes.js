@@ -13,6 +13,13 @@ router.post(
   prerequisiteController.createPrerequisite
 );
 
+router.post(
+  "/:prerequisiteId/clone",
+  upload.fields([{ name: "materialFiles", maxCount: 10 }]),
+
+  prerequisiteController.clonePrerequisite
+);
+
 router.get(
   "/",
   protect,

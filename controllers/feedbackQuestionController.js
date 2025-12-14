@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const FeedbackQuestion = require("../models/FeedbackQuestion");
-
+const Batch = require("../models/Batch");
 exports.createFeedbackQuestion = asyncHandler(async (req, res) => {
   const { courseId, batchId, title, questions } = req.body;
 
@@ -19,6 +19,14 @@ exports.createFeedbackQuestion = asyncHandler(async (req, res) => {
   };
 
   const created = await FeedbackQuestion.create(payload);
+
+  await Batch.findByIdAndUpdate(
+    batchId,
+    {
+      $push: { feedbacks: created._id },
+    },
+    { new: true }
+  );
 
   return sendResponse(res, 201, true, "Feedback questions created", created);
 });
@@ -145,4 +153,37 @@ exports.deleteFeedbackQuestion = asyncHandler(async (req, res) => {
   }
 
   return sendResponse(res, 200, true, "Feedback question deleted", deleted);
+});
+
+exports.cloneFeedbackQuestion = asyncHandler(async (req, res) => {
+  const { originalId, courseId, batchId, title } = req.body;
+
+  if (!originalId || !mongoose.Types.ObjectId.isValid(originalId)) {
+    return sendError(res, 400, false, "Valid original question ID is required");
+  }
+
+  const original = await FeedbackQuestion.findById(originalId);
+  if (!original) {
+    return sendError(res, 404, false, "Original feedback question not found");
+  }
+
+  const clonedData = {
+    courseId: courseId || original.courseId,
+    batchId: batchId || original.batchId,
+    title: title || `${original.title} (Clone)`,
+
+    questions: original.questions,
+
+    createdBy: req.user?.id || original.createdBy,
+  };
+
+  const cloned = await FeedbackQuestion.create(clonedData);
+
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Feedback question cloned successfully",
+    cloned
+  );
 });

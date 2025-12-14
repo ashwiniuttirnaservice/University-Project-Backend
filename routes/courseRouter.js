@@ -9,6 +9,7 @@ const {
   createCourse,
   cloneCourse,
   getAllCourse,
+  getAllCourse1,
   getCourseById,
   updateCourse,
   deleteCourse,
@@ -37,7 +38,9 @@ courseRouter.get(
   getAllCourse
 );
 
-courseRouter.get("/:id", protect, checkAccess("course", "read"), getCourseById);
+courseRouter.get("/all-course", getAllCourse1);
+
+courseRouter.get("/:id", getCourseById);
 
 courseRouter.put(
   "/:id",

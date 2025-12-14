@@ -16,17 +16,6 @@ const uploadExcel = asyncHandler(async (req, res) => {
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const data = xlsx.utils.sheet_to_json(sheet);
 
-  const questions = data.map((row) => ({
-    chapterName: row["chapterName"] || "All",
-    question: row["question"] || "N/A",
-    optionA: row["optionA"] || "N/A",
-    optionB: row["optionB"] || "N/A",
-    optionC: row["optionC"] || "",
-    optionD: row["optionD"] || "",
-    correctAns: row["correctAns"] || "A",
-    marks: Number(row["marks"]) || 1,
-  }));
-
   const {
     title,
     testLevel,
@@ -35,6 +24,7 @@ const uploadExcel = asyncHandler(async (req, res) => {
     batchId,
     phaseId,
     totalMarks,
+    passingMarks,
     minutes,
     seconds,
     userType,
@@ -52,35 +42,60 @@ const uploadExcel = asyncHandler(async (req, res) => {
     seconds: Number(seconds) || 0,
   };
 
+  const totalQuestions = data.length;
+  const totalMarksNumber = Number(totalMarks) || totalQuestions;
+  const marksPerQuestion = totalMarksNumber / totalQuestions;
+
+  const questions = data.map((row) => ({
+    chapterName: row["chapterName"] || "All",
+    question: row["question"] || "N/A",
+    optionA: row["optionA"] || "N/A",
+    optionB: row["optionB"] || "N/A",
+    optionC: row["optionC"] || "",
+    optionD: row["optionD"] || "",
+    correctAns: row["correctAns"] || "A",
+    marks: marksPerQuestion,
+  }));
+
   const filter = { title };
   if (safeChapterId) filter.chapterId = safeChapterId;
 
   const existingTest = await TestList.findOne(filter);
 
   if (existingTest) {
+    // Update existing test
     existingTest.questions = questions;
     existingTest.testLevel = testLevel || existingTest.testLevel;
-    existingTest.totalMarks = Number(totalMarks) || questions.length;
-    existingTest.totalQuestions = questions.length;
+    existingTest.totalMarks = totalMarksNumber;
+    existingTest.passingMarks =
+      Number(passingMarks) || existingTest.passingMarks;
+    existingTest.totalQuestions = totalQuestions;
     existingTest.testDuration = testDuration;
     existingTest.userType = userType || "0";
     existingTest.phaseId = safePhaseId;
     existingTest.batchId = safeBatchId;
     existingTest.courseId = courseId;
     existingTest.chapterId = safeChapterId;
+
     await existingTest.save();
+
+    if (safeBatchId) {
+      await Batch.findByIdAndUpdate(safeBatchId, {
+        $addToSet: { tests: existingTest._id },
+      });
+    }
 
     return sendResponse(
       res,
       200,
       true,
-      "Assessment  updated successfully",
+      "Assessment updated successfully",
       existingTest
     );
   }
 
   const newTest = await TestList.create({
-    title: title || "Untitled Assessment ",
+    title: title || "Untitled Assessment",
     testLevel: testLevel || "Beginner",
     courseId,
     chapterId: safeChapterId,
@@ -88,13 +103,22 @@ const uploadExcel = asyncHandler(async (req, res) => {
     phaseId: safePhaseId,
     questions,
     testDuration,
-    totalMarks: Number(totalMarks) || questions.length,
-    totalQuestions: questions.length,
+    totalMarks: totalMarksNumber,
+    passingMarks: Number(passingMarks) || 0,
+    totalQuestions,
     userType: userType || "0",
   });
 
-  sendResponse(res, 201, true, "Assessment  uploaded successfully", newTest);
+  if (safeBatchId) {
+    await Batch.findByIdAndUpdate(safeBatchId, {
+      $addToSet: { tests: newTest._id },
+    });
+  }
+
+  sendResponse(res, 201, true, "Assessment uploaded successfully", newTest);
 });
+
+module.exports = { uploadExcel };
 
 const createTest = asyncHandler(async (req, res) => {
   const {
@@ -113,34 +137,54 @@ const createTest = asyncHandler(async (req, res) => {
   } = req.body;
 
   if (!courseId)
-    return sendError(res, 400, false, "Training Program  are required");
+    return sendError(res, 400, false, "Training Program is required");
+
+  if (!batchId || !mongoose.Types.ObjectId.isValid(batchId)) {
+    return sendError(res, 400, false, "Valid batchId is required");
+  }
+
+  // ✅ Calculate marks per question if totalMarks given
+  let finalTotalQuestions =
+    totalQuestions || (Array.isArray(questions) ? questions.length : 0);
+
+  let finalTotalMarks = Number(totalMarks) || finalTotalQuestions;
+  let marksPerQuestion =
+    finalTotalQuestions > 0 ? finalTotalMarks / finalTotalQuestions : 1;
+
+  // Assign equal marks to each question
+  const updatedQuestions = questions.map((q) => ({
+    ...q,
+    marks: marksPerQuestion,
+  }));
 
   const newTest = await TestList.create({
     phaseId,
     batchId,
     courseId,
     chapterId,
-    title: title || "Untitled Assessment ",
-    questions,
+    title: title || "Untitled Assessment",
+    questions: updatedQuestions,
     testDuration: {
       minutes: testDuration?.minutes || 0,
       seconds: testDuration?.seconds || 0,
     },
-    totalQuestions:
-      totalQuestions || (Array.isArray(questions) ? questions.length : 0),
-    totalMarks: totalMarks || 0,
+    totalQuestions: finalTotalQuestions,
+    totalMarks: finalTotalMarks,
     passingMarks: passingMarks || 0,
     userType: userType || "0",
     reportType: reportType || 1,
   });
 
-  sendResponse(res, 201, true, "Assessment  created successfully", newTest);
+  await Batch.findByIdAndUpdate(batchId, {
+    $push: { tests: newTest._id },
+  });
+
+  sendResponse(res, 201, true, "Assessment created successfully", newTest);
 });
 
 const getAllTests = asyncHandler(async (req, res) => {
   const filter = {};
 
-  // 🔥 Trainer Role Filtering
   if (req.user.role === "trainer") {
     const trainerBatchIds = await Batch.find({
       trainer: req.user.trainerId,
@@ -214,6 +258,26 @@ const getTestListForAdmin = asyncHandler(async (req, res) => {
   sendResponse(res, 200, true, "Assessment  fetched successfully", result);
 });
 
+const getTestsByBatchId = asyncHandler(async (req, res) => {
+  const { batchId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(batchId)) {
+    return sendError(res, 400, false, "Invalid Batch ID");
+  }
+
+  const tests = await TestList.find({ batchId: batchId, visible: true })
+    .select(
+      "_id title testLevel totalQuestions totalMarks passingMarks testDuration userType reportType createdAt"
+    )
+    .sort({ createdAt: -1 });
+
+  if (!tests || tests.length === 0) {
+    return sendError(res, 404, false, "No tests found for this batch");
+  }
+
+  return sendResponse(res, 200, true, "Tests fetched successfully", tests);
+});
+
 module.exports = {
   uploadMiddleware,
   uploadExcel,
@@ -222,4 +286,5 @@ module.exports = {
   deleteTestById,
   getTestListForAdmin,
   getAllTests,
+  getTestsByBatchId,
 };

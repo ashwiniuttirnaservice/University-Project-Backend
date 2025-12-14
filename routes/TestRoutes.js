@@ -12,6 +12,7 @@ const {
   deleteTestById,
   getTestListForAdmin,
   getAllTests,
+  getTestsByBatchId,
 } = require("../controllers/TestController");
 
 testRouter.post(
@@ -22,8 +23,8 @@ testRouter.post(
   uploadExcel
 );
 
-testRouter.post("/create", protect, checkAccess("test", "create"), createTest);
-
+testRouter.post("/create", createTest);
+// protect, checkAccess("test", "create"),
 testRouter.get(
   "/",
   protect,
@@ -37,6 +38,13 @@ testRouter.get(
   protect,
   checkAccess("test", "read"),
   getQuestionsForAdmin
+);
+
+testRouter.get(
+  "/batch/:batchId",
+  // protect,
+  // checkAccess("test", "read"),
+  getTestsByBatchId
 );
 
 testRouter.post(

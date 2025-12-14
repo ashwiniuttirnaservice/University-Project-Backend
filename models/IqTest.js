@@ -8,7 +8,7 @@ const QuestionSchema = new mongoose.Schema({
   optionC: { type: String, default: "" },
   optionD: { type: String, default: "" },
   correctAns: { type: String, required: true },
-  marks: { type: Number, default: 1 },
+  marks: { type: Number },
   selectedOption: { type: String, default: null },
   isCorrect: { type: Boolean, default: false },
 });

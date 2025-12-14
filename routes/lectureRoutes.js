@@ -15,6 +15,14 @@ lectureRouter.post(
   lectureController.createMultipleLectures
 );
 
+lectureRouter.post(
+  "/:lectureId/clone",
+  // protect,
+  // checkAccess("lecture", "create"),
+  upload.single("contentUrl"),
+  lectureController.cloneLecture
+);
+
 lectureRouter.get(
   "/course/:courseId",
   protect,

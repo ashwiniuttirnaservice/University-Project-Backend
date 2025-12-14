@@ -7,7 +7,6 @@ const Batch = require("../models/Batch");
 const Enrollment = require("../models/Enrollment.js");
 exports.markAttendance = asyncHandler(async (req, res) => {
   const { meetingId } = req.params;
-  console.log("PARAMS:", req.params);
   const { attendees } = req.body;
 
   const meeting = await Meeting.findById(meetingId);
@@ -38,14 +37,27 @@ exports.markAttendance = asyncHandler(async (req, res) => {
     isActive: true,
   });
 
+  // ----------------------------------------
+  // 👉 Save attendance ID in Enrollment
+  // ----------------------------------------
   for (const a of attendees) {
     await Enrollment.findOneAndUpdate(
       { studentId: a.studentId },
-      { $push: { attendances: newAttendance._id } },
+      { $addToSet: { attendances: newAttendance._id } },
       { new: true }
     );
   }
 
+  // ----------------------------------------
+  // 👉 Save attendance ID in Batch
+  // ----------------------------------------
+  await Batch.findByIdAndUpdate(meeting.batch, {
+    $addToSet: { attendances: newAttendance._id },
+  });
+
+  // ----------------------------------------
+  // 👉 Populate Data
+  // ----------------------------------------
   const populated = await Attendance.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(newAttendance._id) } },
     {
@@ -80,7 +92,7 @@ exports.markAttendance = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "Attendance marked & saved to enrollment successfully",
+    "Attendance marked & saved to batch + enrollment successfully",
     populated[0]
   );
 });

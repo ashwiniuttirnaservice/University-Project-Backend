@@ -317,6 +317,84 @@ exports.getAllCourse = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Training Program fetched", finalCourses);
 });
 
+exports.getAllCourse1 = asyncHandler(async (req, res) => {
+  const courses = await Course.aggregate([
+    { $match: { isActive: true } },
+
+    {
+      $lookup: {
+        from: "trainers",
+        localField: "trainer",
+        foreignField: "_id",
+        as: "trainer",
+      },
+    },
+    { $unwind: { path: "$trainer", preserveNullAndEmptyArrays: true } },
+
+    {
+      $lookup: {
+        from: "batches",
+        localField: "batches",
+        foreignField: "_id",
+        pipeline: [
+          { $match: { isActive: true } },
+          {
+            $project: {
+              batchName: 1,
+              startDate: 1,
+              endDate: 1,
+              mode: 1,
+              status: 1,
+            },
+          },
+        ],
+        as: "batches",
+      },
+    },
+
+    {
+      $project: {
+        title: 1,
+        duration: 1,
+        trainer: { fullName: 1, email: 1 },
+        "features.certificate": 1,
+        "features.codingExercises": 1,
+        "features.recordedLectures": 1,
+        batches: 1,
+      },
+    },
+  ]);
+
+  if (!courses.length) {
+    return sendError(res, 404, false, "No Training Program found");
+  }
+
+  const order = { Upcoming: 1, Ongoing: 2, Completed: 3 };
+
+  const withBatches = courses
+    .filter((c) => c.batches && c.batches.length > 0)
+    .map((c) => {
+      c.batches.sort(
+        (a, b) => (order[a.status] || 99) - (order[b.status] || 99)
+      );
+      return c;
+    });
+
+  const withoutBatches = courses.filter(
+    (c) => !c.batches || c.batches.length === 0
+  );
+
+  withBatches.sort((a, b) => {
+    const statusA = order[a.batches[0]?.status] || 99;
+    const statusB = order[b.batches[0]?.status] || 99;
+    return statusA - statusB;
+  });
+
+  const finalCourses = [...withBatches, ...withoutBatches];
+
+  return sendResponse(res, 200, true, "Training Program fetched", finalCourses);
+});
+
 exports.cloneCourse = asyncHandler(async (req, res) => {
   const { id } = req.params;
 

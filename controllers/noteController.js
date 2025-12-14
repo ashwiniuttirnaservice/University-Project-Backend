@@ -5,7 +5,7 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 const Batch = require("../models/Batch");
 exports.createNote = asyncHandler(async (req, res) => {
-  const { course, chapter, title, content } = req.body;
+  const { course, chapter, title, content, batches } = req.body;
 
   if (!chapter || !title) {
     return sendError(res, 400, false, "Chapter and Title are required");
@@ -16,6 +16,12 @@ exports.createNote = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "Chapter not found");
   }
 
+  const batchArray = batches
+    ? Array.isArray(batches)
+      ? batches
+      : [batches]
+    : [];
+
   const note = await Note.create({
     chapter,
     course,
@@ -23,11 +29,21 @@ exports.createNote = asyncHandler(async (req, res) => {
     content,
     file: req.file ? `${req.file.filename}` : null,
     uploadedAt: new Date(),
+    batches: batchArray,
   });
 
   await Chapter.findByIdAndUpdate(chapter, {
     $push: { notes: note._id },
   });
+
+  if (batchArray.length > 0) {
+    await Batch.updateMany(
+      { _id: { $in: batchArray } },
+      {
+        $push: { notes: note._id },
+      }
+    );
+  }
 
   return sendResponse(res, 201, true, "Note created successfully", note);
 });
@@ -253,4 +269,34 @@ exports.deleteNote = asyncHandler(async (req, res) => {
   await note.deleteOne();
 
   return sendResponse(res, 200, true, "Note deleted successfully");
+});
+
+exports.cloneNote = asyncHandler(async (req, res) => {
+  const { noteId } = req.body;
+
+  if (!noteId) {
+    return sendError(res, 400, false, "noteId is required");
+  }
+
+  const originalNote = await Note.findById(noteId);
+
+  if (!originalNote) {
+    return sendError(res, 404, false, "Note not found");
+  }
+
+  const clonedNote = await Note.create({
+    course: originalNote.course,
+    chapter: originalNote.chapter,
+    title: originalNote.title + " (Copy)",
+    content: originalNote.content,
+    file: originalNote.file,
+    isActive: originalNote.isActive,
+    uploadedAt: new Date(),
+  });
+
+  await Chapter.findByIdAndUpdate(originalNote.chapter, {
+    $push: { notes: clonedNote._id },
+  });
+
+  return sendResponse(res, 201, true, "Note cloned successfully", clonedNote);
 });

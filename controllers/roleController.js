@@ -5,10 +5,14 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 exports.createRole = asyncHandler(async (req, res) => {
   const { role, permissions } = req.body;
 
-  if (!role) return sendError(res, "Role name is required", 400);
+  if (!role) {
+    return sendError(res, 400, false, "Role name is required");
+  }
 
   const existing = await Role.findOne({ role });
-  if (existing) return sendError(res, "Role already exists", 400);
+  if (existing) {
+    return sendError(res, 400, false, "Role already exists");
+  }
 
   const newRole = await Role.create({ role, permissions });
 

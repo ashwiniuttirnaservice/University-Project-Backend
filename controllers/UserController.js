@@ -22,23 +22,31 @@ const getUserProfile = asyncHandler(async (req, res) => {
     .populate("coursesInterested", "title duration")
     .lean();
 
-  const enrolledCoursesWithBatch = [];
-  if (enrollment?.enrolledCourses?.length) {
-    for (const course of enrollment.enrolledCourses) {
-      const batch = await Batch.findOne({
-        students: { $elemMatch: { studentId } },
-        coursesAssigned: course._id,
-      })
-        .select(
-          "batchName time days mode status startDate endDate studentCount"
-        )
-        .lean();
+  let enrolledCoursesWithBatch = [];
 
-      enrolledCoursesWithBatch.push({
-        ...course,
-        batch: batch || null,
-      });
+  if (
+    enrollment?.enrolledCourses?.length &&
+    enrollment?.enrolledBatches?.length
+  ) {
+    const batches = await Batch.find({
+      _id: { $in: enrollment.enrolledBatches },
+    })
+      .select(
+        "batchName time days mode status startDate endDate studentCount coursesAssigned"
+      )
+      .lean();
+
+    const batchMap = {};
+    for (const batch of batches) {
+      const courseId = batch.coursesAssigned?.toString();
+      if (!batchMap[courseId]) batchMap[courseId] = [];
+      batchMap[courseId].push(batch);
     }
+
+    enrolledCoursesWithBatch = enrollment.enrolledCourses.map((course) => ({
+      ...course,
+      batches: batchMap[course._id.toString()] || [],
+    }));
   }
 
   return sendResponse(res, 200, true, "User profile fetched successfully", {

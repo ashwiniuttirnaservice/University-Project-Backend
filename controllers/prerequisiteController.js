@@ -37,6 +37,7 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
     return { ...topic, materialFiles: filesForTopic };
   });
 
+  // ✅ Create Prerequisite
   const prerequisite = await Prerequisite.create({
     courseId,
     batchId,
@@ -44,6 +45,15 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
     description,
     topics: finalTopics,
   });
+
+  // ✅ Save prerequisiteId inside Batch document
+  await Batch.findByIdAndUpdate(
+    batchId,
+    {
+      $push: { prerequisites: prerequisite._id }, // array field
+    },
+    { new: true }
+  );
 
   return sendResponse(
     res,
@@ -179,5 +189,42 @@ exports.softDeletePrerequisite = asyncHandler(async (req, res) => {
     true,
     "Prerequisite deleted successfully",
     prerequisite
+  );
+});
+
+exports.clonePrerequisite = asyncHandler(async (req, res) => {
+  const { prerequisiteId } = req.body;
+
+  if (!prerequisiteId) {
+    return sendError(res, 400, false, "prerequisiteId is required");
+  }
+
+  const originalPrerequisite = await Prerequisite.findById(prerequisiteId);
+
+  if (!originalPrerequisite) {
+    return sendError(res, 404, false, "Prerequisite not found");
+  }
+
+  // Clone topics according to schema
+  const clonedTopics = originalPrerequisite.topics.map((topic) => ({
+    name: topic.name, // REQUIRED
+    videoLinks: topic.videoLinks || "",
+    materialFiles: [...(topic.materialFiles || [])],
+  }));
+
+  const clonedPrerequisite = await Prerequisite.create({
+    courseId: originalPrerequisite.courseId,
+    batchId: originalPrerequisite.batchId,
+    title: originalPrerequisite.title + " (Copy)",
+    description: originalPrerequisite.description,
+    topics: clonedTopics,
+  });
+
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Prerequisite cloned successfully",
+    clonedPrerequisite
   );
 });

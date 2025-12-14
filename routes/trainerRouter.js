@@ -45,8 +45,7 @@ trainerRouter.get(
 
 trainerRouter.get(
   "/all-profile",
-  protect,
-  checkAccess("trainer", "read"),
+
   getAllTrainer
 );
 
@@ -78,8 +77,7 @@ trainerRouter.get(
 
 trainerRouter.get(
   "/:trainerId",
-  protect,
-  checkAccess("trainer", "read"),
+
   getTrainerById
 );
 

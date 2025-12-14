@@ -8,6 +8,7 @@ const {
   getAllIQTests,
   getQuestionsForUser,
   updateUserAnswer,
+  getAllResultsByTestId,
   submitExam,
   getAllInProgressIQTests,
   getCompletedIQTestsForUser,
@@ -17,22 +18,27 @@ iqtestRouter.get("/all", protect, checkAccess("test", "read"), getAllIQTests);
 
 iqtestRouter.post(
   "/questions",
-  protect,
-  checkAccess("test", "read"),
+  // protect,
+  // checkAccess("test", "read"),
   getQuestionsForUser
 );
 
 iqtestRouter.put(
   "/update-answer",
-  protect,
-  checkAccess("test", "update"),
+
   updateUserAnswer
+);
+
+iqtestRouter.get(
+  "/:testId",
+
+  getAllResultsByTestId
 );
 
 iqtestRouter.post(
   "/submit",
-  protect,
-  checkAccess("test", "create"),
+  // protect,
+  // checkAccess("test", "create"),
   submitExam
 );
 
@@ -45,8 +51,8 @@ iqtestRouter.post(
 
 iqtestRouter.post(
   "/completed",
-  protect,
-  checkAccess("test", "read"),
+  // protect,
+  // checkAccess("test", "read"),
   getCompletedIQTestsForUser
 );
 

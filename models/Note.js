@@ -7,6 +7,13 @@ const NoteSchema = new mongoose.Schema({
     ref: "Chapter",
     required: true,
   },
+  batches: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+    },
+  ],
+
   title: { type: String, required: true, trim: true },
   content: { type: String, trim: true },
   file: { type: String, trim: true },

@@ -15,8 +15,8 @@ const courseSchema = new mongoose.Schema(
     startDate: { type: Date, required: false },
     endDate: { type: Date, required: false },
 
-    rating: { type: Number, default: 4.9 },
-    enrolledCount: { type: Number, default: 1200 },
+    rating: { type: Number, required: false, default: 4.9 },
+    enrolledCount: { type: Number, required: false, default: 1200 },
 
     overview: {
       type: String,

@@ -3,9 +3,21 @@ const IQTest = require("../models/IqTest");
 const TestList = require("../models/Test");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
+const Batch = require("../models/Batch");
+const Student = require("../models/Student");
 const getAllIQTests = asyncHandler(async (req, res) => {
-  const student = req.student;
+  let studentId;
+
+  if (req.user?.id) {
+    studentId = req.user.id;
+  } else if (req.query.studentId) {
+    studentId = req.query.studentId;
+  } else {
+    return sendError(res, 401, false, "Student not authenticated");
+  }
+
+  studentId = new mongoose.Types.ObjectId(studentId);
+
   const { chapterId, phaseId, batchId } = req.query;
 
   let match = {};
@@ -25,7 +37,7 @@ const getAllIQTests = asyncHandler(async (req, res) => {
               $expr: {
                 $and: [
                   { $eq: ["$testID", "$$testID"] },
-                  { $eq: ["$studentId", student?.data] },
+                  { $eq: ["$studentId", studentId] },
                 ],
               },
             },
@@ -34,7 +46,11 @@ const getAllIQTests = asyncHandler(async (req, res) => {
         as: "userAttempts",
       },
     },
-    { $addFields: { attempted: { $gt: [{ $size: "$userAttempts" }, 0] } } },
+    {
+      $addFields: {
+        attempted: { $gt: [{ $size: "$userAttempts" }, 0] },
+      },
+    },
     { $sort: { createdAt: -1 } },
   ]);
 
@@ -43,7 +59,7 @@ const getAllIQTests = asyncHandler(async (req, res) => {
     title: test.title,
     totalMarks: test.totalMarks,
     attempted: test.attempted
-      ? test.userAttempts[0]?.status <= 0
+      ? test.userAttempts[0]?.status === -1
         ? -1
         : 1
       : 0,
@@ -55,6 +71,7 @@ const getAllIQTests = asyncHandler(async (req, res) => {
 
 const getQuestionsForUser = asyncHandler(async (req, res) => {
   const { testID, studentId } = req.body;
+
   if (!testID || !studentId)
     return sendError(res, 400, false, "testID and studentId are required");
 
@@ -66,6 +83,7 @@ const getQuestionsForUser = asyncHandler(async (req, res) => {
   if (iqTest) {
     if (iqTest.status === 1)
       return sendError(res, 400, false, "Test already completed");
+
     return sendResponse(res, 200, true, "Test resumed successfully", iqTest);
   }
 
@@ -85,6 +103,7 @@ const getQuestionsForUser = asyncHandler(async (req, res) => {
         optionC: "$questions.optionC",
         optionD: "$questions.optionD",
         correctAns: "$questions.correctAns",
+        marks: "$questions.marks",
         selectedOption: null,
       },
     },
@@ -94,7 +113,7 @@ const getQuestionsForUser = asyncHandler(async (req, res) => {
     studentId,
     testID,
     title: test.title,
-    status: 0,
+    status: -1,
     testDuration: test.testDuration,
     totalQuestions: test.totalQuestions,
     passingMarks: test.passingMarks,
@@ -109,17 +128,10 @@ const getQuestionsForUser = asyncHandler(async (req, res) => {
 });
 
 const updateUserAnswer = asyncHandler(async (req, res) => {
-  const {
-    iqTestId,
-    studentId,
-    testID,
-    questionId,
-    selectedOption,
-    status,
-    testDuration,
-  } = req.body;
+  const { studentId, testID, questionId, selectedOption, testDuration } =
+    req.body;
 
-  if (!iqTestId || !studentId || !testID || !questionId)
+  if (!studentId || !testID || !questionId)
     return sendError(res, 400, false, "Required fields missing");
 
   await IQTest.updateOne(
@@ -127,7 +139,7 @@ const updateUserAnswer = asyncHandler(async (req, res) => {
     {
       $set: {
         "questions.$.selectedOption": selectedOption,
-        status,
+        status: -1,
         testDuration,
       },
     }
@@ -142,6 +154,9 @@ const submitExam = asyncHandler(async (req, res) => {
   const iqTest = await IQTest.findOne({ testID, studentId });
   if (!iqTest) return sendError(res, 404, false, "IQ Test not found");
 
+  if (iqTest.status === 1)
+    return sendError(res, 400, false, "Test already submitted");
+
   let correct = 0,
     wrong = 0,
     marks = 0;
@@ -150,7 +165,9 @@ const submitExam = asyncHandler(async (req, res) => {
     if (q.correctAns === q.selectedOption) {
       correct++;
       marks += Number(q.marks || 0);
-    } else if (q.selectedOption) wrong++;
+    } else if (q.selectedOption) {
+      wrong++;
+    }
   });
 
   const totalMarks = iqTest.questions.reduce(
@@ -160,8 +177,9 @@ const submitExam = asyncHandler(async (req, res) => {
 
   const testList = await TestList.findById(testID);
 
+  // ✅ Update IQTest
   await IQTest.updateOne(
-    { testID, studentId },
+    { _id: iqTest._id },
     {
       $set: {
         correctAnswers: correct,
@@ -171,13 +189,25 @@ const submitExam = asyncHandler(async (req, res) => {
         passingMarks: testList?.passingMarks || 0,
         status: 1,
         testDuration,
-        phaseId: testList.phaseId,
-        batchId: testList.batchId,
       },
     }
   );
 
+  // ✅ SAVE iqTestId UNDER BATCH
+  if (iqTest.batchId) {
+    await Batch.updateOne(
+      { _id: iqTest.batchId },
+      {
+        $addToSet: {
+          iqTests: iqTest._id, // 🔥 THIS IS WHAT YOU WANT
+        },
+      }
+    );
+  }
+
   sendResponse(res, 200, true, "Exam submitted successfully", {
+    iqTestId: iqTest._id,
+    batchId: iqTest.batchId,
     correct,
     wrong,
     marks,
@@ -302,7 +332,51 @@ const getCompletedIQTestsForUser = asyncHandler(async (req, res) => {
   );
 });
 
+const getAllResultsByTestId = asyncHandler(async (req, res) => {
+  const { testId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(testId)) {
+    return sendError(res, 400, false, "Invalid Test ID");
+  }
+
+  const testObjectId = new mongoose.Types.ObjectId(testId);
+
+  const results = await IQTest.aggregate([
+    { $match: { testID: testObjectId } },
+    {
+      $lookup: {
+        from: "students",
+        localField: "studentId",
+        foreignField: "_id",
+        as: "student",
+      },
+    },
+    { $unwind: "$student" },
+    {
+      $project: {
+        _id: 1,
+        title: 1,
+        questions: 1,
+        status: 1,
+        totalMarks: 1,
+        marksGained: 1,
+        totalQuestions: 1,
+        correctAnswers: 1,
+        wrongAnswers: 1,
+        testDuration: 1,
+        "student._id": 1,
+        "student.fullName": 1,
+        "student.email": 1,
+        "student.mobileNo": 1,
+      },
+    },
+  ]);
+
+  return sendResponse(res, 200, true, "Results fetched successfully", results);
+});
+
 module.exports = {
+  getAllResultsByTestId,
   getAllIQTests,
   getQuestionsForUser,
   updateUserAnswer,

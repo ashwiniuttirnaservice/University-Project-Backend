@@ -247,11 +247,26 @@ exports.getBatchesByTrainerId = asyncHandler(async (req, res) => {
 exports.getBatchById = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  let studentId = req.user?.studentId;
+
+  if (!studentId && req.query.studentId) {
+    studentId = req.query.studentId;
+  }
+
+  if (!studentId) {
+    return sendError(res, 401, false, "Student not authenticated");
+  }
+
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return sendError(res, 400, false, "Invalid Batch ID format");
   }
 
+  if (!mongoose.Types.ObjectId.isValid(studentId)) {
+    return sendError(res, 400, false, "Invalid Student ID format");
+  }
+
   const batchId = new mongoose.Types.ObjectId(id);
+  const studentObjectId = new mongoose.Types.ObjectId(studentId);
 
   const batch = await Batch.aggregate([
     { $match: { _id: batchId } },
@@ -275,6 +290,296 @@ exports.getBatchById = asyncHandler(async (req, res) => {
     },
 
     {
+      $lookup: {
+        from: "prerequisites",
+        localField: "prerequisites",
+        foreignField: "_id",
+        as: "prerequisites",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "feedbackquestions",
+        localField: "_id",
+        foreignField: "batchId",
+        as: "feedbacks",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "feedbacks",
+        let: { batchId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$batchId", "$$batchId"] },
+                  { $eq: ["$studentId", studentObjectId] },
+                  { $eq: ["$status", 1] },
+                ],
+              },
+            },
+          },
+        ],
+        as: "studentFeedbacks",
+      },
+    },
+
+    {
+      $addFields: {
+        feedbacks: {
+          $map: {
+            input: "$feedbacks",
+            as: "fb",
+            in: {
+              _id: "$$fb._id",
+              title: "$$fb.title",
+
+              nps: {
+                $mergeObjects: [
+                  "$$fb.nps",
+                  { $arrayElemAt: ["$studentFeedbacks.nps", 0] },
+                ],
+              },
+
+              questions: {
+                $map: {
+                  input: "$$fb.questions",
+                  as: "q",
+                  in: {
+                    $mergeObjects: [
+                      "$$q",
+                      {
+                        $arrayElemAt: [
+                          {
+                            $filter: {
+                              input: {
+                                $arrayElemAt: [
+                                  "$studentFeedbacks.questions",
+                                  0,
+                                ],
+                              },
+                              as: "sq",
+                              cond: {
+                                $eq: ["$$sq.question", "$$q.question"],
+                              },
+                            },
+                          },
+                          0,
+                        ],
+                      },
+                    ],
+                  },
+                },
+              },
+
+              status: {
+                $cond: [
+                  {
+                    $gt: [
+                      {
+                        $size: {
+                          $filter: {
+                            input: "$$fb.questions",
+                            as: "q",
+                            cond: {
+                              $gt: [
+                                {
+                                  $size: {
+                                    $filter: {
+                                      input: {
+                                        $arrayElemAt: [
+                                          "$studentFeedbacks.questions",
+                                          0,
+                                        ],
+                                      },
+                                      as: "sq",
+                                      cond: {
+                                        $eq: ["$$sq.question", "$$q.question"],
+                                      },
+                                    },
+                                  },
+                                },
+                                0,
+                              ],
+                            },
+                          },
+                        },
+                      },
+                      0,
+                    ],
+                  },
+                  1,
+                  0,
+                ],
+              },
+            },
+          },
+        },
+      },
+    },
+    { $project: { studentFeedbacks: 0 } },
+
+    {
+      $lookup: {
+        from: "lectures",
+        localField: "lectures",
+        foreignField: "_id",
+        as: "lectures",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "assignments",
+        localField: "assignments",
+        foreignField: "_id",
+        as: "assignments",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "notes",
+        localField: "notes",
+        foreignField: "_id",
+        as: "notes",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "testlists",
+        let: { testIds: "$tests" },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $in: ["$_id", "$$testIds"] },
+            },
+          },
+
+          {
+            $lookup: {
+              from: "iqtests",
+              let: { testID: "$_id" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $and: [
+                        { $eq: ["$testID", "$$testID"] },
+                        { $eq: ["$studentId", studentObjectId] },
+                      ],
+                    },
+                  },
+                },
+              ],
+              as: "iqtest",
+            },
+          },
+
+          {
+            $addFields: {
+              attempted: {
+                $cond: [
+                  { $gt: [{ $size: "$iqtest" }, 0] },
+                  { $arrayElemAt: ["$iqtest.status", 0] },
+                  0,
+                ],
+              },
+
+              iqtest: {
+                $cond: [
+                  { $gt: [{ $size: "$iqtest" }, 0] },
+                  { $arrayElemAt: ["$iqtest", 0] },
+                  null,
+                ],
+              },
+            },
+          },
+        ],
+        as: "tests",
+      },
+    },
+
+    {
+      $lookup: {
+        from: "attendances",
+        let: {
+          batchId: "$_id",
+          studentId: studentObjectId,
+        },
+        pipeline: [
+          {
+            $match: {
+              $expr: { $eq: ["$batch", "$$batchId"] },
+            },
+          },
+
+          // 1️⃣ attendees array मधून logged-in student
+          {
+            $addFields: {
+              studentAttendance: {
+                $filter: {
+                  input: "$attendees",
+                  as: "att",
+                  cond: {
+                    $eq: ["$$att.student", "$$studentId"],
+                  },
+                },
+              },
+            },
+          },
+
+          // 2️⃣ student नसलेले records skip
+          {
+            $match: {
+              $expr: { $gt: [{ $size: "$studentAttendance" }, 0] },
+            },
+          },
+
+          // 3️⃣ student details lookup (🔥 IMPORTANT)
+          {
+            $lookup: {
+              from: "students", // ⚠️ जर collection नाव users असेल तर "users"
+              localField: "studentAttendance.student",
+              foreignField: "_id",
+              as: "student",
+            },
+          },
+
+          // 4️⃣ clean output
+          {
+            $project: {
+              meeting: 1,
+              course: 1,
+              markedAt: 1,
+              present: {
+                $arrayElemAt: ["$studentAttendance.present", 0],
+              },
+              student: {
+                _id: { $arrayElemAt: ["$student._id", 0] },
+                fullName: { $arrayElemAt: ["$student.fullName", 0] },
+              },
+            },
+          },
+        ],
+        as: "attendance",
+      },
+    },
+    {
+      $lookup: {
+        from: "meetings",
+        localField: "_id",
+        foreignField: "batch",
+        as: "meetings",
+      },
+    },
+
+    {
       $project: {
         batchName: 1,
         time: 1,
@@ -288,15 +593,20 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         isEnrolled: 1,
         studentCount: 1,
         students: 1,
-        coursesAssigned: {
-          _id: 1,
-          title: 1,
-        },
-        trainer: {
-          _id: 1,
-          fullName: 1,
-          email: 1,
-        },
+
+        coursesAssigned: { _id: 1, title: 1 },
+        trainer: { _id: 1, fullName: 1, email: 1 },
+        prerequisites: { _id: 1, title: 1, description: 1, topics: 1 },
+        feedbacks: 1,
+        lectures: 1,
+        assignments: 1,
+        notes: 1,
+        tests: 1,
+
+        // 🔥 IMPORTANT CHANGE
+        attendance: 1,
+
+        meetings: 1,
         createdAt: 1,
         updatedAt: 1,
       },

@@ -6,7 +6,7 @@ const responseSchema = new mongoose.Schema(
 
     answer: {
       type: String,
-      enum: ["agree", "disagree", "cant_say", ""],
+      enum: ["agree", "disagree", "cant_say", "strongly_agree"],
       default: "",
     },
 
@@ -17,9 +17,10 @@ const responseSchema = new mongoose.Schema(
 
 responseSchema.pre("validate", function (next) {
   const scoreMap = {
+    strongly_agree: 5,
     agree: 2,
-    disagree: 1,
-    cant_say: 0,
+    disagree: 0,
+    cant_say: 1,
     "": null,
   };
 
@@ -78,6 +79,11 @@ const feedbackSchema = new mongoose.Schema(
     trainerFeedback: { type: String, trim: true },
 
     profile: { type: String, trim: true },
+    status: {
+      type: Number,
+      enum: [0, 1],
+      default: 0,
+    },
 
     nps: npsSchema,
 

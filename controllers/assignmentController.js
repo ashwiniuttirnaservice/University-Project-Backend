@@ -9,10 +9,14 @@ const mongoose = require("mongoose");
 const path = require("path");
 
 exports.createAssignments = asyncHandler(async (req, res) => {
-  const { course, chapter, title, description, deadline } = req.body;
+  const { course, chapter, batches, title, description, deadline } = req.body;
 
   if (!chapter || !mongoose.Types.ObjectId.isValid(chapter)) {
     return sendError(res, 400, false, "Valid chapter ID is required");
+  }
+
+  if (!batches || !mongoose.Types.ObjectId.isValid(batches)) {
+    return sendError(res, 400, false, "Valid batch ID is required");
   }
 
   if (!req.files || req.files.length === 0) {
@@ -33,6 +37,7 @@ exports.createAssignments = asyncHandler(async (req, res) => {
   const assignmentsData = req.files.map((file, index) => ({
     course,
     chapter,
+    batches,
     title: titlesArr[index] || `Assignment ${index + 1}`,
     description: descriptionsArr[index] || "",
     deadline: deadlinesArr[index] ? new Date(deadlinesArr[index]) : null,
@@ -42,6 +47,10 @@ exports.createAssignments = asyncHandler(async (req, res) => {
   const assignments = await Assignment.insertMany(assignmentsData);
 
   await Chapter.findByIdAndUpdate(chapter, {
+    $push: { assignments: { $each: assignments.map((a) => a._id) } },
+  });
+
+  await Batch.findByIdAndUpdate(batches, {
     $push: { assignments: { $each: assignments.map((a) => a._id) } },
   });
 
@@ -55,7 +64,8 @@ exports.createAssignments = asyncHandler(async (req, res) => {
 });
 
 exports.submitAssignment = asyncHandler(async (req, res) => {
-  const { assignmentId, studentId, enrollmentId, remarks } = req.body;
+  const { assignmentId, studentId, enrollmentId, remarks, status, githubLink } =
+    req.body;
 
   if (!assignmentId || !mongoose.Types.ObjectId.isValid(assignmentId)) {
     return sendError(res, 400, false, "Valid assignmentId is required");
@@ -75,8 +85,16 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
 
   const idToUse = studentId || enrollmentId;
 
-  if (!req.files || req.files.length === 0) {
-    return sendError(res, 400, false, "Please upload at least one file");
+  if (
+    (!req.files || req.files.length === 0) &&
+    (!githubLink || githubLink.trim() === "")
+  ) {
+    return sendError(
+      res,
+      400,
+      false,
+      "Please upload a file or provide GitHub link"
+    );
   }
 
   const assignment = await Assignment.findById(assignmentId);
@@ -107,13 +125,22 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
     );
   }
 
-  const files = req.files.map((f) => path.basename(f.path));
+  const files = [];
+
+  if (req.files && req.files.length > 0) {
+    const uploadedFiles = req.files.map((f) => path.basename(f.path));
+    files.push(...uploadedFiles);
+  }
+
+  if (githubLink && githubLink.trim() !== "") {
+    files.push(githubLink.trim());
+  }
 
   assignment.submissions.push({
     student: idToUse,
     files,
     remarks: remarks || "",
-    status: "submitted",
+    status,
     submittedAt: new Date(),
   });
 
@@ -143,7 +170,6 @@ exports.submitAssignment = asyncHandler(async (req, res) => {
 exports.getAllAssignments = asyncHandler(async (req, res) => {
   const filter = { isActive: true };
 
-  // 🔥 Trainer filtering (same as you said)
   if (req.user.role === "trainer") {
     const trainerCourseIds = await Batch.find({
       trainer: req.user.trainerId,
@@ -203,6 +229,7 @@ exports.getAssignmentsByCourse = asyncHandler(async (req, res) => {
 
 exports.getAssignmentSubmissions = asyncHandler(async (req, res) => {
   const { id } = req.params;
+
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return sendError(res, 400, false, "Invalid assignment ID");
   }
@@ -212,38 +239,49 @@ exports.getAssignmentSubmissions = asyncHandler(async (req, res) => {
     select: "fullName email",
   });
 
-  if (!assignment) return sendError(res, 404, false, "Assignment not found");
-
-  const submissionLog = assignment.submissions.map((s) => ({
-    participant: s.student?.fullName || "Unknown",
-    submittedOn: s.submittedAt ? s.submittedAt.toISOString().split("T")[0] : "",
-    status: s.status,
-    file: s.fileUrl,
-    marks: s.score,
-  }));
+  if (!assignment) {
+    return sendError(res, 404, false, "Assignment not found");
+  }
 
   return sendResponse(
     res,
     200,
     true,
-    "Submission log fetched successfully",
-    submissionLog
+    "Assignment fetched successfully",
+    assignment
   );
 });
 
 exports.updateAssignment = asyncHandler(async (req, res) => {
-  const { title, description, deadline, status, score } = req.body;
-  const updateData = { title, description, deadline, status, score };
+  const { course, chapter, title, description, deadline, status, score } =
+    req.body;
 
-  if (req.file) updateData.fileUrl = path.basename(req.file.path);
+  const updateData = {
+    course,
+    chapter,
+    title,
+    description,
+    deadline,
+    status,
+    score,
+  };
+
+  if (req.file) {
+    updateData.fileUrl = path.basename(req.file.path);
+  }
 
   const assignment = await Assignment.findByIdAndUpdate(
     req.params.id,
     updateData,
-    { new: true, runValidators: true }
+    {
+      new: true,
+      runValidators: true,
+    }
   );
 
-  if (!assignment) return sendError(res, 404, false, "Assignment not found");
+  if (!assignment) {
+    return sendError(res, 404, false, "Assignment not found");
+  }
 
   return sendResponse(res, 200, true, "Assignment updated", assignment);
 });
@@ -290,7 +328,6 @@ exports.downloadSubmissionLogExcelByStudent = asyncHandler(async (req, res) => {
     ? assignment.deadline.toISOString().split("T")[0]
     : "";
 
-  // 👉 UPDATED SHEET 1
   const sheet1Data = [
     ["Training Name", assignment.course?.title || ""],
     ["Assignment Title", assignment.title],
@@ -401,7 +438,7 @@ exports.gradeAssignment = asyncHandler(async (req, res) => {
 });
 
 exports.resubmitAssignment = asyncHandler(async (req, res) => {
-  const { assignmentId, submissionId, remarks } = req.body;
+  const { assignmentId, submissionId, remarks, githubLink, status } = req.body;
 
   if (!assignmentId || !mongoose.Types.ObjectId.isValid(assignmentId)) {
     return sendError(res, 400, false, "Valid assignmentId is required");
@@ -410,8 +447,16 @@ exports.resubmitAssignment = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Valid submissionId is required");
   }
 
-  if (!req.files || req.files.length === 0) {
-    return sendError(res, 400, false, "Please upload at least one file");
+  if (
+    (!req.files || req.files.length === 0) &&
+    (!githubLink || githubLink.trim() === "")
+  ) {
+    return sendError(
+      res,
+      400,
+      false,
+      "Please upload a file or provide GitHub link"
+    );
   }
 
   const assignment = await Assignment.findById(assignmentId);
@@ -420,13 +465,17 @@ exports.resubmitAssignment = asyncHandler(async (req, res) => {
   const submission = assignment.submissions.id(submissionId);
   if (!submission) return sendError(res, 404, false, "Submission not found");
 
-  const uploadedFiles = req.files.map((f) => path.basename(f.path));
+  if (req.files && req.files.length > 0) {
+    const uploadedFiles = req.files.map((f) => path.basename(f.path));
+    submission.files.push(...uploadedFiles);
+  }
 
-  submission.files.push(...uploadedFiles);
+  if (githubLink && githubLink.trim() !== "") {
+    submission.files.push(githubLink.trim());
+  }
 
   submission.remarks = remarks || submission.remarks;
-
-  submission.status = "resubmitted";
+  submission.status = status || submission.status;
   submission.submittedAt = new Date();
 
   await assignment.save();
@@ -435,7 +484,45 @@ exports.resubmitAssignment = asyncHandler(async (req, res) => {
     res,
     200,
     true,
-    "Assignment re-submitted successfully (files added)",
+    "Assignment re-submitted successfully",
     submission
+  );
+});
+
+exports.cloneAssignment = asyncHandler(async (req, res) => {
+  const { assignmentId } = req.body;
+
+  if (!assignmentId) {
+    return sendError(res, 400, false, "assignmentId is required");
+  }
+
+  const originalAssignment = await Assignment.findById(assignmentId);
+
+  if (!originalAssignment) {
+    return sendError(res, 404, false, "Assignment not found");
+  }
+
+  const clonedAssignment = await Assignment.create({
+    course: originalAssignment.course,
+    chapter: originalAssignment.chapter,
+    title: originalAssignment.title + " (Copy)",
+    description: originalAssignment.description,
+    fileUrl: originalAssignment.fileUrl,
+    deadline: originalAssignment.deadline,
+    status: originalAssignment.status,
+    isActive: originalAssignment.isActive,
+    submissions: [],
+  });
+
+  await Chapter.findByIdAndUpdate(originalAssignment.chapter, {
+    $push: { assignments: clonedAssignment._id },
+  });
+
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Assignment cloned successfully",
+    clonedAssignment
   );
 });

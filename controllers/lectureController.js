@@ -5,7 +5,6 @@ const Lecture = require("../models/Lecture");
 const Chapter = require("../models/Chapter");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-
 exports.createMultipleLectures = asyncHandler(async (req, res) => {
   const {
     course,
@@ -29,6 +28,12 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
     contentUrl = req.body.contentUrl;
   }
 
+  const batchArray = batches
+    ? Array.isArray(batches)
+      ? batches
+      : [batches]
+    : [];
+
   const lecturesData = [
     {
       course,
@@ -38,7 +43,7 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
       duration,
       description,
       contentUrl,
-      batches: batches ? (Array.isArray(batches) ? batches : [batches]) : [],
+      batches: batchArray,
       status: status || "pending",
     },
   ];
@@ -48,6 +53,15 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
   await Chapter.findByIdAndUpdate(chapter, {
     $push: { lectures: { $each: createdLectures.map((lec) => lec._id) } },
   });
+
+  if (batchArray.length > 0) {
+    await Batch.updateMany(
+      { _id: { $in: batchArray } },
+      {
+        $push: { lectures: { $each: createdLectures.map((lec) => lec._id) } },
+      }
+    );
+  }
 
   return sendResponse(
     res,
@@ -153,4 +167,43 @@ exports.deleteLecture = asyncHandler(async (req, res) => {
   await lecture.deleteOne();
 
   return sendResponse(res, 200, true, "Lecture deleted successfully");
+});
+
+exports.cloneLecture = asyncHandler(async (req, res) => {
+  const { lectureId } = req.body;
+
+  if (!lectureId) {
+    return sendError(res, 400, false, "lectureId is required");
+  }
+
+  const originalLecture = await Lecture.findById(lectureId);
+
+  if (!originalLecture) {
+    return sendError(res, 404, false, "Lecture not found");
+  }
+
+  const clonedLecture = await Lecture.create({
+    course: originalLecture.course,
+    chapter: originalLecture.chapter,
+    title: originalLecture.title + " (Copy)",
+    description: originalLecture.description,
+    contentUrl: originalLecture.contentUrl,
+    duration: originalLecture.duration,
+    type: originalLecture.type,
+    batches: originalLecture.batches,
+    status: originalLecture.status,
+    isActive: originalLecture.isActive,
+  });
+
+  await Chapter.findByIdAndUpdate(originalLecture.chapter, {
+    $push: { lectures: clonedLecture._id },
+  });
+
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Lecture cloned successfully",
+    clonedLecture
+  );
 });

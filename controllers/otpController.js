@@ -10,7 +10,7 @@ const Event = require("../models/EventSession .js");
 const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 const mongoose = require("mongoose");
 
-const { sendOtpEmail } = require("../models/emailService.js");
+const { sendPasswordEmail } = require("../models/emailService.js");
 
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
@@ -108,10 +108,8 @@ exports.registerStudent = asyncHandler(async (req, res) => {
     student = await Student.create(studentData);
   }
 
-  // Get first enrolled course ID if exists
   const firstCourseId = student.enrolledCourses?.[0]?._id || null;
 
-  // ✅ Generate JWT
   const tokenPayload = {
     studentId: student._id,
     courseId: firstCourseId,
@@ -128,48 +126,53 @@ exports.registerStudent = asyncHandler(async (req, res) => {
   });
 });
 
-exports.sendOtpEmailController = asyncHandler(async (req, res) => {
-  const { email } = req.body;
+function generateSixDigitPassword() {
+  return crypto.randomInt(100000, 999999).toString();
+}
+
+const password = generateSixDigitPassword();
+console.log(password);
+exports.sendPasswordEmailAPI = asyncHandler(async (req, res) => {
+  const { email, fullName, mobileNo, selectedProgram } = req.body;
   if (!email) return sendError(res, 400, false, "Email is required");
 
-  // Validate email
-  if (!/^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,6}$/.test(email)) {
-    return sendError(res, 400, false, "Invalid email address");
+  const password = generateSixDigitPassword(10);
+
+  let student = await Student.findOne({ email });
+
+  // 👉 Student not exists → CREATE NEW
+  if (!student) {
+    student = await Student.create({
+      fullName: fullName || "Student",
+      email,
+      mobileNo,
+      selectedProgram,
+      password, // 🔥 IMPORTANT
+      role: "student",
+      status: "Registered",
+      isActive: true,
+    });
+  } else {
+    // 👉 Existing student → update password
+    student.password = password;
+    await student.save();
+
+    await Enrollment.updateMany(
+      { studentId: student._id },
+      { $set: { password } }
+    );
   }
 
-  // Check student exists
-  let student = await Student.findOne({ email: email });
-  if (!student)
-    return sendError(res, 404, false, "Email not found in our records");
-
-  // Generate OTP
-  const otp = generateOtp();
-  const reference_id = crypto.randomBytes(8).toString("hex");
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-
-  // Save OTP in collection
-  await Otp.create({ email, otp, reference_id, expiresAt });
-
-  // Update student password with OTP
-  student.password = otp;
-  await student.save();
-
-  // Update password in all enrollments for this student
-  await Enrollment.updateMany(
-    { studentId: student._id },
-    { $set: { password: otp } }
-  );
-
-  // Send OTP via email
+  // 👉 Always send email
   try {
-    await sendOtpEmail(email, otp);
+    await sendPasswordEmail(email, password);
   } catch (err) {
-    console.error("Email sending failed:", err.message);
+    return sendError(res, 500, false, "Failed to send email");
   }
 
-  return sendResponse(res, 200, true, "OTP sent successfully", {
-    reference_id,
+  return sendResponse(res, 200, true, "Password sent successfully", {
     studentId: student._id,
+    isNewStudent: !student,
   });
 });
 
@@ -192,7 +195,7 @@ exports.sendOtpEmail = asyncHandler(async (req, res) => {
   await Otp.create({ email_id, otp, reference_id, expiresAt });
 
   try {
-    await sendOtpEmail(email_id, otp);
+    await sendPasswordEmail(email_id, otp);
   } catch (err) {
     console.error("Email sending failed:", err.message);
   }

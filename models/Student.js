@@ -97,6 +97,7 @@ const studentSchema = new mongoose.Schema({
   password: {
     type: String,
   },
+
   registeredAt: {
     type: Date,
     default: Date.now,

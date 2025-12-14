@@ -34,6 +34,28 @@ const batchSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    feedbacks: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "FeedbackQuestion",
+      },
+    ],
+    lectures: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Lecture",
+      },
+    ],
+    assignments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Assignment" }],
+    attendances: [{ type: mongoose.Schema.Types.ObjectId, ref: "Attendance" }],
+
+    notes: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Note",
+      },
+    ],
+    tests: [{ type: mongoose.Schema.Types.ObjectId, ref: "TestList" }],
 
     mode: {
       type: String,
@@ -60,6 +82,13 @@ const batchSchema = new mongoose.Schema(
       default: "",
     },
 
+    prerequisites: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Prerequisite",
+      },
+    ],
+
     students: [
       {
         studentId: { type: mongoose.Schema.Types.ObjectId, ref: "Student" },
@@ -74,6 +103,8 @@ const batchSchema = new mongoose.Schema(
         ref: "Enrollment",
       },
     ],
+
+    iqTests: [{ type: mongoose.Schema.Types.ObjectId, ref: "IQTest" }],
 
     studentCount: {
       type: Number,
