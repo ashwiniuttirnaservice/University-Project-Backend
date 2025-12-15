@@ -63,8 +63,8 @@ assignmentRouter.get(
 
 assignmentRouter.get(
   "/course/:courseId",
-  // protect,
-  // checkAccess("assignment", "read"),
+  protect,
+  checkAccess("assignment", "read"),
   assignmentController.getAssignmentsByCourse
 );
 

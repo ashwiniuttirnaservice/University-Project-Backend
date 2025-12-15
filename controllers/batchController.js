@@ -332,89 +332,71 @@ exports.getBatchById = asyncHandler(async (req, res) => {
       $addFields: {
         feedbacks: {
           $map: {
-            input: "$feedbacks",
+            input: { $ifNull: ["$feedbacks", []] },
             as: "fb",
             in: {
-              _id: "$$fb._id",
-              title: "$$fb.title",
-
-              nps: {
-                $mergeObjects: [
-                  "$$fb.nps",
-                  { $arrayElemAt: ["$studentFeedbacks.nps", 0] },
-                ],
-              },
-
-              questions: {
-                $map: {
-                  input: "$$fb.questions",
-                  as: "q",
-                  in: {
-                    $mergeObjects: [
-                      "$$q",
+              $let: {
+                vars: {
+                  studentFB: {
+                    $arrayElemAt: [
                       {
-                        $arrayElemAt: [
-                          {
-                            $filter: {
-                              input: {
-                                $arrayElemAt: [
-                                  "$studentFeedbacks.questions",
-                                  0,
-                                ],
-                              },
-                              as: "sq",
-                              cond: {
-                                $eq: ["$$sq.question", "$$q.question"],
-                              },
-                            },
-                          },
-                          0,
-                        ],
-                      },
-                    ],
-                  },
-                },
-              },
-
-              status: {
-                $cond: [
-                  {
-                    $gt: [
-                      {
-                        $size: {
-                          $filter: {
-                            input: "$$fb.questions",
-                            as: "q",
-                            cond: {
-                              $gt: [
-                                {
-                                  $size: {
-                                    $filter: {
-                                      input: {
-                                        $arrayElemAt: [
-                                          "$studentFeedbacks.questions",
-                                          0,
-                                        ],
-                                      },
-                                      as: "sq",
-                                      cond: {
-                                        $eq: ["$$sq.question", "$$q.question"],
-                                      },
-                                    },
-                                  },
-                                },
-                                0,
-                              ],
-                            },
+                        $filter: {
+                          input: "$studentFeedbacks",
+                          as: "sf",
+                          cond: {
+                            $eq: [
+                              { $size: "$$sf.questions" },
+                              { $size: "$$fb.questions" },
+                            ],
                           },
                         },
                       },
                       0,
                     ],
                   },
-                  1,
-                  0,
-                ],
+                },
+                in: {
+                  _id: "$$fb._id",
+                  title: "$$fb.title",
+
+                  nps: {
+                    $mergeObjects: [
+                      "$$fb.nps",
+                      { $ifNull: ["$$studentFB.nps", {}] },
+                    ],
+                  },
+                  questions: {
+                    $map: {
+                      input: { $ifNull: ["$$fb.questions", []] },
+                      as: "q",
+                      in: {
+                        $mergeObjects: [
+                          "$$q",
+                          {
+                            $arrayElemAt: [
+                              {
+                                $filter: {
+                                  input: {
+                                    $ifNull: ["$$studentFB.questions", []],
+                                  },
+                                  as: "sq",
+                                  cond: {
+                                    $eq: ["$$sq.question", "$$q.question"],
+                                  },
+                                },
+                              },
+                              0,
+                            ],
+                          },
+                        ],
+                      },
+                    },
+                  },
+
+                  status: {
+                    $cond: [{ $ifNull: ["$$studentFB", false] }, 1, 0],
+                  },
+                },
               },
             },
           },
@@ -519,7 +501,6 @@ exports.getBatchById = asyncHandler(async (req, res) => {
             },
           },
 
-          // 1️⃣ attendees array मधून logged-in student
           {
             $addFields: {
               studentAttendance: {
@@ -534,24 +515,21 @@ exports.getBatchById = asyncHandler(async (req, res) => {
             },
           },
 
-          // 2️⃣ student नसलेले records skip
           {
             $match: {
               $expr: { $gt: [{ $size: "$studentAttendance" }, 0] },
             },
           },
 
-          // 3️⃣ student details lookup (🔥 IMPORTANT)
           {
             $lookup: {
-              from: "students", // ⚠️ जर collection नाव users असेल तर "users"
+              from: "students",
               localField: "studentAttendance.student",
               foreignField: "_id",
               as: "student",
             },
           },
 
-          // 4️⃣ clean output
           {
             $project: {
               meeting: 1,
@@ -603,7 +581,6 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         notes: 1,
         tests: 1,
 
-        // 🔥 IMPORTANT CHANGE
         attendance: 1,
 
         meetings: 1,

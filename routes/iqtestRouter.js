@@ -18,8 +18,7 @@ iqtestRouter.get("/all", protect, checkAccess("test", "read"), getAllIQTests);
 
 iqtestRouter.post(
   "/questions",
-  // protect,
-  // checkAccess("test", "read"),
+
   getQuestionsForUser
 );
 
@@ -37,8 +36,7 @@ iqtestRouter.get(
 
 iqtestRouter.post(
   "/submit",
-  // protect,
-  // checkAccess("test", "create"),
+
   submitExam
 );
 
@@ -51,8 +49,7 @@ iqtestRouter.post(
 
 iqtestRouter.post(
   "/completed",
-  // protect,
-  // checkAccess("test", "read"),
+
   getCompletedIQTestsForUser
 );
 
