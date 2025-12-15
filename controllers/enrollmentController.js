@@ -604,7 +604,6 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Participant ID is required");
   }
 
-  // Find existing enrollment
   const existingEnrollment = await Enrollment.findById(id);
   if (!existingEnrollment) {
     return sendError(res, 404, false, "Participant not found");

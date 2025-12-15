@@ -19,8 +19,7 @@ const {
 
 trainerRouter.post(
   "/register",
-  protect,
-  checkAccess("trainer", "create"),
+
   upload.fields([
     { name: "resume", maxCount: 1 },
     { name: "idProofTrainer", maxCount: 1 },
