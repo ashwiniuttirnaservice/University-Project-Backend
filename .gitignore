@@ -1,5 +1,5 @@
 node_modules
-.env
+# .env
 ecosystem.config.js
 ecosystem.config.cjs
 # edit .gitignore and add:
