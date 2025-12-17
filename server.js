@@ -5,6 +5,8 @@ const path = require("path");
 const connectDB = require("./config/db.js");
 const cookieParser = require("cookie-parser");
 const PORT = process.env.PORT || 5001;
+
+const logger = require("./config/logger.js");
 dotenv.config();
 
 const app = express();
@@ -33,22 +35,6 @@ const allowedOrigins = [
   "http://localhost:6021",
 ];
 
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     if (!origin) return callback(null, true);
-
-//     // if (allowedOrigins.includes(origin)) {
-//     if (origin.includes("codedrift.co")) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error("Not allowed by CORS"));
-//     }
-//   },
-//   credentials: true,
-//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//   allowedHeaders: ["Content-Type", "Authorization"],
-//   optionsSuccessStatus: 200,
-// };
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
@@ -72,13 +58,51 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+// const corsOptions = {
+//   origin: function (origin, callback) {
+//     if (!origin) return callback(null, true);
+
+//     // if (allowedOrigins.includes(origin)) {
+//     if (origin.includes("codedrift.co")) {
+//       callback(null, true);
+//     } else {
+//       callback(new Error("Not allowed by CORS"));
+//     }
+//   },
+//   credentials: true,
+//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+//   allowedHeaders: ["Content-Type", "Authorization"],
+//   optionsSuccessStatus: 200,
+// };
+app.use((req, res, next) => {
+  logger.info(`API HIT -> ${req.method} ${req.originalUrl}`);
+
+  const oldJson = res.json;
+
+  res.json = function (body) {
+    if (body && body.message) {
+      logger.info(
+        `API DONE -> ${req.method} ${req.originalUrl} | Status: ${res.statusCode} | Message: ${body.message}`
+      );
+    } else {
+      logger.info(
+        `API DONE -> ${req.method} ${req.originalUrl} | Status: ${res.statusCode}`
+      );
+    }
+
+    return oldJson.call(this, body);
+  };
+
+  next();
+});
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 const indexRouter = require("./routes/index.js");
 app.use("/api", indexRouter);
 
 app.use((err, req, res, next) => {
-  console.error("Global Error Handler:", err.stack);
+  logger.error(`Global Error Handler: ${err.stack}`);
   res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || "Internal Server Error",
@@ -86,9 +110,9 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () =>
-  console.log(`🚀 LMS API running on http://localhost:${PORT}`)
+  logger.info(`LMS API running on http://localhost:${PORT}`)
 );
 
 process.on("unhandledRejection", (err, promise) => {
-  console.error(`Unhandled Rejection: ${err.message}`);
+  logger.error(`Unhandled Rejection: ${err.message}`);
 });
