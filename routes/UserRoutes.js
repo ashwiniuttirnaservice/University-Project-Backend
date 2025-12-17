@@ -1,7 +1,6 @@
 const express = require("express");
 const userRouter = express.Router();
 const {
-  // Naya controller function import kiya hai
   getUserProfile,
   getUserProfileTrainer,
   getUsers,
@@ -15,7 +14,7 @@ const { protect, admin } = require("../middleware/authMiddleware.js");
 userRouter.route("/profile").get(protect, getUserProfile);
 userRouter.route("/profiles").get(protect, getUserProfileTrainer);
 
-userRouter.route("/").get(protect, admin, getUsers);
+userRouter.route("/").post(protect, admin, getUsers);
 userRouter
   .route("/:id")
   .get(protect, admin, getUserById)

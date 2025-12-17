@@ -23,14 +23,60 @@ const transporter = nodemailer.createTransport({
 });
 
 exports.registerUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
+  const { firstName, lastName, email, password, mobileNo, role } = req.body;
 
-  if (!firstName || !lastName || !email || !password) {
+  if (!firstName || !lastName || !email || !password || !role) {
     return sendError(res, 400, false, "Please provide all required fields.");
   }
 
-  const existing = await User.findOne({ email });
-  if (existing) {
+  if (role === "trainer") {
+    if (!mobileNo) {
+      return sendError(
+        res,
+        400,
+        false,
+        "Mobile number is required for trainer."
+      );
+    }
+
+    const existingTrainer = await Trainer.findOne({ email });
+    if (existingTrainer) {
+      return sendError(res, 400, false, "Trainer already exists.");
+    }
+
+    const trainer = new Trainer({
+      fullName: `${firstName} ${lastName}`,
+      email,
+      password,
+      mobileNo,
+      role: "trainer",
+
+      dob: "NA",
+      gender: "Other",
+      address: { add1: "NA" },
+      highestQualification: "NA",
+      totalExperience: "0",
+      resume: "NA",
+      availableTiming: "NA",
+
+      approvalStatus: "pending",
+      isApproved: false,
+    });
+
+    await trainer.save();
+
+    return sendResponse(
+      res,
+      201,
+      true,
+      "Trainer registration successful!",
+      trainer
+    );
+  }
+
+  /* ================= ALL OTHER ROLES ================= */
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
     return sendError(res, 400, false, "User already exists.");
   }
 
@@ -39,12 +85,13 @@ exports.registerUser = asyncHandler(async (req, res) => {
     lastName,
     email,
     password,
-    role: "admin",
+    mobileNo,
+    role, // admin, student, vendor, future roles
   });
 
   await user.save();
 
-  return sendResponse(res, 201, true, "Admin registration successful!", user);
+  return sendResponse(res, 201, true, `${role} registration successful!`, user);
 });
 
 exports.verifyEmail = asyncHandler(async (req, res) => {

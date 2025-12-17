@@ -114,11 +114,41 @@ const getUserProfileTrainer = asyncHandler(async (req, res) => {
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find({ isActive: true })
+  const { role } = req.body;
+
+  if (role === "trainer") {
+    const trainers = await Trainer.find()
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    return sendResponse(res, 200, true, "Trainers fetched successfully", {
+      role: "trainer",
+      users: trainers,
+    });
+  }
+
+  if (role && role !== "trainer") {
+    const users = await User.find({ role })
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    return sendResponse(res, 200, true, "Users fetched successfully", {
+      role,
+      users: users,
+    });
+  }
+
+  const users = await User.find().select("-password").sort({ createdAt: -1 });
+
+  const trainers = await Trainer.find()
     .select("-password")
     .sort({ createdAt: -1 });
 
-  return sendResponse(res, 200, true, "All users fetched successfully", users);
+  return sendResponse(res, 200, true, "All users fetched successfully", {
+    role: null,
+    users,
+    trainers,
+  });
 });
 
 const getUserById = asyncHandler(async (req, res) => {

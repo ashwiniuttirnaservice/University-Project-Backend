@@ -11,13 +11,10 @@ const userSchema = new mongoose.Schema(
 
     role: {
       type: String,
-      enum: ["admin", "trainer", "student"],
-      default: "admin", // default as you wrote
     },
 
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch" },
 
-    // Only students will have enrolled courses
     enrolledCourses: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -25,7 +22,6 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
-    // If trainer — this links to trainer profile
     trainerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Trainer",
