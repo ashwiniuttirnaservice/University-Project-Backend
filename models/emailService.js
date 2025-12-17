@@ -25,9 +25,19 @@ exports.sendPasswordEmail = async (email, password) => {
       `,
     };
 
+    console.log(mailOptions, "=mail options");
+    console.log(
+      {
+        user: process.env.NODE_MAILER_EID,
+        pass: process.env.NODE_MAILER_KEY,
+      },
+      "=auth data"
+    );
+
     await transporter.sendMail(mailOptions);
     console.log("Password email sent to:", email);
   } catch (error) {
+    console.log(error, "=error email transporter...");
     console.error("Email send error:", error.message);
     throw new Error("Email sending failed");
   }
