@@ -164,7 +164,7 @@ exports.sendPasswordEmailAPI = asyncHandler(async (req, res) => {
   try {
     await sendPasswordEmail(email, password);
   } catch (err) {
-    return sendError(res, 500, false, "Failed to send email");
+    return sendError(res, 500, false, err?.message || "Failed to send email");
   }
 
   return sendResponse(res, 200, true, "Password sent successfully", {
