@@ -170,14 +170,16 @@ const submitExam = asyncHandler(async (req, res) => {
     }
   });
 
-  const totalMarks = iqTest.questions.reduce(
+  marks = Math.round(marks);
+
+  let totalMarks = iqTest.questions.reduce(
     (a, q) => a + Number(q.marks || 0),
     0
   );
+  totalMarks = Math.round(totalMarks);
 
   const testList = await TestList.findById(testID);
 
-  // ✅ Update IQTest
   await IQTest.updateOne(
     { _id: iqTest._id },
     {
@@ -193,14 +195,11 @@ const submitExam = asyncHandler(async (req, res) => {
     }
   );
 
-  // ✅ SAVE iqTestId UNDER BATCH
   if (iqTest.batchId) {
     await Batch.updateOne(
       { _id: iqTest.batchId },
       {
-        $addToSet: {
-          iqTests: iqTest._id, // 🔥 THIS IS WHAT YOU WANT
-        },
+        $addToSet: { iqTests: iqTest._id },
       }
     );
   }

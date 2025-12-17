@@ -53,6 +53,11 @@ const feedbackSchema = new mongoose.Schema(
       ref: "Student",
     },
 
+    feedbackQuestionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "FeedbackQuestion",
+    },
+
     trainerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Trainer",

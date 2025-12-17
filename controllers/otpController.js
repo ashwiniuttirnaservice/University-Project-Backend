@@ -140,20 +140,18 @@ exports.sendPasswordEmailAPI = asyncHandler(async (req, res) => {
 
   let student = await Student.findOne({ email });
 
-  // 👉 Student not exists → CREATE NEW
   if (!student) {
     student = await Student.create({
       fullName: fullName || "Student",
       email,
       mobileNo,
       selectedProgram,
-      password, // 🔥 IMPORTANT
+      password,
       role: "student",
       status: "Registered",
       isActive: true,
     });
   } else {
-    // 👉 Existing student → update password
     student.password = password;
     await student.save();
 
@@ -163,7 +161,6 @@ exports.sendPasswordEmailAPI = asyncHandler(async (req, res) => {
     );
   }
 
-  // 👉 Always send email
   try {
     await sendPasswordEmail(email, password);
   } catch (err) {

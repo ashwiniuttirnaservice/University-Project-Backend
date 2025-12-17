@@ -310,7 +310,9 @@ exports.getBatchById = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "feedbacks",
-        let: { batchId: "$_id" },
+        let: {
+          batchId: "$_id",
+        },
         pipeline: [
           {
             $match: {
@@ -324,7 +326,7 @@ exports.getBatchById = asyncHandler(async (req, res) => {
             },
           },
         ],
-        as: "studentFeedbacks",
+        as: "allStudentFeedbacks",
       },
     },
 
@@ -341,13 +343,10 @@ exports.getBatchById = asyncHandler(async (req, res) => {
                     $arrayElemAt: [
                       {
                         $filter: {
-                          input: "$studentFeedbacks",
+                          input: "$allStudentFeedbacks",
                           as: "sf",
                           cond: {
-                            $eq: [
-                              { $size: "$$sf.questions" },
-                              { $size: "$$fb.questions" },
-                            ],
+                            $eq: ["$$sf.feedbackQuestionId", "$$fb._id"],
                           },
                         },
                       },
@@ -365,6 +364,7 @@ exports.getBatchById = asyncHandler(async (req, res) => {
                       { $ifNull: ["$$studentFB.nps", {}] },
                     ],
                   },
+
                   questions: {
                     $map: {
                       input: { $ifNull: ["$$fb.questions", []] },
@@ -403,7 +403,12 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         },
       },
     },
-    { $project: { studentFeedbacks: 0 } },
+
+    {
+      $project: {
+        allStudentFeedbacks: 0,
+      },
+    },
 
     {
       $lookup: {

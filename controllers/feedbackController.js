@@ -7,6 +7,7 @@ exports.createFeedback = asyncHandler(async (req, res) => {
     let {
       studentId,
       trainerId,
+      feedbackQuestionId,
       courseId,
       batchId,
       fullName,
@@ -34,6 +35,7 @@ exports.createFeedback = asyncHandler(async (req, res) => {
       studentId,
       trainerId,
       courseId,
+      feedbackQuestionId,
       batchId,
       fullName,
       email,

@@ -8,9 +8,6 @@ const studentSchema = new mongoose.Schema({
   },
   email: {
     type: String,
-
-    lowercase: true,
-    match: /^\S+@\S+\.\S+$/,
   },
   mobileNo: {
     type: String,
