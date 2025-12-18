@@ -9,6 +9,7 @@ const {
   uploadExcel,
   createTest,
   getQuestionsForAdmin,
+  getTestById,
   deleteTestById,
   getTestListForAdmin,
   getAllTests,
@@ -32,6 +33,8 @@ testRouter.get(
   checkAccess("test", "read"),
   getAllTests
 );
+
+testRouter.get("/:id", getTestById);
 
 testRouter.get(
   "/questions/:id",

@@ -4,7 +4,7 @@ const Branch = require("../models/Branch");
 const User = require("../models/User");
 const Trainer = require("../models/Trainer");
 const Student = require("../models/Student");
-
+const mongoose = require("mongoose");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
@@ -118,6 +118,36 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   );
 });
 
+exports.logout = asyncHandler(async (req, res) => {
+  const { _id, role } = req.body;
+
+  if (!_id || !role) {
+    return sendError(res, 400, false, "_id and role are required");
+  }
+
+  const Model = role === "trainer" ? Trainer : User;
+
+  if (!mongoose.Types.ObjectId.isValid(_id)) {
+    return sendError(res, 400, false, "Invalid ID");
+  }
+
+  const account = await Model.findById(_id);
+  if (!account) {
+    return sendError(res, 404, false, "Account not found");
+  }
+
+  account.isLogin = !account.isLogin;
+  await account.save();
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    account.isLogin ? "Login successful" : "Logout successful",
+    { isLogin: account.isLogin }
+  );
+});
+
 exports.loginUser = asyncHandler(async (req, res) => {
   const { email, password, role } = req.body;
 
@@ -132,13 +162,24 @@ exports.loginUser = asyncHandler(async (req, res) => {
 
   if (role === "admin") {
     const admin = await User.findOne({ email, role: "admin" }).select(
-      "+password"
+      "+password +isLogin"
     );
+
     if (!admin || admin.password !== password) {
       return sendError(res, 401, false, "Invalid email or password for admin.");
     }
 
+    if (!admin.isLogin) {
+      return sendError(
+        res,
+        403,
+        false,
+        "This admin currently does not have permission to log in."
+      );
+    }
+
     const token = generateToken(admin._id, admin.role);
+
     return sendResponse(res, 200, true, "Admin login successful", {
       token,
       user: {
@@ -152,7 +193,10 @@ exports.loginUser = asyncHandler(async (req, res) => {
   }
 
   if (role === "trainer") {
-    const trainer = await Trainer.findOne({ email }).select("+password");
+    const trainer = await Trainer.findOne({ email }).select(
+      "+password +isLogin"
+    );
+
     if (!trainer || trainer.password !== password) {
       return sendError(
         res,
@@ -162,13 +206,25 @@ exports.loginUser = asyncHandler(async (req, res) => {
       );
     }
 
+    if (!trainer.isLogin) {
+      return sendError(
+        res,
+        403,
+        false,
+        "This trainer currently does not have permission to log in."
+      );
+    }
+
     const token = generateToken(trainer._id, "trainer");
+
+    const nameParts = trainer.fullName.split(" ");
+
     return sendResponse(res, 200, true, "Trainer login successful", {
       token,
       user: {
         _id: trainer._id,
-        firstName: trainer.fullName.split(" ")[0],
-        lastName: trainer.fullName.split(" ").slice(1).join(" "),
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(" "),
         email: trainer.email,
         role: "trainer",
       },
@@ -177,6 +233,7 @@ exports.loginUser = asyncHandler(async (req, res) => {
 
   if (role === "student") {
     const student = await Student.findOne({ email }).select("+password");
+
     if (!student || student.password !== password) {
       return sendError(
         res,
@@ -187,19 +244,48 @@ exports.loginUser = asyncHandler(async (req, res) => {
     }
 
     const token = generateToken(student._id, "student");
+
+    const nameParts = student.fullName.split(" ");
+
     return sendResponse(res, 200, true, "Student login successful", {
       token,
       user: {
         _id: student._id,
-        firstName: student.fullName.split(" ")[0],
-        lastName: student.fullName.split(" ").slice(1).join(" "),
+        firstName: nameParts[0],
+        lastName: nameParts.slice(1).join(" "),
         email: student.email,
         role: "student",
       },
     });
   }
 
-  return sendError(res, 400, false, "Invalid role specified.");
+  const user = await User.findOne({ email, role }).select("+password +isLogin");
+
+  if (!user || user.password !== password) {
+    return sendError(res, 401, false, `Invalid email or password for ${role}.`);
+  }
+
+  if (!user.isLogin) {
+    return sendError(
+      res,
+      403,
+      false,
+      `This ${role} currently does not have permission to log in.`
+    );
+  }
+
+  const token = generateToken(user._id, role);
+
+  return sendResponse(res, 200, true, `${role} login successful`, {
+    token,
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      role: user.role,
+    },
+  });
 });
 
 exports.getUserProfile = asyncHandler(async (req, res) => {

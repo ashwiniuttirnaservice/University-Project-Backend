@@ -1,213 +1,108 @@
+const mongoose = require("mongoose");
 const Prerequisite = require("../models/Prerequisite");
 const PrerequisiteProgress = require("../models/PrerequisiteProgress");
-const Student = require("../models/Student");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-const ExcelJS = require("exceljs");
-// const PDFDocument = require("pdfkit");
-const mongoose = require("mongoose");
 
-exports.updatePrerequisiteProgress = asyncHandler(async (req, res) => {
-  const { prerequisiteId, studentId, status } = req.body;
+exports.createOrGetProgress = asyncHandler(async (req, res) => {
+  const { prerequisiteId, studentId } = req.body;
 
-  if (!prerequisiteId || !studentId || !status) {
-    return sendError(res, 400, false, "Missing required fields");
+  if (!prerequisiteId || !studentId) {
+    return sendError(res, 400, false, "prerequisiteId and studentId required");
   }
 
-  const existing = await PrerequisiteProgress.findOne({
+  if (
+    !mongoose.Types.ObjectId.isValid(prerequisiteId) ||
+    !mongoose.Types.ObjectId.isValid(studentId)
+  ) {
+    return sendError(res, 400, false, "Invalid ID");
+  }
+
+  // 🔹 check existing progress
+  let progress = await PrerequisiteProgress.findOne({
     prerequisiteId,
     studentId,
   });
 
-  if (existing) {
-    existing.status = status;
-    existing.completedAt = status === "completed" ? new Date() : null;
-    await existing.save();
-    return sendResponse(res, 200, true, "Progress updated", existing);
+  if (progress) {
+    return sendResponse(res, 200, true, "Progress fetched", progress);
   }
-  const progress = await PrerequisiteProgress.create({
+
+  // 🔹 fetch prerequisite content
+  const prerequisite = await Prerequisite.findById(prerequisiteId);
+  if (!prerequisite) {
+    return sendError(res, 404, false, "Prerequisite not found");
+  }
+
+  // 🔹 create progress
+  progress = await PrerequisiteProgress.create({
     prerequisiteId,
     studentId,
-    status,
-    completedAt: status === "completed" ? new Date() : null,
+    courseId: prerequisite.courseId,
+    batchId: prerequisite.batchId,
+    topicsProgress: prerequisite.topics.map((t) => ({
+      topicId: t._id,
+      topicName: t.name,
+    })),
   });
 
   return sendResponse(res, 201, true, "Progress created", progress);
 });
+exports.completeTopic = asyncHandler(async (req, res) => {
+  const { prerequisiteId, studentId, topicId } = req.body;
 
-exports.getCoursePrerequisiteProgress = asyncHandler(async (req, res) => {
-  const { courseId } = req.params;
+  if (!prerequisiteId || !studentId || !topicId) {
+    return sendError(res, 400, false, "All fields required");
+  }
 
-  const prerequisites = await Prerequisite.find({ courseId, isActive: true });
-  const prerequisiteIds = prerequisites.map((p) => p._id);
-
-  const progress = await PrerequisiteProgress.aggregate([
-    { $match: { prerequisiteId: { $in: prerequisiteIds } } },
-    {
-      $lookup: {
-        from: "students",
-        localField: "studentId",
-        foreignField: "_id",
-        as: "student",
-      },
-    },
-    { $unwind: "$student" },
-    {
-      $lookup: {
-        from: "prerequisites",
-        localField: "prerequisiteId",
-        foreignField: "_id",
-        as: "prerequisite",
-      },
-    },
-    { $unwind: "$prerequisite" },
-    { $sort: { "student.fullName": 1 } },
-  ]);
-
-  return sendResponse(res, 200, true, "Course prerequisite progress", progress);
-});
-
-exports.generatePrerequisiteExcelReport = asyncHandler(async (req, res) => {
-  const { courseId } = req.params;
-
-  const prerequisites = await Prerequisite.find({ courseId, isActive: true });
-  const prerequisiteIds = prerequisites.map((p) => p._id);
-
-  const progress = await PrerequisiteProgress.aggregate([
-    { $match: { prerequisiteId: { $in: prerequisiteIds } } },
-    {
-      $lookup: {
-        from: "students",
-        localField: "studentId",
-        foreignField: "_id",
-        as: "student",
-      },
-    },
-    { $unwind: "$student" },
-  ]);
-
-  let grouped = {};
-
-  progress.forEach((item) => {
-    if (!grouped[item.studentId]) {
-      grouped[item.studentId] = {
-        student: item.student.fullName,
-        videos: {},
-        total: prerequisites.length,
-        completed: 0,
-      };
-    }
-
-    const preIndex =
-      prerequisites.findIndex((p) => p._id.equals(item.prerequisiteId)) + 1;
-
-    grouped[item.studentId].videos[`Video ${preIndex}`] =
-      item.status === "completed" ? "100%" : "0%";
-
-    if (item.status === "completed") {
-      grouped[item.studentId].completed++;
-    }
+  const progress = await PrerequisiteProgress.findOne({
+    prerequisiteId,
+    studentId,
   });
 
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Prerequisite Report");
+  if (!progress) {
+    return sendError(res, 404, false, "Progress not found");
+  }
 
-  let header = ["Participant"];
-
-  prerequisites.forEach((_, i) => header.push(`Video ${i + 1}`));
-
-  header.push("Completion %", "Status");
-
-  sheet.addRow(header);
-
-  Object.values(grouped).forEach((row) => {
-    const data = [row.student];
-
-    prerequisites.forEach((_, i) => {
-      data.push(row.videos[`Video ${i + 1}`] || "0%");
-    });
-
-    const percent = Math.round((row.completed / row.total) * 100);
-
-    data.push(percent + "%");
-    data.push(percent === 100 ? "Completed" : "Pending");
-
-    sheet.addRow(data);
-  });
-
-  res.setHeader(
-    "Content-Type",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  const topic = progress.topicsProgress.find(
+    (t) => t.topicId.toString() === topicId
   );
-  res.setHeader("Content-Disposition", "attachment; filename=report.xlsx");
 
-  await workbook.xlsx.write(res);
-  res.end();
+  if (!topic) {
+    return sendError(res, 404, false, "Topic not found");
+  }
+
+  topic.isCompleted = true;
+  topic.completedAt = new Date();
+
+  // 🔹 check full completion
+  const allDone = progress.topicsProgress.every((t) => t.isCompleted === true);
+
+  if (allDone) {
+    progress.isCompleted = true;
+    progress.completedAt = new Date();
+  }
+
+  await progress.save();
+
+  return sendResponse(res, 200, true, "Topic completed", progress);
 });
 
-// exports.generatePrerequisitePdfReport = asyncHandler(async (req, res) => {
-//   const { courseId } = req.params;
+exports.getStudentProgress = asyncHandler(async (req, res) => {
+  const { prerequisiteId, studentId } = req.query;
 
-//   const prerequisites = await Prerequisite.find({ courseId, isActive: true });
-//   const prerequisiteIds = prerequisites.map((p) => p._id);
+  if (!prerequisiteId || !studentId) {
+    return sendError(res, 400, false, "prerequisiteId and studentId required");
+  }
 
-//   const progress = await PrerequisiteProgress.aggregate([
-//     { $match: { prerequisiteId: { $in: prerequisiteIds } } },
-//     {
-//       $lookup: {
-//         from: "students",
-//         localField: "studentId",
-//         foreignField: "_id",
-//         as: "student",
-//       },
-//     },
-//     { $unwind: "$student" },
-//   ]);
+  const progress = await PrerequisiteProgress.findOne({
+    prerequisiteId,
+    studentId,
+  });
 
-//   let grouped = {};
+  if (!progress) {
+    return sendError(res, 404, false, "Progress not found");
+  }
 
-//   progress.forEach((item) => {
-//     if (!grouped[item.studentId]) {
-//       grouped[item.studentId] = {
-//         student: item.student.fullName,
-//         videos: {},
-//         total: prerequisites.length,
-//         completed: 0,
-//       };
-//     }
-
-//     const preIndex =
-//       prerequisites.findIndex((p) => p._id.equals(item.prerequisiteId)) + 1;
-
-//     grouped[item.studentId].videos[`Video ${preIndex}`] =
-//       item.status === "completed" ? "100%" : "0%";
-
-//     if (item.status === "completed") grouped[item.studentId].completed++;
-//   });
-
-//   const doc = new PDFDocument({ margin: 30 });
-
-//   res.setHeader("Content-Type", "application/pdf");
-//   res.setHeader("Content-Disposition", "attachment; filename=report.pdf");
-
-//   doc.pipe(res);
-
-//   doc.fontSize(18).text("Prerequisite Progress Report", { underline: true });
-//   doc.moveDown();
-
-//   Object.values(grouped).forEach((row) => {
-//     doc.fontSize(14).text(`Participant: ${row.student}`);
-
-//     prerequisites.forEach((_, i) => {
-//       doc.text(`Video ${i + 1}: ${row.videos[`Video ${i + 1}`] || "0%"}`);
-//     });
-
-//     const percent = Math.round((row.completed / row.total) * 100);
-
-//     doc.text(`Completion: ${percent}%`);
-//     doc.text(`Status: ${percent === 100 ? "Completed" : "Pending"}`);
-//     doc.moveDown();
-//   });
-
-//   doc.end();
-// });
+  return sendResponse(res, 200, true, "Progress fetched", progress);
+});

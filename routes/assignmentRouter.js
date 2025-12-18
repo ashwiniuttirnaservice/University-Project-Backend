@@ -92,8 +92,6 @@ assignmentRouter.get(
 
 assignmentRouter.post(
   "/submit",
-  protect,
-  checkAccess("assignment", "create"),
 
   upload.array("submissionFile", 10),
   assignmentController.submitAssignment

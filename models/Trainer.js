@@ -141,7 +141,7 @@ const trainerSchema = new mongoose.Schema(
       enum: ["admin", "trainer", "student"],
       default: "trainer",
     },
-
+    isLogin: { type: Boolean, default: true },
     registeredAt: {
       type: Date,
       default: Date.now,

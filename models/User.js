@@ -35,6 +35,11 @@ const userSchema = new mongoose.Schema(
       default: "pending",
     },
 
+    isLogin: {
+      type: Boolean,
+      default: true,
+    },
+
     isActive: {
       type: Boolean,
       default: true,

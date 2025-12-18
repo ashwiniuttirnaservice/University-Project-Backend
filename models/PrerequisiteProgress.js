@@ -10,20 +10,43 @@ const PrerequisiteProgressSchema = new mongoose.Schema(
 
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Student",
+      ref: "User",
       required: true,
     },
 
-    status: {
-      type: String,
-      enum: ["pending", "completed"],
-      default: "pending",
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      required: true,
     },
 
-    completedAt: {
-      type: Date,
-      default: null,
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      required: true,
     },
+
+    topicsProgress: [
+      {
+        topicId: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: true,
+        },
+        topicName: String,
+        isCompleted: {
+          type: Boolean,
+          default: false,
+        },
+        completedAt: Date,
+      },
+    ],
+
+    isCompleted: {
+      type: Boolean,
+      default: false,
+    },
+
+    completedAt: Date,
   },
   { timestamps: true }
 );

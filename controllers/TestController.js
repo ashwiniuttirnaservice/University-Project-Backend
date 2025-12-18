@@ -225,6 +225,40 @@ const deleteTestById = asyncHandler(async (req, res) => {
   sendResponse(res, 200, true, "Assessment  deleted successfully", deleted);
 });
 
+const getTestById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // 1️⃣ Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid Test ID");
+  }
+
+  // 2️⃣ Fetch test
+  const test = await TestList.findById(id)
+    .populate("batchId", "name")
+    .populate("phaseId", "name")
+    .populate("courseId", "title")
+    .populate("chapterId", "title");
+
+  if (!test) {
+    return sendError(res, 404, false, "Test not found");
+  }
+
+  // 3️⃣ Hide correct answer for students (optional)
+  test.questions = test.questions.map((q) => ({
+    _id: q._id,
+    chapterName: q.chapterName,
+    question: q.question,
+    optionA: q.optionA,
+    optionB: q.optionB,
+    optionC: q.optionC,
+    optionD: q.optionD,
+    marks: q.marks,
+  }));
+
+  return sendResponse(res, 200, true, "Test fetched successfully", test);
+});
+
 const getTestListForAdmin = asyncHandler(async (req, res) => {
   const { chapterId, phaseId, batchId } = req.body;
 
@@ -286,5 +320,6 @@ module.exports = {
   deleteTestById,
   getTestListForAdmin,
   getAllTests,
+  getTestById,
   getTestsByBatchId,
 };
