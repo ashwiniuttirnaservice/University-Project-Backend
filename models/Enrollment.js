@@ -72,6 +72,9 @@ const EnrollmentSchema = new mongoose.Schema(
 
       lowercase: true,
     },
+    password: {
+      type: String,
+    },
 
     designation: {
       type: String,
