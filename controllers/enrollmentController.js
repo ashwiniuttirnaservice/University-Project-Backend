@@ -928,21 +928,12 @@ exports.getEnrollmentById = asyncHandler(async (req, res) => {
 const xlsx = require("xlsx");
 
 exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
-  if (!req.file) {
-    return sendError(res, 400, false, "No Excel file uploaded");
+  const rows = req.body.excelData;
+
+  if (!rows || !Array.isArray(rows) || rows.length === 0) {
+    return sendError(res, 400, false, "No student data received");
   }
 
-  // 📌 Read Excel
-  const workbook = xlsx.readFile(req.file.path);
-  const sheetName = workbook.SheetNames[0];
-  const worksheet = workbook.Sheets[sheetName];
-  const rows = xlsx.utils.sheet_to_json(worksheet);
-
-  if (!rows || rows.length === 0) {
-    return sendError(res, 400, false, "No student data found in Excel");
-  }
-
-  // 📌 Enrolled course & batch (from form-data)
   const enrolledCourses = req.body.enrolledCourses
     ? [req.body.enrolledCourses]
     : [];
@@ -970,11 +961,9 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       continue;
     }
 
-    // ✅ Optional password
     const password =
       row.password?.toString().trim() || Math.random().toString(36).slice(-8);
 
-    // 👨‍🎓 Enrollment
     const enrollmentDoc = await Enrollment.create({
       fullName: row.fullName || "",
       email,
@@ -988,7 +977,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     summary.enrollmentSaved++;
 
-    // 👨‍🎓 Student
     const student = await Student.create({
       fullName: row.fullName || "",
       email,
@@ -1003,7 +991,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     summary.studentsSaved++;
 
-    // 🧑‍🤝‍🧑 Batch Mapping
     for (const batchId of enrolledBatches) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,
@@ -1024,5 +1011,11 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     }
   }
 
-  return sendResponse(res, 200, true, "Excel uploaded successfully", summary);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Students imported successfully",
+    summary
+  );
 });

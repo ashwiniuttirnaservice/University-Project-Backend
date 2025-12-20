@@ -1026,20 +1026,17 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     if (!email) continue;
 
-    // 🚫 DUPLICATE STUDENT → FULL SKIP
     const existingStudent = await Student.findOne({ email });
     if (existingStudent) {
       summary.skippedDuplicateStudents++;
       continue;
     }
 
-    // ✅ Password optional
     const password =
       row.password && row.password.toString().trim().length > 0
         ? row.password.toString().trim()
         : Math.random().toString(36).slice(-8);
 
-    // 👨‍🎓 CREATE STUDENT
     const student = await Student.create({
       fullName,
       email,
@@ -1053,7 +1050,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     summary.createdStudents++;
 
-    // 📘 CREATE ENROLLMENT
     const enrollmentDoc = await Enrollment.create({
       studentId: student._id,
       fullName: student.fullName,
@@ -1067,7 +1063,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     summary.newEnrollments++;
 
-    // 🧑‍🤝‍🧑 ADD TO BATCH
     for (const batchId of enrolledBatchIds) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,
