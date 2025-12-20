@@ -4,12 +4,17 @@ const router = express.Router();
 const {
   registerUser,
   loginUser,
-
+  resetPassword,
   logout,
   getUserProfile,
   updateUserProfile,
 } = require("../controllers/authController");
 const { protect } = require("../middleware/authMiddleware");
+router.put(
+  "/reset-password",
+
+  resetPassword
+);
 
 router.post("/register", registerUser);
 router.post("/login", loginUser);

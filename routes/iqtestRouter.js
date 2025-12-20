@@ -9,6 +9,7 @@ const {
   getQuestionsForUser,
   updateUserAnswer,
   getAllResultsByTestId,
+  downloadIQTestReportExcel,
   submitExam,
   getAllInProgressIQTests,
   getCompletedIQTestsForUser,
@@ -46,6 +47,8 @@ iqtestRouter.post(
   checkAccess("test", "read"),
   getAllInProgressIQTests
 );
+
+iqtestRouter.get("/iq-test/:testId/download-excel", downloadIQTestReportExcel);
 
 iqtestRouter.post(
   "/completed",

@@ -184,10 +184,7 @@ exports.getAssignmentSubmissions = asyncHandler(async (req, res) => {
 });
 
 exports.updateAssignment = asyncHandler(async (req, res) => {
-  const { course, chapter, title, description, deadline, status, score } =
-    req.body;
-
-  const updateData = {
+  const {
     course,
     chapter,
     title,
@@ -195,7 +192,22 @@ exports.updateAssignment = asyncHandler(async (req, res) => {
     deadline,
     status,
     score,
-  };
+    batches,
+  } = req.body;
+
+  const updateData = {};
+
+  if (course) updateData.course = course;
+  if (chapter !== undefined) updateData.chapter = chapter;
+  if (title) updateData.title = title;
+  if (description) updateData.description = description;
+  if (deadline) updateData.deadline = deadline;
+  if (status) updateData.status = status;
+  if (score !== undefined) updateData.score = score;
+
+  if (batches !== undefined) {
+    updateData.batches = batches;
+  }
 
   if (req.file) {
     updateData.fileUrl = path.basename(req.file.path);
@@ -214,7 +226,13 @@ exports.updateAssignment = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "Assignment not found");
   }
 
-  return sendResponse(res, 200, true, "Assignment updated", assignment);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Assignment updated successfully",
+    assignment
+  );
 });
 
 exports.downloadSubmissionLogExcelByStudent = asyncHandler(async (req, res) => {

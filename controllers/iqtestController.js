@@ -373,9 +373,116 @@ const getAllResultsByTestId = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "Results fetched successfully", results);
 });
+const ExcelJS = require("exceljs");
+const path = require("path");
+const downloadIQTestReportExcel = async (req, res) => {
+  try {
+    const { testId } = req.params;
+
+    const test = await IQTest.findById(testId)
+      .populate("studentId", "name email")
+      .populate("batchId", "batchName")
+      .populate("courseId", "courseName")
+      .populate("chapterId", "chapterName");
+
+    if (!test) {
+      return res.status(404).json({
+        success: false,
+        message: "IQ Test not found",
+      });
+    }
+
+    const workbook = new ExcelJS.Workbook();
+
+    const summarySheet = workbook.addWorksheet("Summary");
+
+    summarySheet.columns = [
+      { header: "Field", key: "field", width: 30 },
+      { header: "Value", key: "value", width: 40 },
+    ];
+
+    const summaryData = [
+      { field: "Test Title", value: test.title },
+      { field: "Student", value: test.studentId?.name || "-" },
+      { field: "Email", value: test.studentId?.email || "-" },
+      { field: "Batch", value: test.batchId?.batchName || "-" },
+      { field: "Course", value: test.courseId?.courseName || "-" },
+      { field: "Chapter", value: test.chapterId?.chapterName || "All" },
+      { field: "Total Questions", value: test.totalQuestions },
+      { field: "Correct Answers", value: test.correctAnswers },
+      { field: "Wrong Answers", value: test.wrongAnswers },
+      { field: "Total Marks", value: test.totalMarks },
+      { field: "Marks Gained", value: test.marksGained },
+      { field: "Passing Marks", value: test.passingMarks },
+      {
+        field: "Result",
+        value: test.marksGained >= test.passingMarks ? "PASS" : "FAIL",
+      },
+      { field: "Test Status", value: test.status },
+    ];
+
+    summarySheet.addRows(summaryData);
+
+    summarySheet.getRow(1).font = { bold: true };
+
+    const questionSheet = workbook.addWorksheet("Questions Report");
+
+    questionSheet.columns = [
+      { header: "Q.No", key: "qno", width: 10 },
+      { header: "Chapter", key: "chapter", width: 20 },
+      { header: "Question", key: "question", width: 50 },
+      { header: "Option A", key: "optionA", width: 25 },
+      { header: "Option B", key: "optionB", width: 25 },
+      { header: "Option C", key: "optionC", width: 25 },
+      { header: "Option D", key: "optionD", width: 25 },
+      { header: "Correct Answer", key: "correctAns", width: 20 },
+      { header: "Selected Answer", key: "selectedOption", width: 20 },
+      { header: "Is Correct", key: "isCorrect", width: 15 },
+      { header: "Marks", key: "marks", width: 10 },
+    ];
+
+    test.questions.forEach((q, index) => {
+      questionSheet.addRow({
+        qno: index + 1,
+        chapter: q.chapterName || "All",
+        question: q.question,
+        optionA: q.optionA,
+        optionB: q.optionB,
+        optionC: q.optionC,
+        optionD: q.optionD,
+        correctAns: q.correctAns,
+        selectedOption: q.selectedOption || "-",
+        isCorrect: q.isCorrect ? "Yes" : "No",
+        marks: q.marks || 0,
+      });
+    });
+
+    questionSheet.getRow(1).font = { bold: true };
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=IQ_Test_Report_${test._id}.xlsx`
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate Excel report",
+    });
+  }
+};
 
 module.exports = {
   getAllResultsByTestId,
+  downloadIQTestReportExcel,
   getAllIQTests,
   getQuestionsForUser,
   updateUserAnswer,

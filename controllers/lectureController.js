@@ -141,13 +141,13 @@ exports.updateLecture = asyncHandler(async (req, res) => {
 
   const updateData = { ...req.body };
 
-  // ✅ chapter optional handling
-  if (req.body.chapter === undefined) {
-    delete updateData.chapter;
-  } else if (
-    req.body.chapter !== null &&
-    !mongoose.Types.ObjectId.isValid(req.body.chapter)
+  if (
+    req.body.chapter === undefined ||
+    req.body.chapter === "" ||
+    req.body.chapter === null
   ) {
+    delete updateData.chapter;
+  } else if (!mongoose.Types.ObjectId.isValid(req.body.chapter)) {
     return sendError(res, 400, false, "Invalid chapter ID");
   }
 

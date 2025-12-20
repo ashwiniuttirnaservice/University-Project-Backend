@@ -118,6 +118,47 @@ exports.verifyEmail = asyncHandler(async (req, res) => {
   );
 });
 
+exports.resetPassword = asyncHandler(async (req, res) => {
+  const { email, role, newPassword } = req.body;
+
+  if (!email || !role || !newPassword) {
+    return sendError(
+      res,
+      400,
+      false,
+      "Email, role and new password are required"
+    );
+  }
+
+  let account;
+
+  if (role === "trainer") {
+    account = await Trainer.findOne({ email });
+
+    if (!account) {
+      return sendError(res, 404, false, "Trainer not found");
+    }
+
+    account.password = await newPassword;
+
+    await account.save();
+
+    return sendResponse(res, 200, true, "Trainer password reset successful");
+  }
+
+  account = await User.findOne({ email, role });
+
+  if (!account) {
+    return sendError(res, 404, false, "User not found");
+  }
+
+  account.password = await newPassword;
+
+  await account.save();
+
+  return sendResponse(res, 200, true, `${role} password reset successful`);
+});
+
 exports.logout = asyncHandler(async (req, res) => {
   const { _id, role } = req.body;
 

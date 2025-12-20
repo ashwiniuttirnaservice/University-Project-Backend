@@ -984,8 +984,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "No Excel file uploaded");
   }
 
-  const filePath = req.file.path;
-  const workbook = xlsx.readFile(filePath);
+  const workbook = xlsx.readFile(req.file.path);
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
   const rows = xlsx.utils.sheet_to_json(worksheet);
@@ -999,27 +998,25 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     if (typeof input === "string") {
       try {
         input = JSON.parse(input);
-      } catch (e) {
+      } catch {
         input = [input];
       }
     }
-    return [].concat(...input).map((id) => new mongoose.Types.ObjectId(id));
+    return [].concat(input).map((id) => new mongoose.Types.ObjectId(id));
   };
 
   const enrolledCourseIds = parseIds(req.body.enrolledCourses);
   const enrolledBatchIds = parseIds(req.body.enrolledBatches);
 
-  if (!enrolledCourseIds.length) {
-    return sendError(res, 400, false, "Course is required");
+  if (!enrolledCourseIds.length || !enrolledBatchIds.length) {
+    return sendError(res, 400, false, "Course and Batch are required");
   }
 
   const summary = {
     createdStudents: 0,
-    existingStudents: 0,
+    skippedDuplicateStudents: 0,
     newEnrollments: 0,
-    skippedEnrollments: 0,
     addedToBatch: 0,
-    duplicatesSkipped: 0,
   };
 
   for (const row of rows) {
@@ -1029,60 +1026,48 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     if (!email) continue;
 
+    // 🚫 DUPLICATE STUDENT → FULL SKIP
     const existingStudent = await Student.findOne({ email });
-    const existingEnrollment = existingStudent
-      ? await Enrollment.findOne({
-          studentId: existingStudent._id,
-          enrolledCourses: { $all: enrolledCourseIds },
-          enrolledBatches: { $all: enrolledBatchIds },
-        })
-      : null;
-
-    if (existingStudent && existingEnrollment) {
-      summary.duplicatesSkipped++;
+    if (existingStudent) {
+      summary.skippedDuplicateStudents++;
       continue;
     }
 
-    let student = existingStudent;
+    // ✅ Password optional
+    const password =
+      row.password && row.password.toString().trim().length > 0
+        ? row.password.toString().trim()
+        : Math.random().toString(36).slice(-8);
 
-    if (!student) {
-      const rawPassword = Math.random().toString(36).slice(-8);
+    // 👨‍🎓 CREATE STUDENT
+    const student = await Student.create({
+      fullName,
+      email,
+      mobileNo,
+      collegeName: row.collegeName || "",
+      designation: row.designation || "",
+      password,
+      role: "student",
+      isActive: true,
+    });
 
-      student = await Student.create({
-        fullName,
-        email,
-        mobileNo,
-        collegeName: row.collegeName || "",
-        designation: row.designation || "",
-        password: rawPassword,
-        role: "student",
-        isActive: true,
-      });
+    summary.createdStudents++;
 
-      summary.createdStudents++;
-    } else {
-      summary.existingStudents++;
-    }
+    // 📘 CREATE ENROLLMENT
+    const enrollmentDoc = await Enrollment.create({
+      studentId: student._id,
+      fullName: student.fullName,
+      email: student.email,
+      mobileNo: student.mobileNo,
+      designation: student.designation,
+      collegeName: student.collegeName,
+      enrolledCourses: enrolledCourseIds,
+      enrolledBatches: enrolledBatchIds,
+    });
 
-    let enrollmentDoc = existingEnrollment;
+    summary.newEnrollments++;
 
-    if (!enrollmentDoc) {
-      enrollmentDoc = await Enrollment.create({
-        studentId: student._id,
-        fullName: student.fullName,
-        mobileNo: student.mobileNo,
-        email: student.email,
-        designation: student.designation,
-        collegeName: student.collegeName,
-        enrolledCourses: enrolledCourseIds,
-        enrolledBatches: enrolledBatchIds,
-      });
-
-      summary.newEnrollments++;
-    } else {
-      summary.skippedEnrollments++;
-    }
-
+    // 🧑‍🤝‍🧑 ADD TO BATCH
     for (const batchId of enrolledBatchIds) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,

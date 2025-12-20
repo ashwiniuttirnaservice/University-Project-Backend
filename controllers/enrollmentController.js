@@ -925,25 +925,29 @@ exports.getEnrollmentById = asyncHandler(async (req, res) => {
   );
 });
 
-const XLSX = require("xlsx");
-const crypto = require("crypto");
-
-const generatePassword = () => {
-  return crypto.randomInt(100000, 999999).toString();
-};
+const xlsx = require("xlsx");
 
 exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
-  const rows = req.body.excelData;
-
-  if (!rows || rows.length === 0) {
-    return sendError(res, 400, false, "No student data found");
+  if (!req.file) {
+    return sendError(res, 400, false, "No Excel file uploaded");
   }
 
-  const bodyEnrolledCourses = req.body.enrolledCourses
+  // 📌 Read Excel
+  const workbook = xlsx.readFile(req.file.path);
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  const rows = xlsx.utils.sheet_to_json(worksheet);
+
+  if (!rows || rows.length === 0) {
+    return sendError(res, 400, false, "No student data found in Excel");
+  }
+
+  // 📌 Enrolled course & batch (from form-data)
+  const enrolledCourses = req.body.enrolledCourses
     ? [req.body.enrolledCourses]
     : [];
 
-  const bodyEnrolledBatches = req.body.enrolledBatches
+  const enrolledBatches = req.body.enrolledBatches
     ? [req.body.enrolledBatches]
     : [];
 
@@ -955,7 +959,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
   };
 
   for (const row of rows) {
-    const email = row.email?.trim();
+    const email = row.email?.toString().trim().toLowerCase();
     if (!email) continue;
 
     const existingStudent = await Student.findOne({ email });
@@ -966,30 +970,18 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       continue;
     }
 
-    const password = row.password?.toString().trim() || generatePassword();
+    // ✅ Optional password
+    const password =
+      row.password?.toString().trim() || Math.random().toString(36).slice(-8);
 
-    let interestedCourseIds = [];
-    if (row.coursesInterested) {
-      const courseNames = row.coursesInterested.split(",").map((n) => n.trim());
-
-      const courses = await Course.find({
-        title: { $in: courseNames },
-      }).select("_id");
-
-      interestedCourseIds = courses.map((c) => c._id);
-    }
-
-    const finalEnrolledCourses = [...new Set(bodyEnrolledCourses)];
-    const finalEnrolledBatches = [...new Set(bodyEnrolledBatches)];
-
+    // 👨‍🎓 Enrollment
     const enrollmentDoc = await Enrollment.create({
       fullName: row.fullName || "",
       email,
       mobileNo: row.mobileNo || "",
       password,
-      coursesInterested: interestedCourseIds,
-      enrolledCourses: finalEnrolledCourses,
-      enrolledBatches: finalEnrolledBatches,
+      enrolledCourses,
+      enrolledBatches,
       designation: row.designation || "",
       collegeName: row.collegeName || "",
     });
@@ -1000,40 +992,19 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     const student = await Student.create({
       fullName: row.fullName || "",
       email,
-      password,
       mobileNo: row.mobileNo || "",
-      dob: row.dob || null,
-      gender: row.gender || "",
-      selectedProgram: row.selectedProgram || undefined,
-
-      address: {
-        add1: row.add1 || "",
-        add2: row.add2 || "",
-        taluka: row.taluka || "",
-        dist: row.dist || "",
-        state: row.state || "",
-        pincode: row.pincode || "",
-      },
-
-      currentEducation: row.currentEducation || "",
-      boardUniversityCollege: row.boardUniversityCollege || "",
-      branch: row.branchId || null,
-
-      enrolledCourses: finalEnrolledCourses,
-      coursesInterested: interestedCourseIds,
-
+      password,
+      designation: row.designation || "",
       collegeName: row.collegeName || "",
-      preferredBatchTiming: row.preferredBatchTiming || "",
-      preferredMode: row.preferredMode || "",
-
       role: "student",
       isActive: true,
+      enrolledCourses,
     });
 
     summary.studentsSaved++;
 
     // 🧑‍🤝‍🧑 Batch Mapping
-    for (const batchId of finalEnrolledBatches) {
+    for (const batchId of enrolledBatches) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,
         {
