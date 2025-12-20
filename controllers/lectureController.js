@@ -17,13 +17,9 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
     status,
   } = req.body;
 
-  if (!chapter || !mongoose.Types.ObjectId.isValid(chapter)) {
-    return sendError(res, 400, false, "Valid chapter ID is required");
-  }
-
   let contentUrl = null;
   if (req.file) {
-    contentUrl = `${req.file.filename}`;
+    contentUrl = req.file.filename;
   } else if (req.body.contentUrl) {
     contentUrl = req.body.contentUrl;
   }
@@ -37,7 +33,8 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
   const lecturesData = [
     {
       course,
-      chapter,
+      chapter:
+        chapter && mongoose.Types.ObjectId.isValid(chapter) ? chapter : null,
       type,
       title,
       duration,
@@ -50,16 +47,18 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
 
   const createdLectures = await Lecture.insertMany(lecturesData);
 
-  await Chapter.findByIdAndUpdate(chapter, {
-    $push: { lectures: { $each: createdLectures.map((lec) => lec._id) } },
-  });
+  // ✅ update chapter only if valid
+  if (chapter && mongoose.Types.ObjectId.isValid(chapter)) {
+    await Chapter.findByIdAndUpdate(chapter, {
+      $push: { lectures: { $each: createdLectures.map((l) => l._id) } },
+    });
+  }
 
+  // ✅ update batches
   if (batchArray.length > 0) {
     await Batch.updateMany(
       { _id: { $in: batchArray } },
-      {
-        $push: { lectures: { $each: createdLectures.map((lec) => lec._id) } },
-      }
+      { $push: { lectures: { $each: createdLectures.map((l) => l._id) } } }
     );
   }
 
@@ -75,13 +74,12 @@ exports.createMultipleLectures = asyncHandler(async (req, res) => {
 exports.getAllLectures = asyncHandler(async (req, res) => {
   const filter = { isActive: true };
 
-  // Trainer असल्यास batch.trainer मधे शोधायचे
   if (req.user.role === "trainer") {
-    filter.batches = {
-      $in: await Batch.find({
-        trainer: req.user.trainerId,
-      }).distinct("_id"),
-    };
+    const trainerBatches = await Batch.find({
+      trainer: req.user.trainerId,
+    }).distinct("_id");
+
+    filter.batches = { $in: trainerBatches };
   }
 
   const lectures = await Lecture.find(filter)
@@ -100,13 +98,17 @@ exports.getLecturesByCourse = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid course ID");
   }
 
-  const lectures = await Lecture.find({ course: courseId })
+  const lectures = await Lecture.find({
+    course: courseId,
+    isActive: true,
+  })
     .populate("course")
     .populate("chapter")
     .populate("batches");
 
-  if (!lectures.length)
+  if (!lectures.length) {
     return sendError(res, 404, false, "No lectures found for this course");
+  }
 
   return sendResponse(res, 200, true, "Lectures fetched by course", lectures);
 });
@@ -123,7 +125,9 @@ exports.getLectureById = asyncHandler(async (req, res) => {
     .populate("chapter")
     .populate("batches");
 
-  if (!lecture) return sendError(res, 404, false, "Lecture not found");
+  if (!lecture) {
+    return sendError(res, 404, false, "Lecture not found");
+  }
 
   return sendResponse(res, 200, true, "Lecture fetched", lecture);
 });
@@ -136,14 +140,29 @@ exports.updateLecture = asyncHandler(async (req, res) => {
   }
 
   const updateData = { ...req.body };
-  if (req.file) updateData.contentUrl = path.basename(req.file.path);
+
+  // ✅ chapter optional handling
+  if (req.body.chapter === undefined) {
+    delete updateData.chapter;
+  } else if (
+    req.body.chapter !== null &&
+    !mongoose.Types.ObjectId.isValid(req.body.chapter)
+  ) {
+    return sendError(res, 400, false, "Invalid chapter ID");
+  }
+
+  if (req.file) {
+    updateData.contentUrl = req.file.filename;
+  }
 
   const lecture = await Lecture.findByIdAndUpdate(id, updateData, {
     new: true,
     runValidators: true,
   });
 
-  if (!lecture) return sendError(res, 404, false, "Lecture not found");
+  if (!lecture) {
+    return sendError(res, 404, false, "Lecture not found");
+  }
 
   return sendResponse(res, 200, true, "Lecture updated successfully", lecture);
 });
@@ -156,7 +175,6 @@ exports.deleteLecture = asyncHandler(async (req, res) => {
   }
 
   const lecture = await Lecture.findById(id);
-
   if (!lecture) {
     return sendError(res, 404, false, "Lecture not found");
   }
@@ -164,16 +182,14 @@ exports.deleteLecture = asyncHandler(async (req, res) => {
   lecture.isActive = false;
   await lecture.save();
 
-  await lecture.deleteOne();
-
   return sendResponse(res, 200, true, "Lecture deleted successfully");
 });
 
 exports.cloneLecture = asyncHandler(async (req, res) => {
   const { lectureId } = req.body;
 
-  if (!lectureId) {
-    return sendError(res, 400, false, "lectureId is required");
+  if (!lectureId || !mongoose.Types.ObjectId.isValid(lectureId)) {
+    return sendError(res, 400, false, "Valid lectureId is required");
   }
 
   const originalLecture = await Lecture.findById(lectureId);
@@ -184,7 +200,7 @@ exports.cloneLecture = asyncHandler(async (req, res) => {
 
   const clonedLecture = await Lecture.create({
     course: originalLecture.course,
-    chapter: originalLecture.chapter,
+    chapter: originalLecture.chapter || null,
     title: originalLecture.title + " (Copy)",
     description: originalLecture.description,
     contentUrl: originalLecture.contentUrl,
@@ -192,12 +208,15 @@ exports.cloneLecture = asyncHandler(async (req, res) => {
     type: originalLecture.type,
     batches: originalLecture.batches,
     status: originalLecture.status,
-    isActive: originalLecture.isActive,
+    isActive: true,
   });
 
-  await Chapter.findByIdAndUpdate(originalLecture.chapter, {
-    $push: { lectures: clonedLecture._id },
-  });
+  // ✅ update chapter only if exists
+  if (originalLecture.chapter) {
+    await Chapter.findByIdAndUpdate(originalLecture.chapter, {
+      $push: { lectures: clonedLecture._id },
+    });
+  }
 
   return sendResponse(
     res,

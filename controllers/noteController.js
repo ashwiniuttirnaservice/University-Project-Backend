@@ -1,19 +1,22 @@
 const mongoose = require("mongoose");
 const Note = require("../models/Note");
 const Chapter = require("../models/Chapter");
+const Batch = require("../models/Batch");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
-const Batch = require("../models/Batch");
+
 exports.createNote = asyncHandler(async (req, res) => {
   const { course, chapter, title, content, batches } = req.body;
 
-  if (!chapter || !title) {
-    return sendError(res, 400, false, "Chapter and Title are required");
+  if (!title) {
+    return sendError(res, 400, false, "Title is required");
   }
 
-  const chapterExists = await Chapter.findById(chapter);
-  if (!chapterExists) {
-    return sendError(res, 404, false, "Chapter not found");
+  if (chapter && mongoose.Types.ObjectId.isValid(chapter)) {
+    const chapterExists = await Chapter.findById(chapter);
+    if (!chapterExists) {
+      return sendError(res, 404, false, "Chapter not found");
+    }
   }
 
   const batchArray = batches
@@ -23,25 +26,25 @@ exports.createNote = asyncHandler(async (req, res) => {
     : [];
 
   const note = await Note.create({
-    chapter,
     course,
+    chapter: chapter || null,
     title,
     content,
-    file: req.file ? `${req.file.filename}` : null,
-    uploadedAt: new Date(),
+    file: req.file ? req.file.filename : null,
     batches: batchArray,
+    uploadedAt: new Date(),
   });
 
-  await Chapter.findByIdAndUpdate(chapter, {
-    $push: { notes: note._id },
-  });
+  if (chapter && mongoose.Types.ObjectId.isValid(chapter)) {
+    await Chapter.findByIdAndUpdate(chapter, {
+      $push: { notes: note._id },
+    });
+  }
 
   if (batchArray.length > 0) {
     await Batch.updateMany(
       { _id: { $in: batchArray } },
-      {
-        $push: { notes: note._id },
-      }
+      { $push: { notes: note._id } }
     );
   }
 
@@ -51,8 +54,7 @@ exports.createNote = asyncHandler(async (req, res) => {
 exports.getAllNotes = asyncHandler(async (req, res) => {
   const matchQuery = { isActive: true };
 
-  // 🔥 Trainer role filter
-  if (req.user.role === "trainer") {
+  if (req.user?.role === "trainer") {
     const trainerCourseIds = await Batch.find({
       trainer: req.user.trainerId,
     }).distinct("coursesAssigned");
@@ -61,9 +63,8 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
   }
 
   const notes = await Note.aggregate([
-    {
-      $match: matchQuery,
-    },
+    { $match: matchQuery },
+
     {
       $lookup: {
         from: "chapters",
@@ -72,7 +73,9 @@ exports.getAllNotes = asyncHandler(async (req, res) => {
         as: "chapter",
       },
     },
-    { $unwind: "$chapter" },
+
+    { $unwind: { path: "$chapter", preserveNullAndEmptyArrays: true } },
+
     { $sort: { uploadedAt: -1 } },
   ]);
 
@@ -95,7 +98,7 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
         as: "chapterData",
       },
     },
-    { $unwind: "$chapterData" },
+    { $unwind: { path: "$chapterData", preserveNullAndEmptyArrays: true } },
 
     {
       $lookup: {
@@ -105,7 +108,7 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
         as: "weekData",
       },
     },
-    { $unwind: "$weekData" },
+    { $unwind: { path: "$weekData", preserveNullAndEmptyArrays: true } },
 
     {
       $lookup: {
@@ -115,7 +118,7 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
         as: "phaseData",
       },
     },
-    { $unwind: "$phaseData" },
+    { $unwind: { path: "$phaseData", preserveNullAndEmptyArrays: true } },
 
     {
       $match: {
@@ -127,9 +130,8 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
       $project: {
         _id: 1,
         title: 1,
-        fileUrl: 1,
+        file: 1,
         uploadedAt: 1,
-        description: 1,
         "chapterData._id": 1,
         "chapterData.title": 1,
       },
@@ -142,13 +144,7 @@ exports.getNotesByCourse = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "No notes found for this course");
   }
 
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Notes fetched successfully for the given course",
-    notes
-  );
+  return sendResponse(res, 200, true, "Notes fetched successfully", notes);
 });
 
 exports.getNoteById = asyncHandler(async (req, res) => {
@@ -160,6 +156,7 @@ exports.getNoteById = asyncHandler(async (req, res) => {
 
   const note = await Note.aggregate([
     { $match: { _id: new mongoose.Types.ObjectId(id) } },
+
     {
       $lookup: {
         from: "chapters",
@@ -168,12 +165,8 @@ exports.getNoteById = asyncHandler(async (req, res) => {
         as: "chapter",
       },
     },
-    {
-      $unwind: {
-        path: "$chapter",
-        preserveNullAndEmptyArrays: true,
-      },
-    },
+    { $unwind: { path: "$chapter", preserveNullAndEmptyArrays: true } },
+
     {
       $lookup: {
         from: "modules",
@@ -188,6 +181,7 @@ exports.getNoteById = asyncHandler(async (req, res) => {
         preserveNullAndEmptyArrays: true,
       },
     },
+
     {
       $lookup: {
         from: "courses",
@@ -200,31 +194,6 @@ exports.getNoteById = asyncHandler(async (req, res) => {
       $unwind: {
         path: "$chapter.courseDetails",
         preserveNullAndEmptyArrays: true,
-      },
-    },
-    {
-      $project: {
-        _id: 1,
-        title: 1,
-        content: 1,
-        file: 1,
-        uploadedAt: 1,
-        createdAt: 1,
-        updatedAt: 1,
-        __v: 1,
-        chapter: {
-          _id: 1,
-          chapterName: 1,
-          description: 1,
-          moduleDetails: {
-            _id: 1,
-            moduleName: 1,
-          },
-          courseDetails: {
-            _id: 1,
-            courseName: 1,
-          },
-        },
       },
     },
   ]);
@@ -240,12 +209,26 @@ exports.updateNote = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { title, content, chapter } = req.body;
 
-  let updateData = { title, content };
-  if (chapter) updateData.chapter = chapter;
-  if (req.file) updateData.file = `${req.file.filename}`;
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    return sendError(res, 400, false, "Invalid note ID");
+  }
+
+  const updateData = {};
+
+  if (title !== undefined) updateData.title = title;
+  if (content !== undefined) updateData.content = content;
+
+  if (chapter === null || mongoose.Types.ObjectId.isValid(chapter)) {
+    updateData.chapter = chapter;
+  }
+
+  if (req.file) updateData.file = req.file.filename;
 
   const note = await Note.findByIdAndUpdate(id, updateData, { new: true });
-  if (!note) return sendError(res, 404, false, "Note not found");
+
+  if (!note) {
+    return sendError(res, 404, false, "Note not found");
+  }
 
   return sendResponse(res, 200, true, "Note updated successfully", note);
 });
@@ -258,7 +241,6 @@ exports.deleteNote = asyncHandler(async (req, res) => {
   }
 
   const note = await Note.findById(id);
-
   if (!note) {
     return sendError(res, 404, false, "Note not found");
   }
@@ -266,37 +248,37 @@ exports.deleteNote = asyncHandler(async (req, res) => {
   note.isActive = false;
   await note.save();
 
-  await note.deleteOne();
-
   return sendResponse(res, 200, true, "Note deleted successfully");
 });
 
 exports.cloneNote = asyncHandler(async (req, res) => {
   const { noteId } = req.body;
 
-  if (!noteId) {
-    return sendError(res, 400, false, "noteId is required");
+  if (!noteId || !mongoose.Types.ObjectId.isValid(noteId)) {
+    return sendError(res, 400, false, "Valid noteId is required");
   }
 
   const originalNote = await Note.findById(noteId);
-
   if (!originalNote) {
     return sendError(res, 404, false, "Note not found");
   }
 
   const clonedNote = await Note.create({
     course: originalNote.course,
-    chapter: originalNote.chapter,
+    chapter: originalNote.chapter || null,
     title: originalNote.title + " (Copy)",
     content: originalNote.content,
     file: originalNote.file,
     isActive: originalNote.isActive,
     uploadedAt: new Date(),
+    batches: originalNote.batches,
   });
 
-  await Chapter.findByIdAndUpdate(originalNote.chapter, {
-    $push: { notes: clonedNote._id },
-  });
+  if (originalNote.chapter) {
+    await Chapter.findByIdAndUpdate(originalNote.chapter, {
+      $push: { notes: clonedNote._id },
+    });
+  }
 
   return sendResponse(res, 201, true, "Note cloned successfully", clonedNote);
 });

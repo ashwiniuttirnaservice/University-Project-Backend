@@ -4,15 +4,14 @@ const meetingRouter = express.Router();
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
 const meetingController = require("../controllers/meetingController");
-
 const roleFilter = require("../middleware/roleFilter");
 
 meetingRouter.post(
   "/",
-  protect,
-  checkAccess("meeting", "create"),
+
   meetingController.createMeeting
 );
+
 meetingRouter.get(
   "/",
   protect,
@@ -31,7 +30,6 @@ meetingRouter.get(
 meetingRouter.get(
   "/batch/:batchId",
   protect,
-
   checkAccess("meeting", "read"),
   meetingController.getMeetingsByBatch
 );
@@ -48,6 +46,13 @@ meetingRouter.delete(
   protect,
   checkAccess("meeting", "delete"),
   meetingController.deleteMeeting
+);
+
+meetingRouter.get(
+  "/recurring/:recurrenceGroupId",
+  protect,
+  checkAccess("meeting", "read"),
+  meetingController.getRecurringMeetings
 );
 
 module.exports = meetingRouter;

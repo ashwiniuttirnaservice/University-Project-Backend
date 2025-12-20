@@ -21,6 +21,7 @@ const MeetingSchema = new mongoose.Schema(
     platform: {
       type: String,
       required: true,
+      enum: ["Zoom", "Google Meet", "Microsoft Teams", "Offline"],
     },
 
     meetingLink: {
@@ -53,6 +54,7 @@ const MeetingSchema = new mongoose.Schema(
     course: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Course",
+      required: true,
     },
 
     startTime: {
@@ -62,10 +64,11 @@ const MeetingSchema = new mongoose.Schema(
 
     endTime: {
       type: Date,
+      required: true,
     },
 
     duration: {
-      type: Number,
+      type: String, // HH:MM
     },
 
     recordingUrl: {
@@ -74,7 +77,7 @@ const MeetingSchema = new mongoose.Schema(
 
     status: {
       type: String,
-
+      enum: ["scheduled", "ongoing", "completed", "cancelled"],
       default: "scheduled",
     },
 
@@ -87,10 +90,21 @@ const MeetingSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+
+    recurrenceGroupId: {
+      type: mongoose.Schema.Types.ObjectId,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+MeetingSchema.virtual("occurrences", {
+  ref: "Meeting",
+  localField: "recurrenceGroupId",
+  foreignField: "recurrenceGroupId",
+});
 
 module.exports = mongoose.model("Meeting", MeetingSchema);

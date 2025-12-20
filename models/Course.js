@@ -4,7 +4,7 @@ const courseSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
-    duration: { type: String, required: true },
+    duration: { type: String, required: false },
 
     branch: {
       type: mongoose.Schema.Types.ObjectId,
@@ -37,8 +37,8 @@ const courseSchema = new mongoose.Schema(
     keyFeatures: [
       {
         title: { type: String, required: false },
-        description: { type: String },
-        subPoints: [{ type: String }],
+        description: { type: String, required: false },
+        subPoints: [{ type: String, required: false }],
       },
     ],
 
@@ -51,17 +51,13 @@ const courseSchema = new mongoose.Schema(
       type: String,
     },
 
-    cloudLabsLink: {
-      type: String,
-      default: null,
+    trainingPlan: {
+      folderName: { type: String, default: null, required: false },
+      fileName: { type: String, default: null, required: false },
+      originalName: { type: String, default: null, required: false },
+      fileType: { type: String, default: null, required: false },
     },
 
-    trainingPlan: {
-      folderName: { type: String, default: null },
-      fileName: { type: String, default: null },
-      originalName: { type: String, default: null },
-      fileType: { type: String, default: null },
-    },
     videolectures: [
       { type: mongoose.Schema.Types.ObjectId, ref: "VideoLecture" },
     ],

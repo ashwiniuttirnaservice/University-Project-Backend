@@ -118,7 +118,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
   if (role === "trainer") {
     const trainers = await Trainer.find()
-      .select("-password")
+      .select("+password")
       .sort({ createdAt: -1 });
 
     return sendResponse(res, 200, true, "Trainers fetched successfully", {
@@ -129,7 +129,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
   if (role && role !== "trainer") {
     const users = await User.find({ role })
-      .select("-password")
+      .select("+password")
       .sort({ createdAt: -1 });
 
     return sendResponse(res, 200, true, "Users fetched successfully", {
@@ -141,7 +141,7 @@ const getUsers = asyncHandler(async (req, res) => {
   const users = await User.find().select("-password").sort({ createdAt: -1 });
 
   const trainers = await Trainer.find()
-    .select("-password")
+    .select("+password")
     .sort({ createdAt: -1 });
 
   return sendResponse(res, 200, true, "All users fetched successfully", {

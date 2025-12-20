@@ -1,6 +1,6 @@
 const express = require("express");
 const {
-  createBatch,
+  createBatchWithCloudLabs,
   getAllBatches,
   getBatchesByCourseAndStudent,
   getBatchById,
@@ -11,6 +11,7 @@ const {
   assignStudentToBatch,
   getAllBatches1,
   getBatchesForStudent,
+
   uploadEnrollmentExcel,
 } = require("../controllers/batchController");
 
@@ -21,7 +22,13 @@ const roleFilter = require("../middleware/roleFilter");
 
 const router = express.Router();
 
-router.post("/", protect, checkAccess("batch", "create"), createBatch);
+router.post(
+  "/",
+  protect,
+  checkAccess("batch", "create"),
+  upload.single("labs"),
+  createBatchWithCloudLabs
+);
 
 router.post("/student-batche", assignStudentToBatch);
 

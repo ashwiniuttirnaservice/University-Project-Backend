@@ -22,6 +22,8 @@ const getFolderPath = (fieldname) => {
     case "notes":
     case "file":
       return "uploads/course-notes/";
+    case "labs":
+      return "uploads/cloudLabs/";
     case "testExcel":
       return "uploads/test-excel/";
     case "bannerImage":
@@ -81,7 +83,6 @@ const storage = multer.diskStorage({
     cb(null, file.fieldname + "_" + uniqueSuffix + ext);
   },
 });
-
 const allowedMimeTypes = [
   "image/jpeg",
   "image/jpg",
@@ -91,14 +92,15 @@ const allowedMimeTypes = [
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "application/vnd.ms-powerpoint",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  "application/zip",
-  "application/x-zip-compressed",
   "application/vnd.ms-excel",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+  "application/zip",
+  "application/x-zip-compressed",
   "video/mp4",
-  "video/mov",
-  "video/avi",
-  "video/mkv",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
 ];
 
 const fileFilter = (req, file, cb) => {

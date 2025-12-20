@@ -480,6 +480,7 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
+    password,
     enrolledCourses,
     enrolledBatches,
     designation,
@@ -513,6 +514,7 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
       fullName,
       mobileNo,
       email,
+      password,
       role: "student",
       status: "Enrolled",
       isActive: true,
@@ -540,6 +542,7 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
+    password,
     designation,
     collegeName,
     profilePhotoStudent,
@@ -594,7 +597,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
-    coursesInterested,
+    enrolledCourses,
     enrolledBatches,
     designation,
     collegeName,
@@ -635,11 +638,11 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
   student.email = email || student.email;
   await student.save();
 
-  const newCoursesInterested = Array.isArray(coursesInterested)
-    ? coursesInterested
-    : coursesInterested
-    ? coursesInterested.split(",")
-    : existingEnrollment.coursesInterested.map((id) => id.toString());
+  const newEnrolledCourses = Array.isArray(enrolledCourses)
+    ? enrolledCourses
+    : enrolledCourses
+    ? enrolledCourses.split(",")
+    : existingEnrollment.enrolledCourses.map((id) => id.toString());
 
   const newEnrolledBatches = Array.isArray(enrolledBatches)
     ? enrolledBatches
@@ -661,7 +664,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
 
   existingEnrollment.profilePhotoStudent = profilePhotoStudent;
 
-  existingEnrollment.coursesInterested = newCoursesInterested.map(
+  existingEnrollment.enrolledCourses = newEnrolledCourses.map(
     (id) => new mongoose.Types.ObjectId(id)
   );
 
@@ -923,6 +926,12 @@ exports.getEnrollmentById = asyncHandler(async (req, res) => {
 });
 
 const XLSX = require("xlsx");
+const crypto = require("crypto");
+
+const generatePassword = () => {
+  return crypto.randomInt(100000, 999999).toString();
+};
+
 exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
   const rows = req.body.excelData;
 
@@ -947,6 +956,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
   for (const row of rows) {
     const email = row.email?.trim();
+    if (!email) continue;
 
     const existingStudent = await Student.findOne({ email });
     const existingEnrollment = await Enrollment.findOne({ email });
@@ -956,30 +966,27 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       continue;
     }
 
-    let interestedCourseIds = [];
-    let enrolledCourseIds = [];
-    let enrolledBatchIds = [];
+    const password = row.password?.toString().trim() || generatePassword();
 
+    let interestedCourseIds = [];
     if (row.coursesInterested) {
       const courseNames = row.coursesInterested.split(",").map((n) => n.trim());
-      const courses = await Course.find({ title: { $in: courseNames } }).select(
-        "_id"
-      );
+
+      const courses = await Course.find({
+        title: { $in: courseNames },
+      }).select("_id");
+
       interestedCourseIds = courses.map((c) => c._id);
     }
 
-    const finalEnrolledCourses = [
-      ...new Set([...enrolledCourseIds, ...bodyEnrolledCourses]),
-    ];
-
-    const finalEnrolledBatches = [
-      ...new Set([...enrolledBatchIds, ...bodyEnrolledBatches]),
-    ];
+    const finalEnrolledCourses = [...new Set(bodyEnrolledCourses)];
+    const finalEnrolledBatches = [...new Set(bodyEnrolledBatches)];
 
     const enrollmentDoc = await Enrollment.create({
       fullName: row.fullName || "",
-      mobileNo: row.mobileNo || "",
       email,
+      mobileNo: row.mobileNo || "",
+      password,
       coursesInterested: interestedCourseIds,
       enrolledCourses: finalEnrolledCourses,
       enrolledBatches: finalEnrolledBatches,
@@ -989,9 +996,11 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     summary.enrollmentSaved++;
 
+    // 👨‍🎓 Student
     const student = await Student.create({
       fullName: row.fullName || "",
       email,
+      password,
       mobileNo: row.mobileNo || "",
       dob: row.dob || null,
       gender: row.gender || "",
@@ -1007,9 +1016,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       },
 
       currentEducation: row.currentEducation || "",
-      status: row.status || "",
       boardUniversityCollege: row.boardUniversityCollege || "",
-
       branch: row.branchId || null,
 
       enrolledCourses: finalEnrolledCourses,
@@ -1018,16 +1025,14 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       collegeName: row.collegeName || "",
       preferredBatchTiming: row.preferredBatchTiming || "",
       preferredMode: row.preferredMode || "",
-      idProofStudent: row.idProofStudent || "",
-      profilePhotoStudent: row.profilePhotoStudent || "",
 
-      password: "",
       role: "student",
       isActive: true,
     });
 
     summary.studentsSaved++;
 
+    // 🧑‍🤝‍🧑 Batch Mapping
     for (const batchId of finalEnrolledBatches) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,
@@ -1048,10 +1053,5 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     }
   }
 
-  return sendResponse(res, 200, true, "Excel uploaded successfully.", {
-    enrollmentSaved: summary.enrollmentSaved,
-    studentsSaved: summary.studentsSaved,
-    addedToBatch: summary.addedToBatch,
-    duplicates: summary.duplicates,
-  });
+  return sendResponse(res, 200, true, "Excel uploaded successfully", summary);
 });

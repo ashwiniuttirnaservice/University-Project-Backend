@@ -3,7 +3,12 @@ const mongoose = require("mongoose");
 const AssignmentSchema = new mongoose.Schema(
   {
     course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
-    chapter: { type: mongoose.Schema.Types.ObjectId, ref: "Chapter" },
+
+    chapter: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Chapter",
+      required: false,
+    },
     title: { type: String },
     description: { type: String },
     fileUrl: { type: String },

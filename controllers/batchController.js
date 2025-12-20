@@ -6,7 +6,8 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 const Trainer = require("../models/Trainer");
 const Course = require("../models/Course");
 const Enrollment = require("../models/Enrollment");
-exports.createBatch = asyncHandler(async (req, res) => {
+
+exports.createBatchWithCloudLabs = asyncHandler(async (req, res) => {
   const {
     batchName,
     time,
@@ -19,9 +20,11 @@ exports.createBatch = asyncHandler(async (req, res) => {
     coursesAssigned,
     trainer,
     additionalNotes,
+    durationPerDayHours,
+    cloudLabsLink,
   } = req.body;
 
-  const batch = await Batch.create({
+  const batchData = {
     batchName,
     time,
     days,
@@ -33,7 +36,24 @@ exports.createBatch = asyncHandler(async (req, res) => {
     coursesAssigned,
     trainer,
     additionalNotes,
-  });
+    durationPerDayHours: durationPerDayHours || 1,
+  };
+
+  if (req.file || cloudLabsLink) {
+    batchData.cloudLabs = {
+      link: cloudLabsLink || null,
+      excelFile: req.file
+        ? {
+            fileName: req.file.originalname,
+            fileUrl: req.file.path,
+            uploadedAt: new Date(),
+          }
+        : null,
+      students: [],
+    };
+  }
+
+  const batch = await Batch.create(batchData);
 
   if (Array.isArray(trainer) && trainer.length > 0) {
     await Trainer.updateMany(
@@ -49,11 +69,81 @@ exports.createBatch = asyncHandler(async (req, res) => {
     );
   }
 
-  return sendResponse(res, 201, true, "Batch created successfully", batch);
+  if (req.file) {
+    const workbook = xlsx.readFile(req.file.path);
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const rows = xlsx.utils.sheet_to_json(worksheet);
+
+    if (!rows || rows.length === 0)
+      return sendError(res, 400, false, "Excel is empty");
+
+    let added = 0;
+    let skipped = 0;
+
+    batch.cloudLabs.students = batch.cloudLabs.students || [];
+
+    for (const row of rows) {
+      const email = (row.email || "").trim().toLowerCase();
+      const username = (row.username || "").trim();
+      const password = (row.password || "").trim();
+
+      if (!username || !password || !email) {
+        skipped++;
+        continue;
+      }
+
+      const exists = batch.cloudLabs.students.some(
+        (s) => s.username === username || s.email === email
+      );
+
+      if (exists) {
+        skipped++;
+        continue;
+      }
+
+      batch.cloudLabs.students.push({
+        email,
+        username,
+        password,
+      });
+
+      added++;
+    }
+
+    await batch.save();
+
+    return sendResponse(
+      res,
+      201,
+      true,
+      "Batch created with CloudLabs successfully",
+      {
+        batchId: batch._id,
+        cloudLabsLink: batch.cloudLabs.link,
+        totalStudents: batch.cloudLabs.students.length,
+        added,
+        skipped,
+      }
+    );
+  }
+
+  // If no cloudLabs, return batch info
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Batch created successfully (without CloudLabs)",
+    {
+      batchId: batch._id,
+    }
+  );
 });
 
 exports.getAllBatches = asyncHandler(async (req, res) => {
   const batches = await Batch.aggregate([
+    { $match: { isActive: true } },
+
     {
       $lookup: {
         from: "courses",
@@ -65,9 +155,9 @@ exports.getAllBatches = asyncHandler(async (req, res) => {
     {
       $lookup: {
         from: "trainers",
-        localField: "trainersAssigned",
+        localField: "trainer",
         foreignField: "_id",
-        as: "trainersAssigned",
+        as: "trainer",
       },
     },
     {
@@ -570,6 +660,8 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         mode: 1,
         startDate: 1,
         endDate: 1,
+        durationPerDayHours: 1,
+        cloudLabs: 1,
         status: 1,
         additionalNotes: 1,
         isActive: 1,
@@ -811,29 +903,25 @@ exports.updateBatch = asyncHandler(async (req, res) => {
     coursesAssigned,
     trainer,
     additionalNotes,
+    durationPerDayHours,
   } = req.body;
 
-  const updatedBatch = await Batch.findByIdAndUpdate(
-    batchId,
-    {
-      batchName,
-      time,
-      days,
-      mode,
-      startDate,
-      endDate,
-      status,
-      isEnrolled,
-      coursesAssigned,
-      trainer,
-      additionalNotes,
-    },
-    { new: true }
-  );
-
-  if (!updatedBatch) {
+  const batch = await Batch.findById(batchId);
+  if (!batch) {
     return sendError(res, 404, false, "Batch not found");
   }
+
+  if (batchName !== undefined) batch.batchName = batchName;
+  if (time !== undefined) batch.time = time;
+  if (days !== undefined) batch.days = days;
+  if (mode !== undefined) batch.mode = mode;
+  if (startDate !== undefined) batch.startDate = startDate;
+  if (endDate !== undefined) batch.endDate = endDate;
+  if (status !== undefined) batch.status = status;
+  if (isEnrolled !== undefined) batch.isEnrolled = isEnrolled;
+  if (additionalNotes !== undefined) batch.additionalNotes = additionalNotes;
+  if (durationPerDayHours !== undefined)
+    batch.durationPerDayHours = durationPerDayHours;
 
   if (Array.isArray(trainer)) {
     await Trainer.updateMany(
@@ -847,6 +935,8 @@ exports.updateBatch = asyncHandler(async (req, res) => {
         { $addToSet: { batches: batchId } }
       );
     }
+
+    batch.trainer = trainer;
   }
 
   if (Array.isArray(coursesAssigned)) {
@@ -861,15 +951,13 @@ exports.updateBatch = asyncHandler(async (req, res) => {
         { $addToSet: { batches: batchId } }
       );
     }
+
+    batch.coursesAssigned = coursesAssigned;
   }
 
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Batch updated successfully",
-    updatedBatch
-  );
+  await batch.save();
+
+  return sendResponse(res, 200, true, "Batch updated successfully", batch);
 });
 
 exports.deleteBatch = asyncHandler(async (req, res) => {
@@ -952,12 +1040,9 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     if (existingStudent && existingEnrollment) {
       summary.duplicatesSkipped++;
-      continue; // 🔥 FULL SKIP – DO NOT CREATE ANYTHING
+      continue;
     }
 
-    // **************************************************
-    // 2️⃣ STUDENT CREATE / USE EXISTING
-    // **************************************************
     let student = existingStudent;
 
     if (!student) {
@@ -979,9 +1064,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       summary.existingStudents++;
     }
 
-    // **************************************************
-    // 3️⃣ ENROLLMENT CREATE
-    // **************************************************
     let enrollmentDoc = existingEnrollment;
 
     if (!enrollmentDoc) {
@@ -1001,9 +1083,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       summary.skippedEnrollments++;
     }
 
-    // **************************************************
-    // 4️⃣ BATCH UPDATE
-    // **************************************************
     for (const batchId of enrolledBatchIds) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,
@@ -1024,9 +1103,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     }
   }
 
-  // **************************************************
-  // 5️⃣ FINAL RESPONSE
-  // **************************************************
   return sendResponse(
     res,
     200,

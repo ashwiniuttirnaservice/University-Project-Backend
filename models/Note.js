@@ -5,7 +5,7 @@ const NoteSchema = new mongoose.Schema({
   chapter: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Chapter",
-    required: true,
+    required: false,
   },
   batches: [
     {

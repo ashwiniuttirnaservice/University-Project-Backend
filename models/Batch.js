@@ -67,6 +67,7 @@ const batchSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course",
+        require: true,
       },
     ],
 
@@ -103,9 +104,29 @@ const batchSchema = new mongoose.Schema(
         ref: "Enrollment",
       },
     ],
+    tests: [{ type: mongoose.Schema.Types.ObjectId, ref: "TestList" }],
 
     iqTests: [{ type: mongoose.Schema.Types.ObjectId, ref: "IQTest" }],
-
+    durationPerDayHours: {
+      type: Number,
+      required: true,
+      min: 0.5,
+    },
+    cloudLabs: {
+      link: String,
+      excelFile: {
+        fileName: String,
+        fileUrl: String,
+        uploadedAt: { type: Date, default: Date.now },
+      },
+      students: [
+        {
+          username: String,
+          password: String,
+          email: String,
+        },
+      ],
+    },
     studentCount: {
       type: Number,
       default: 0,
@@ -113,12 +134,12 @@ const batchSchema = new mongoose.Schema(
 
     startDate: {
       type: String,
-      required: false,
+      required: true,
     },
 
     endDate: {
       type: String,
-      required: false,
+      required: true,
     },
 
     status: {

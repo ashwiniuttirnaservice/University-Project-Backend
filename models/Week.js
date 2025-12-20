@@ -7,7 +7,7 @@ const WeekSchema = new mongoose.Schema(
       required: true,
     },
     phase: { type: mongoose.Schema.Types.ObjectId, ref: "Phase" },
-    weekNumber: { type: Number, required: true },
+    weekNumber: { type: Number, required: false },
     title: { type: String, required: true },
     chapters: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chapter" }],
     isActive: {

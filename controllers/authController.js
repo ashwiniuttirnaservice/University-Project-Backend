@@ -321,11 +321,7 @@ exports.updateUserProfile = asyncHandler(async (req, res) => {
     user.branch = null;
   }
 
-  if (password && password.length >= 6) {
-    user.password = password;
-  } else if (password && password.length < 6) {
-    return sendError(res, 400, false, "Password must be at least 6 characters");
-  }
+  user.password = password;
 
   await user.save();
   const updatedUser = await User.findById(user._id).populate("branch", "name");

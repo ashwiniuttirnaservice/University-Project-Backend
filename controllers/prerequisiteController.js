@@ -37,7 +37,6 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
     return { ...topic, materialFiles: filesForTopic };
   });
 
-  // ✅ Create Prerequisite
   const prerequisite = await Prerequisite.create({
     courseId,
     batchId,
@@ -46,11 +45,10 @@ exports.createPrerequisite = asyncHandler(async (req, res) => {
     topics: finalTopics,
   });
 
-  // ✅ Save prerequisiteId inside Batch document
   await Batch.findByIdAndUpdate(
     batchId,
     {
-      $push: { prerequisites: prerequisite._id }, // array field
+      $push: { prerequisites: prerequisite._id },
     },
     { new: true }
   );

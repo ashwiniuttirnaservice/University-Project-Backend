@@ -2,7 +2,11 @@ const mongoose = require("mongoose");
 
 const PhaseSchema = new mongoose.Schema(
   {
-    course: { type: mongoose.Schema.Types.ObjectId, ref: "Course" },
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      require: true,
+      ref: "Course",
+    },
     title: { type: String, required: true },
     description: { type: String },
     weeks: [{ type: mongoose.Schema.Types.ObjectId, ref: "Week" }],

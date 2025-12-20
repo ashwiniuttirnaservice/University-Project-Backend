@@ -1,13 +1,13 @@
 const mongoose = require("mongoose");
 const Meeting = require("../models/Meeting");
+const Attendance = require("../models/Attendance");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
-const Batch = require("../models/Batch");
+
 exports.createMeeting = asyncHandler(async (req, res) => {
   const {
     title,
     description,
-    meetingDescription,
     platform,
     meetingLink,
     meetingId,
@@ -15,61 +15,127 @@ exports.createMeeting = asyncHandler(async (req, res) => {
     batch,
     trainer,
     course,
+    startDate,
+    endDate,
     startTime,
     endTime,
-    recordingUrl,
     notification,
   } = req.body;
 
-  const duration =
-    startTime && endTime
-      ? Math.round((new Date(endTime) - new Date(startTime)) / 60000)
-      : null;
+  if (
+    !title ||
+    !platform ||
+    !meetingLink ||
+    !batch ||
+    !trainer ||
+    !course ||
+    !startDate ||
+    !endDate ||
+    !startTime ||
+    !endTime
+  ) {
+    return sendError(res, 400, false, "Required fields are missing");
+  }
 
-  const meeting = await Meeting.create({
-    title,
-    description,
-    meetingDescription,
-    platform,
-    meetingLink,
-    meetingId,
-    meetingPassword,
-    batch,
-    trainer,
-    course,
-    startTime,
-    endTime,
-    duration,
-    recordingUrl,
-    notification,
+  const recurrenceGroupId = new mongoose.Types.ObjectId();
+  const meetings = [];
+
+  let current = new Date(startDate);
+  const end = new Date(endDate);
+  let sessionCounter = 1;
+
+  while (current <= end) {
+    const start = new Date(current);
+    const endT = new Date(current);
+
+    const [sh, sm] = startTime.split(":").map(Number);
+    const [eh, em] = endTime.split(":").map(Number);
+
+    start.setHours(sh, sm, 0, 0);
+    endT.setHours(eh, em, 0, 0);
+
+    // Duration in HH:MM
+    const durationMinutes = (endT - start) / (1000 * 60);
+    const hours = Math.floor(durationMinutes / 60)
+      .toString()
+      .padStart(2, "0");
+    const minutes = Math.floor(durationMinutes % 60)
+      .toString()
+      .padStart(2, "0");
+    const durationString = `${hours}:${minutes}`;
+
+    meetings.push({
+      title: `${title} - Session ${sessionCounter}`,
+      description,
+      platform,
+      meetingLink,
+      meetingId,
+      meetingPassword,
+      batch,
+      trainer,
+      course,
+      startTime: start,
+      endTime: endT,
+      duration: durationString,
+      notification,
+      isActive: true,
+      recurrenceGroupId,
+    });
+
+    current.setDate(current.getDate() + 1);
+    sessionCounter++;
+  }
+
+  const savedMeetings = await Meeting.insertMany(meetings);
+
+  const responseSessions = savedMeetings.map((m) => {
+    return {
+      _id: m._id,
+      title: m.title,
+      description: m.description,
+      platform: m.platform,
+      meetingLink: m.meetingLink,
+      meetingId: m.meetingId,
+      meetingPassword: m.meetingPassword,
+      batch: m.batch,
+      trainer: m.trainer,
+      course: m.course,
+      date: m.startTime.toISOString().split("T")[0],
+      startTime: m.startTime.toTimeString().slice(0, 5),
+      endTime: m.endTime.toTimeString().slice(0, 5),
+      duration: m.duration,
+      status: m.status,
+      notification: m.notification,
+      isActive: m.isActive,
+      recurrenceGroupId: m.recurrenceGroupId,
+      createdAt: m.createdAt,
+      updatedAt: m.updatedAt,
+    };
   });
 
-  await Batch.findByIdAndUpdate(batch, {
-    $addToSet: { meetings: meeting._id },
-  });
-
-  return sendResponse(res, 201, true, "Meeting created successfully", meeting);
+  return sendResponse(
+    res,
+    201,
+    true,
+    `${savedMeetings.length} meetings created successfully`,
+    {
+      recurrenceGroupId,
+      totalSessions: savedMeetings.length,
+      sessions: responseSessions,
+    }
+  );
 });
 
 exports.getAllMeetings = asyncHandler(async (req, res) => {
-  const baseFilter =
-    req.roleFilter && Object.keys(req.roleFilter).length > 0
+  const filter =
+    req.roleFilter && Object.keys(req.roleFilter).length
       ? { ...req.roleFilter, isActive: true }
       : { isActive: true };
 
-  const meetings = await Meeting.find(baseFilter)
-    .populate({
-      path: "batch",
-      model: "Batch",
-    })
-    .populate({
-      path: "trainer",
-      model: "Trainer",
-    })
-    .populate({
-      path: "course",
-      model: "Course",
-    })
+  const meetings = await Meeting.find(filter)
+    .populate("batch")
+    .populate("trainer")
+    .populate("course")
     .sort({ createdAt: -1 });
 
   return sendResponse(
@@ -81,54 +147,28 @@ exports.getAllMeetings = asyncHandler(async (req, res) => {
   );
 });
 
-const Attendance = require("../models/Attendance");
-
+// ========================= GET MEETING BY ID =========================
 exports.getMeetingById = asyncHandler(async (req, res) => {
-  const meetingId = new mongoose.Types.ObjectId(req.params.id);
+  const meetingId = req.params.id;
   const student = req.Student?._id;
 
-  const meeting = await Meeting.aggregate([
-    { $match: { _id: meetingId, isActive: true } },
-    {
-      $lookup: {
-        from: "batches",
-        localField: "batch",
-        foreignField: "_id",
-        as: "batch",
-      },
-    },
-    { $unwind: "$batch" },
-    {
-      $lookup: {
-        from: "courses",
-        localField: "course",
-        foreignField: "_id",
-        as: "course",
-      },
-    },
-    { $unwind: { path: "$course", preserveNullAndEmptyArrays: true } },
-    {
-      $lookup: {
-        from: "trainers",
-        localField: "trainer",
-        foreignField: "_id",
-        as: "trainer",
-      },
-    },
-    { $unwind: "$trainer" },
-  ]);
-
-  if (!meeting.length) {
-    return sendError(res, 404, false, "Meeting not found");
+  if (!mongoose.Types.ObjectId.isValid(meetingId)) {
+    return sendError(res, 400, false, "Invalid meeting ID");
   }
 
-  let meetingData = meeting[0];
+  const meeting = await Meeting.findById(meetingId)
+    .populate("batch")
+    .populate("trainer")
+    .populate("course");
+
+  if (!meeting) return sendError(res, 404, false, "Meeting not found");
 
   const attendance = await Attendance.findOne({
     meeting: meetingId,
     "attendees.student": student,
   });
 
+  const meetingData = meeting.toObject();
   meetingData.attendanceStatus = attendance ? "already done" : "not marked";
 
   return sendResponse(
@@ -140,107 +180,40 @@ exports.getMeetingById = asyncHandler(async (req, res) => {
   );
 });
 
+// ========================= UPDATE MEETING =========================
 exports.updateMeeting = asyncHandler(async (req, res) => {
   const meeting = await Meeting.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
   });
 
-  if (!meeting) return sendError(res, 404, "Meeting not found");
+  if (!meeting) return sendError(res, 404, false, "Meeting not found");
 
-  return sendResponse(res, 200, "Meeting updated successfully", meeting);
+  return sendResponse(res, 200, true, "Meeting updated successfully", meeting);
 });
 
+// ========================= DELETE MEETING (SOFT) =========================
 exports.deleteMeeting = asyncHandler(async (req, res) => {
-  const meeting = await Meeting.findByIdAndDelete(req.params.id);
+  const meeting = await Meeting.findById(req.params.id);
+  if (!meeting) return sendError(res, 404, false, "Meeting not found");
 
   meeting.isActive = false;
   await meeting.save();
-  if (!meeting) return sendError(res, 404, "Meeting not found");
 
-  return sendResponse(res, 200, "Meeting deleted successfully", null);
+  return sendResponse(res, 200, true, "Meeting deleted successfully", null);
 });
 
+// ========================= GET MEETINGS BY BATCH =========================
 exports.getMeetingsByBatch = asyncHandler(async (req, res) => {
   const { batchId } = req.params;
-
   if (!mongoose.Types.ObjectId.isValid(batchId)) {
     return sendError(res, 400, false, "Invalid batch ID format");
   }
 
-  const meetings = await Meeting.aggregate([
-    {
-      $match: {
-        batch: new mongoose.Types.ObjectId(batchId),
-        isActive: true,
-      },
-    },
-    {
-      $lookup: {
-        from: "attendances",
-        localField: "_id",
-        foreignField: "meeting",
-        as: "attendanceRecords",
-      },
-    },
-    {
-      $addFields: {
-        attendanceStatus: {
-          $cond: [
-            { $gt: [{ $size: "$attendanceRecords" }, 0] },
-            "Attendance already marked",
-            "Attendance not marked",
-          ],
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: "batches",
-        localField: "batch",
-        foreignField: "_id",
-        as: "batchDetails",
-      },
-    },
-    {
-      $lookup: {
-        from: "trainers",
-        localField: "trainer",
-        foreignField: "_id",
-        as: "trainerDetails",
-      },
-    },
-    {
-      $lookup: {
-        from: "courses",
-        localField: "course",
-        foreignField: "_id",
-        as: "courseDetails",
-      },
-    },
-    {
-      $project: {
-        title: 1,
-        description: 1,
-        meetingDescription: 1,
-        platform: 1,
-        meetingLink: 1,
-        meetingId: 1,
-        meetingPassword: 1,
-        startTime: 1,
-        endTime: 1,
-        duration: 1,
-        recordingUrl: 1,
-        status: 1,
-        notification: 1,
-        isActive: 1,
-        attendanceStatus: 1,
-        batchDetails: { $arrayElemAt: ["$batchDetails", 0] },
-        trainerDetails: { $arrayElemAt: ["$trainerDetails", 0] },
-        courseDetails: { $arrayElemAt: ["$courseDetails", 0] },
-      },
-    },
-    { $sort: { startTime: -1 } },
-  ]);
+  const meetings = await Meeting.find({ batch: batchId, isActive: true })
+    .populate("batch")
+    .populate("trainer")
+    .populate("course")
+    .sort({ startTime: -1 });
 
   if (!meetings || meetings.length === 0) {
     return sendError(res, 404, false, "No meetings found for this batch");
@@ -252,5 +225,56 @@ exports.getMeetingsByBatch = asyncHandler(async (req, res) => {
     true,
     "Meetings fetched successfully",
     meetings
+  );
+});
+
+// ========================= GET RECURRING MEETINGS =========================
+exports.getRecurringMeetings = asyncHandler(async (req, res) => {
+  const { recurrenceGroupId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(recurrenceGroupId)) {
+    return sendError(res, 400, false, "Invalid recurrenceGroupId");
+  }
+
+  const meetings = await Meeting.find({ recurrenceGroupId, isActive: true })
+    .populate("batch")
+    .populate("trainer")
+    .populate("course")
+    .sort({ startTime: 1 });
+
+  if (!meetings || meetings.length === 0) {
+    return sendError(res, 404, false, "No recurring meetings found");
+  }
+
+  const response = meetings.map((m) => ({
+    _id: m._id,
+    title: m.title,
+    description: m.description,
+    platform: m.platform,
+    meetingLink: m.meetingLink,
+    meetingId: m.meetingId,
+    meetingPassword: m.meetingPassword,
+    batch: m.batch,
+    trainer: m.trainer,
+    course: m.course,
+    date: m.startTime.toISOString().split("T")[0],
+    startTime: m.startTime.toTimeString().slice(0, 5),
+    endTime: m.endTime.toTimeString().slice(0, 5),
+    duration: m.duration,
+    status: m.status,
+    notification: m.notification,
+    isActive: m.isActive,
+    recurrenceGroupId: m.recurrenceGroupId,
+  }));
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Recurring meetings fetched successfully",
+    {
+      recurrenceGroupId,
+      totalSessions: meetings.length,
+      sessions: response,
+    }
   );
 });
