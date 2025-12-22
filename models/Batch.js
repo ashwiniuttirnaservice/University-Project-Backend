@@ -114,7 +114,7 @@ const batchSchema = new mongoose.Schema(
     },
     cloudLabs: {
       link: String,
-      excelFile: {
+      cloudLabsFile: {
         fileName: String,
         fileUrl: String,
         uploadedAt: { type: Date, default: Date.now },
@@ -127,6 +127,7 @@ const batchSchema = new mongoose.Schema(
         },
       ],
     },
+
     studentCount: {
       type: Number,
       default: 0,

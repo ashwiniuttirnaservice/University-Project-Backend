@@ -21,7 +21,6 @@ const MeetingSchema = new mongoose.Schema(
     platform: {
       type: String,
       required: true,
-      enum: ["Zoom", "Google Meet", "Microsoft Teams", "Offline"],
     },
 
     meetingLink: {

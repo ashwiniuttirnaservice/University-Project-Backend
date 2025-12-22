@@ -62,7 +62,7 @@ const EnrollmentSchema = new mongoose.Schema(
 
     mobileNo: {
       type: String,
-      required: true,
+      required: false,
     },
 
     email: {

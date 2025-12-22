@@ -25,7 +25,7 @@ const trainerSchema = new mongoose.Schema(
     },
     dob: {
       type: String,
-      required: true,
+      required: false,
     },
     gender: {
       type: String,
@@ -122,10 +122,10 @@ const trainerSchema = new mongoose.Schema(
 
     courses: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Course",
+        type: String,
       },
     ],
+
     batches: [{ type: mongoose.Schema.Types.ObjectId, ref: "Batch" }],
 
     isActive: {

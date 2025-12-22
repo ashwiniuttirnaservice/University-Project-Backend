@@ -120,7 +120,7 @@ exports.updatePrerequisite = asyncHandler(async (req, res) => {
 
   let parsedTopics = [];
   try {
-    parsedTopics = topics ? JSON.parse(topics) : prerequisite.topics;
+    parsedTopics = topics ? JSON.parse(topics) : [];
   } catch {
     return sendError(res, 400, false, "Invalid topics JSON format");
   }
@@ -128,24 +128,28 @@ exports.updatePrerequisite = asyncHandler(async (req, res) => {
   const uploadedFiles = [];
   if (req.files) {
     if (Array.isArray(req.files)) uploadedFiles.push(...req.files);
-    else Object.values(req.files).forEach((arr) => uploadedFiles.push(...arr));
+    else
+      Object.values(req.files)
+        .flat()
+        .forEach((f) => uploadedFiles.push(f));
   }
 
-  const finalTopics = parsedTopics.map((topic, index) => {
-    const existingTopic = prerequisite.topics[index] || {};
+  const finalTopics = parsedTopics.map((topic) => {
+    const existingTopic = prerequisite.topics.find(
+      (t) => t._id?.toString() === topic._id
+    );
 
-    const oldFiles = existingTopic.materialFiles || [];
+    const existingFiles = existingTopic?.materialFiles || [];
 
-    const newFiles =
-      (topic.materialFiles || []).map((fileName) => {
-        const file = uploadedFiles.find((f) => f.originalname === fileName);
-        return file ? file.filename : fileName;
-      }) || [];
+    const resolvedFiles = (topic.materialFiles || []).map((fileName) => {
+      const uploaded = uploadedFiles.find((f) => f.originalname === fileName);
+      return uploaded ? uploaded.filename : fileName;
+    });
 
     return {
-      ...existingTopic,
+      ...existingTopic?.toObject?.(),
       ...topic,
-      materialFiles: newFiles.length ? newFiles : oldFiles,
+      materialFiles: resolvedFiles.length ? resolvedFiles : existingFiles,
     };
   });
 

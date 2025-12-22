@@ -2,7 +2,7 @@ const Student = require("../models/Student");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 const mongoose = require("mongoose");
-
+const Batch = require("../models/Batch");
 exports.registerCandidate = asyncHandler(async (req, res) => {
   const { fullName, mobileNo, email, dob, collegeName, selectedProgram } =
     req.body;
@@ -207,6 +207,7 @@ exports.updateStudent = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Student updated", updatedStudent);
 });
 
+// Student soft delete + batch update
 exports.deleteStudent = asyncHandler(async (req, res) => {
   const { studentId } = req.params;
 
@@ -222,11 +223,17 @@ exports.deleteStudent = asyncHandler(async (req, res) => {
   student.isActive = false;
   await student.save();
 
+  // Batch मधून student remove करणे
+  await Batch.updateMany(
+    { "students.studentId": studentId },
+    { $pull: { students: { studentId: studentId }, enrolledIds: studentId } }
+  );
+
   return sendResponse(
     res,
     200,
     true,
-    "Student deactivated successfully",
+    "Student deactivated and removed from batches successfully",
     student
   );
 });

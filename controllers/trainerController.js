@@ -4,6 +4,8 @@ const { sendResponse, sendError } = require("../utils/apiResponse");
 const asyncHandler = require("../middleware/asyncHandler");
 
 const parseObjectIdArray = (input) => {
+  if (!input) return [];
+
   try {
     if (typeof input === "string") input = JSON.parse(input);
   } catch {
@@ -11,7 +13,20 @@ const parseObjectIdArray = (input) => {
   }
 
   if (!Array.isArray(input)) input = [input];
+
   return input.map((id) => new mongoose.Types.ObjectId(id));
+};
+
+const parseStringArray = (input) => {
+  if (!input) return [];
+
+  try {
+    if (typeof input === "string") input = JSON.parse(input);
+  } catch {
+    input = [input];
+  }
+
+  return Array.isArray(input) ? input : [input];
 };
 
 const registerTrainer = asyncHandler(async (req, res) => {
@@ -44,7 +59,9 @@ const registerTrainer = asyncHandler(async (req, res) => {
     mobileNo,
     dob,
     gender,
+
     address: typeof address === "string" ? JSON.parse(address) : address,
+
     highestQualification,
     collegeName,
     totalExperience,
@@ -57,18 +74,19 @@ const registerTrainer = asyncHandler(async (req, res) => {
     certifications:
       typeof certifications === "string"
         ? JSON.parse(certifications)
-        : certifications,
+        : certifications || [],
 
     achievements:
       typeof achievements === "string"
         ? JSON.parse(achievements)
-        : achievements,
+        : achievements || [],
 
-    skills: typeof skills === "string" ? JSON.parse(skills) : skills,
+    skills: typeof skills === "string" ? JSON.parse(skills) : skills || [],
 
-    courses: parseObjectIdArray(courses),
-    batches: parseObjectIdArray(batches),
-    branches: parseObjectIdArray(branches)[0] || null,
+    courses: parseStringArray(courses),
+
+    batches: batches ? parseObjectIdArray(batches) : [],
+    branches: branches ? parseObjectIdArray(branches)[0] : null,
 
     resume: req.files?.resume?.[0]?.filename || "",
     idProofTrainer: req.files?.idProofTrainer?.[0]?.filename || "",
@@ -102,9 +120,9 @@ const getAllTrainers = asyncHandler(async (req, res) => {
 });
 
 const getAllTrainer = asyncHandler(async (req, res) => {
-  const trainers = await Trainer.find().select(
-    "highestQualification fullName profilePhotoTrainer summary linkedinProfilex"
-  );
+  const trainers = await Trainer.find({ isActive: true })
+    .populate("batches", "batchName startDate endDate mode status")
+    .sort({ createdAt: -1 });
 
   return sendResponse(
     res,
@@ -130,12 +148,11 @@ const updateTrainerApproval = asyncHandler(async (req, res) => {
   await trainer.save();
   return sendResponse(res, 200, true, `Trainer ${status}`, trainer);
 });
-
 const updateTrainer = asyncHandler(async (req, res) => {
   const { trainerId } = req.params;
 
   const trainer = await Trainer.findById(trainerId);
-  if (!trainer) return sendError(res, 404, "Trainer not found");
+  if (!trainer) return sendError(res, 404, false, "Trainer not found");
 
   let updateData = req.body;
 
@@ -158,9 +175,13 @@ const updateTrainer = asyncHandler(async (req, res) => {
     updateData.skills = JSON.parse(updateData.skills);
   }
 
-  delete updateData.testimonials;
-  delete updateData.rating;
-  delete updateData.reviews;
+  if (updateData.courses) {
+    updateData.courses = parseStringArray(updateData.courses);
+  }
+
+  if (updateData.batches) {
+    updateData.batches = parseObjectIdArray(updateData.batches);
+  }
 
   if (req.files?.resume?.[0]?.filename) {
     updateData.resume = req.files.resume[0].filename;
@@ -172,18 +193,6 @@ const updateTrainer = asyncHandler(async (req, res) => {
 
   if (req.files?.profilePhotoTrainer?.[0]?.filename) {
     updateData.profilePhotoTrainer = req.files.profilePhotoTrainer[0].filename;
-  }
-
-  if (updateData.branches) {
-    updateData.branches = parseObjectIdArray(updateData.branches)[0] || null;
-  }
-
-  if (updateData.courses) {
-    updateData.courses = parseObjectIdArray(updateData.courses);
-  }
-
-  if (updateData.batches) {
-    updateData.batches = parseObjectIdArray(updateData.batches);
   }
 
   const updatedTrainer = await Trainer.findByIdAndUpdate(
@@ -259,10 +268,10 @@ const getTrainerById = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid trainer ID");
   }
 
-  const trainer = await Trainer.findById(trainerId)
-    .populate("courses", "title")
-
-    .populate("batches", "batchName startDate endDate mode status");
+  const trainer = await Trainer.findById(trainerId).populate(
+    "batches",
+    "batchName startDate endDate mode status"
+  );
 
   if (!trainer) {
     return sendError(res, 404, false, "Trainer not found");

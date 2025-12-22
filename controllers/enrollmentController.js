@@ -112,29 +112,45 @@ exports.getMyEnrollments = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "All Participant  fetched", enrollments);
 });
-
 exports.deleteEnrollment = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    return sendError(res, 400, false, "Invalid Participant  ID");
+    return sendError(res, 400, false, "Invalid Enrollment ID");
   }
 
   const enrollment = await Enrollment.findById(id);
+  if (!enrollment) return sendError(res, 404, false, "Enrollment not found");
 
-  if (!enrollment) {
-    return sendError(res, 404, false, "Participant  not found");
-  }
-
+  // Soft delete enrollment
   enrollment.isActive = false;
   await enrollment.save();
+
+  // Soft delete linked student
+  const student = await Student.findById(enrollment.studentId);
+  if (student) {
+    student.isActive = false;
+    await student.save();
+  }
+
+  // Remove student from all batches
+  await Batch.updateMany(
+    { "students.studentId": enrollment.studentId },
+    {
+      $pull: {
+        students: { studentId: enrollment.studentId },
+        enrolledIds: enrollment.studentId,
+      },
+      $inc: { studentCount: -1 },
+    }
+  );
 
   return sendResponse(
     res,
     200,
     true,
-    "Participant  soft deleted successfully",
-    enrollment
+    "Enrollment and linked Student soft deleted, removed from batches successfully",
+    { enrollment, student }
   );
 });
 
@@ -487,26 +503,27 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     collegeName,
   } = req.body;
 
-  if (
-    !fullName ||
-    !mobileNo ||
-    !email ||
-    !enrolledCourses ||
-    !enrolledBatches
-  ) {
+  if (!fullName || !email || !enrolledCourses || !enrolledBatches) {
     return sendError(
       res,
       400,
       false,
-      "Required fields: fullName, mobileNo, email, enrolledCourses, enrolledBatches"
+      "Required fields: fullName, email, enrolledCourses, enrolledBatches"
     );
   }
 
   const profilePhotoStudent = req.file ? req.file.filename : "";
 
-  const enrolledCoursesArray = enrolledCourses.split(",");
-  const enrolledBatchesArray = enrolledBatches.split(",");
+  // Convert to array if comma-separated string
+  const enrolledCoursesArray = Array.isArray(enrolledCourses)
+    ? enrolledCourses
+    : enrolledCourses.split(",");
 
+  const enrolledBatchesArray = Array.isArray(enrolledBatches)
+    ? enrolledBatches
+    : enrolledBatches.split(",");
+
+  // Check if student already exists
   let student = await Student.findOne({ email });
 
   if (!student) {
@@ -518,16 +535,25 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
       role: "student",
       status: "Enrolled",
       isActive: true,
+      enrolledCourses: enrolledCoursesArray.map(
+        (id) => new mongoose.Types.ObjectId(id)
+      ),
     });
   } else {
     student.fullName = fullName;
     student.mobileNo = mobileNo;
     student.status = "Enrolled";
     student.isActive = true;
-
+    student.enrolledCourses = Array.from(
+      new Set([
+        ...student.enrolledCourses.map((id) => id.toString()),
+        ...enrolledCoursesArray,
+      ])
+    ).map((id) => new mongoose.Types.ObjectId(id));
     await student.save();
   }
 
+  // Check if active enrollment exists
   const existingEnrollment = await Enrollment.findOne({
     studentId: student._id,
     isActive: true,
@@ -537,8 +563,9 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Student already enrolled");
   }
 
+  // Create enrollment
   const enrollment = await Enrollment.create({
-    studentId: student._id,
+    studentId: student._id, // ✅ studentId link
     fullName,
     mobileNo,
     email,
@@ -556,6 +583,7 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     isActive: true,
   });
 
+  // Add student to batches
   for (const batchId of enrolledBatchesArray) {
     await Batch.findByIdAndUpdate(
       batchId,
@@ -573,11 +601,6 @@ exports.createStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
       { new: true }
     );
   }
-
-  student.enrolledCourses = enrolledCoursesArray.map(
-    (id) => new mongoose.Types.ObjectId(id)
-  );
-  await student.save();
 
   return sendResponse(
     res,
@@ -597,6 +620,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
+    password,
     enrolledCourses,
     enrolledBatches,
     designation,
@@ -628,6 +652,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
       fullName: fullName || existingEnrollment.fullName,
       mobileNo: mobileNo || existingEnrollment.mobileNo,
       email: email || existingEnrollment.email,
+      password: password || undefined,
     });
 
     existingEnrollment.studentId = student._id;
@@ -636,6 +661,7 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
   student.fullName = fullName || student.fullName;
   student.mobileNo = mobileNo || student.mobileNo;
   student.email = email || student.email;
+  if (password) student.password = password;
   await student.save();
 
   const newEnrolledCourses = Array.isArray(enrolledCourses)
@@ -657,11 +683,11 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
   existingEnrollment.fullName = student.fullName;
   existingEnrollment.mobileNo = student.mobileNo;
   existingEnrollment.email = student.email;
+  if (password) existingEnrollment.password = password;
   existingEnrollment.designation =
     designation || existingEnrollment.designation;
   existingEnrollment.collegeName =
     collegeName || existingEnrollment.collegeName;
-
   existingEnrollment.profilePhotoStudent = profilePhotoStudent;
 
   existingEnrollment.enrolledCourses = newEnrolledCourses.map(
@@ -679,10 +705,6 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
     (id) => !newEnrolledBatches.includes(id)
   );
 
-  const addedBatches = newEnrolledBatches.filter(
-    (id) => !oldBatchIds.includes(id)
-  );
-
   if (removedBatches.length > 0) {
     await Batch.updateMany(
       { _id: { $in: removedBatches } },
@@ -695,6 +717,10 @@ exports.updateStudentEnrollmentByAdmin = asyncHandler(async (req, res) => {
       }
     );
   }
+
+  const addedBatches = newEnrolledBatches.filter(
+    (id) => !oldBatchIds.includes(id)
+  );
 
   for (const batchId of addedBatches) {
     await Batch.findByIdAndUpdate(
@@ -935,11 +961,15 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
   }
 
   const enrolledCourses = req.body.enrolledCourses
-    ? [req.body.enrolledCourses]
+    ? Array.isArray(req.body.enrolledCourses)
+      ? req.body.enrolledCourses
+      : [req.body.enrolledCourses]
     : [];
 
   const enrolledBatches = req.body.enrolledBatches
-    ? [req.body.enrolledBatches]
+    ? Array.isArray(req.body.enrolledBatches)
+      ? req.body.enrolledBatches
+      : [req.body.enrolledBatches]
     : [];
 
   let summary = {
@@ -947,6 +977,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     studentsSaved: 0,
     addedToBatch: 0,
     duplicates: 0,
+    skippedStudents: [],
   };
 
   for (const row of rows) {
@@ -958,25 +989,17 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     if (existingStudent || existingEnrollment) {
       summary.duplicates++;
+      summary.skippedStudents.push({
+        fullName: row.fullName || "",
+        email,
+      });
       continue;
     }
 
     const password =
       row.password?.toString().trim() || Math.random().toString(36).slice(-8);
 
-    const enrollmentDoc = await Enrollment.create({
-      fullName: row.fullName || "",
-      email,
-      mobileNo: row.mobileNo || "",
-      password,
-      enrolledCourses,
-      enrolledBatches,
-      designation: row.designation || "",
-      collegeName: row.collegeName || "",
-    });
-
-    summary.enrollmentSaved++;
-
+    // 1️⃣ Create Student first
     const student = await Student.create({
       fullName: row.fullName || "",
       email,
@@ -991,18 +1014,37 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     summary.studentsSaved++;
 
+    // 2️⃣ Create Enrollment with studentId
+    const enrollmentDoc = await Enrollment.create({
+      studentId: student._id, // ✅ assign studentId
+      fullName: row.fullName || "",
+      email,
+      mobileNo: row.mobileNo || "",
+      password,
+      enrolledCourses,
+      enrolledBatches,
+      designation: row.designation || "",
+      collegeName: row.collegeName || "",
+      isActive: true,
+      enrolledAt: new Date(),
+    });
+
+    summary.enrollmentSaved++;
+
+    // 3️⃣ Add student to batches
     for (const batchId of enrolledBatches) {
       const batchUpdate = await Batch.findByIdAndUpdate(
         batchId,
         {
           $addToSet: {
             students: {
-              studentId: student._id,
+              studentId: student._id, // ✅ student._id
               fullName: student.fullName,
               email: student.email,
             },
-            enrolledIds: enrollmentDoc._id,
+            enrolledIds: student._id, // ✅ student._id
           },
+          $inc: { studentCount: 1 },
         },
         { new: true }
       );
@@ -1010,6 +1052,14 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       if (batchUpdate) summary.addedToBatch++;
     }
   }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Students imported successfully",
+    summary
+  );
 
   return sendResponse(
     res,

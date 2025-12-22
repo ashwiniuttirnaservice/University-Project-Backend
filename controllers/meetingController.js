@@ -147,7 +147,6 @@ exports.getAllMeetings = asyncHandler(async (req, res) => {
   );
 });
 
-// ========================= GET MEETING BY ID =========================
 exports.getMeetingById = asyncHandler(async (req, res) => {
   const meetingId = req.params.id;
   const student = req.Student?._id;
@@ -180,7 +179,6 @@ exports.getMeetingById = asyncHandler(async (req, res) => {
   );
 });
 
-// ========================= UPDATE MEETING =========================
 exports.updateMeeting = asyncHandler(async (req, res) => {
   const meeting = await Meeting.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
@@ -191,7 +189,6 @@ exports.updateMeeting = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Meeting updated successfully", meeting);
 });
 
-// ========================= DELETE MEETING (SOFT) =========================
 exports.deleteMeeting = asyncHandler(async (req, res) => {
   const meeting = await Meeting.findById(req.params.id);
   if (!meeting) return sendError(res, 404, false, "Meeting not found");
@@ -201,14 +198,14 @@ exports.deleteMeeting = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "Meeting deleted successfully", null);
 });
-
-// ========================= GET MEETINGS BY BATCH =========================
 exports.getMeetingsByBatch = asyncHandler(async (req, res) => {
   const { batchId } = req.params;
+
   if (!mongoose.Types.ObjectId.isValid(batchId)) {
     return sendError(res, 400, false, "Invalid batch ID format");
   }
 
+  // Fetch all meetings for the batch
   const meetings = await Meeting.find({ batch: batchId, isActive: true })
     .populate("batch")
     .populate("trainer")
@@ -219,16 +216,34 @@ exports.getMeetingsByBatch = asyncHandler(async (req, res) => {
     return sendError(res, 404, false, "No meetings found for this batch");
   }
 
+  // Get all meeting IDs
+  const meetingIds = meetings.map((m) => m._id);
+
+  // Fetch attendance records for these meetings
+  const attendances = await Attendance.find({
+    meeting: { $in: meetingIds },
+    isActive: true,
+  }).select("meeting");
+
+  const attendanceDoneSet = new Set(
+    attendances.map((a) => a.meeting.toString())
+  );
+
+  const formattedMeetings = meetings.map((meeting) => {
+    const obj = meeting.toObject();
+    obj.attendanceDone = attendanceDoneSet.has(meeting._id.toString());
+    return obj;
+  });
+
   return sendResponse(
     res,
     200,
     true,
     "Meetings fetched successfully",
-    meetings
+    formattedMeetings
   );
 });
 
-// ========================= GET RECURRING MEETINGS =========================
 exports.getRecurringMeetings = asyncHandler(async (req, res) => {
   const { recurrenceGroupId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(recurrenceGroupId)) {

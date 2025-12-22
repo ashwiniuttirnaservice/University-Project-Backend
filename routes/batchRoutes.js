@@ -6,7 +6,7 @@ const {
   getBatchById,
   getBatchesByCourseId,
   getBatchesByTrainerId,
-  updateBatch,
+  updateBatchWithCloudLabs,
   deleteBatch,
   assignStudentToBatch,
   getAllBatches1,
@@ -74,7 +74,13 @@ router.get(
 
 router.get("/batches/:id", protect, getBatchById);
 
-router.put("/:id", protect, checkAccess("batch", "update"), updateBatch);
+router.put(
+  "/:batchId",
+  protect,
+  checkAccess("batch", "update"),
+  upload.single("labs"),
+  updateBatchWithCloudLabs
+);
 
 router.delete("/:id", protect, checkAccess("batch", "delete"), deleteBatch);
 
