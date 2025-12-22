@@ -156,6 +156,7 @@ exports.updateCourse = asyncHandler(async (req, res) => {
     endDate,
     isActive,
     cloudLabsLink,
+    trainingPlan,
   } = req.body;
 
   learningOutcomes = parseJSON(learningOutcomes);
@@ -195,6 +196,8 @@ exports.updateCourse = asyncHandler(async (req, res) => {
       originalName: req.file.originalname,
       fileType: req.file.mimetype,
     };
+  } else if (trainingPlan === "" || trainingPlan === null) {
+    updateData.trainingPlan = null;
   }
 
   const course = await Course.findByIdAndUpdate(id, updateData, {

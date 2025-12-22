@@ -1112,39 +1112,44 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       });
       summary.createdStudents++;
       isNewStudent = true;
-    } else {
-      summary.skippedDuplicateStudents++;
-      summary.skippedStudents.push({ fullName, email, mobileNo });
     }
 
-    // Create enrollment for each batch
+    // Handle enrollment (merge courses and batches)
+    let enrollment = await Enrollment.findOne({ studentId: student._id });
+
+    if (!enrollment) {
+      // No enrollment exists, create new
+      enrollment = await Enrollment.create({
+        studentId: student._id,
+        fullName: student.fullName,
+        email: student.email,
+        mobileNo: student.mobileNo,
+        designation: student.designation,
+        collegeName: student.collegeName,
+        enrolledCourses: enrolledCourseIds,
+        enrolledBatches: enrolledBatchIds,
+        password: student.password,
+      });
+      summary.newEnrollments++;
+    } else {
+      // Merge new courses
+      enrollment.enrolledCourses = Array.from(
+        new Set([...enrollment.enrolledCourses, ...enrolledCourseIds])
+      );
+
+      // Merge new batches
+      enrollment.enrolledBatches = Array.from(
+        new Set([...enrollment.enrolledBatches, ...enrolledBatchIds])
+      );
+
+      await enrollment.save();
+    }
+
+    // Add student to each batch
     for (const batchId of enrolledBatchIds) {
       const batch = await Batch.findById(batchId);
       if (!batch) continue;
 
-      // Check if student already has enrollment
-      const existingEnrollment = await Enrollment.findOne({
-        studentId: student._id,
-        enrolledBatches: batch._id,
-      });
-
-      if (!existingEnrollment) {
-        // Create enrollment
-        await Enrollment.create({
-          studentId: student._id,
-          fullName: student.fullName,
-          email: student.email,
-          mobileNo: student.mobileNo,
-          designation: student.designation,
-          collegeName: student.collegeName,
-          enrolledCourses: enrolledCourseIds,
-          enrolledBatches: [batch._id],
-          password: student.password,
-        });
-        summary.newEnrollments++;
-      }
-
-      // Add student to batch.students if not exists
       if (!batch.students.some((s) => s.studentId.equals(student._id))) {
         batch.students.push({
           studentId: student._id,
@@ -1153,19 +1158,11 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
         });
       }
 
-      // Add enrollment reference to enrolledIds
-      const enrollmentDoc = await Enrollment.findOne({
-        studentId: student._id,
-        enrolledBatches: batch._id,
-      });
-
-      if (!batch.enrolledIds.includes(enrollmentDoc._id)) {
-        batch.enrolledIds.push(enrollmentDoc._id);
+      if (!batch.enrolledIds.includes(enrollment._id)) {
+        batch.enrolledIds.push(enrollment._id);
       }
 
-      // Update student count
       batch.studentCount = batch.students.length;
-
       await batch.save();
       summary.addedToBatch++;
     }
