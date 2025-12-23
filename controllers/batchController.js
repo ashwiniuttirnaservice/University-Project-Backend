@@ -373,6 +373,13 @@ exports.getBatchById = asyncHandler(async (req, res) => {
         as: "coursesAssigned",
       },
     },
+    {
+      $addFields: {
+        courseId: {
+          $arrayElemAt: ["$coursesAssigned._id", 0],
+        },
+      },
+    },
 
     {
       $lookup: {
@@ -726,6 +733,7 @@ exports.getBatchById = asyncHandler(async (req, res) => {
 
     {
       $project: {
+        courseId: 1,
         batchName: 1,
         time: 1,
         days: 1,
@@ -1088,18 +1096,15 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     if (!email) continue;
 
-    // Check if student exists
     let student = await Student.findOne({ email });
     let isNewStudent = false;
 
     if (!student) {
-      // Generate password if not provided
       const password =
         row.password && row.password.toString().trim().length > 0
           ? row.password.toString().trim()
           : Math.random().toString(36).slice(-8);
 
-      // Create new student
       student = await Student.create({
         fullName,
         email,
@@ -1114,11 +1119,9 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       isNewStudent = true;
     }
 
-    // Handle enrollment (merge courses and batches)
     let enrollment = await Enrollment.findOne({ studentId: student._id });
 
     if (!enrollment) {
-      // No enrollment exists, create new
       enrollment = await Enrollment.create({
         studentId: student._id,
         fullName: student.fullName,
@@ -1151,7 +1154,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       await enrollment.save();
     }
 
-    // Add student to each batch
     for (const batchId of enrolledBatchIds) {
       const batch = await Batch.findById(batchId);
       if (!batch) continue;

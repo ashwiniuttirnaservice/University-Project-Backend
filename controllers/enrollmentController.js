@@ -960,106 +960,110 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "No student data received");
   }
 
-  const enrolledCourses = req.body.enrolledCourses
-    ? Array.isArray(req.body.enrolledCourses)
-      ? req.body.enrolledCourses
-      : [req.body.enrolledCourses]
+  const enrolledCourseIds = req.body.enrolledCourses
+    ? []
+        .concat(req.body.enrolledCourses)
+        .map((id) => new mongoose.Types.ObjectId(id))
     : [];
 
-  const enrolledBatches = req.body.enrolledBatches
-    ? Array.isArray(req.body.enrolledBatches)
-      ? req.body.enrolledBatches
-      : [req.body.enrolledBatches]
+  const enrolledBatchIds = req.body.enrolledBatches
+    ? []
+        .concat(req.body.enrolledBatches)
+        .map((id) => new mongoose.Types.ObjectId(id))
     : [];
 
-  let summary = {
-    enrollmentSaved: 0,
-    studentsSaved: 0,
+  if (!enrolledCourseIds.length || !enrolledBatchIds.length) {
+    return sendError(res, 400, false, "Course and Batch are required");
+  }
+
+  const summary = {
+    createdStudents: 0,
+    newEnrollments: 0,
     addedToBatch: 0,
-    duplicates: 0,
-    skippedStudents: [],
   };
 
   for (const row of rows) {
     const email = row.email?.toString().trim().toLowerCase();
     if (!email) continue;
 
-    const existingStudent = await Student.findOne({ email });
-    const existingEnrollment = await Enrollment.findOne({ email });
+    let student = await Student.findOne({ email });
 
-    if (existingStudent || existingEnrollment) {
-      summary.duplicates++;
-      summary.skippedStudents.push({
+    let isNewStudent = false;
+    if (!student) {
+      const password =
+        row.password?.toString().trim() || Math.random().toString(36).slice(-8);
+
+      student = await Student.create({
         fullName: row.fullName || "",
         email,
+        mobileNo: row.mobileNo || "",
+        password,
+        designation: row.designation || "",
+        collegeName: row.collegeName || "",
+        role: "student",
+        isActive: true,
       });
-      continue;
+
+      summary.createdStudents++;
+      isNewStudent = true;
     }
 
-    const password =
-      row.password?.toString().trim() || Math.random().toString(36).slice(-8);
+    let enrollment = await Enrollment.findOne({ studentId: student._id });
 
-    // 1️⃣ Create Student first
-    const student = await Student.create({
-      fullName: row.fullName || "",
-      email,
-      mobileNo: row.mobileNo || "",
-      password,
-      designation: row.designation || "",
-      collegeName: row.collegeName || "",
-      role: "student",
-      isActive: true,
-      enrolledCourses,
-    });
+    if (!enrollment) {
+      enrollment = await Enrollment.create({
+        studentId: student._id,
+        fullName: student.fullName,
+        email: student.email,
+        mobileNo: student.mobileNo,
+        designation: student.designation,
+        collegeName: student.collegeName,
+        enrolledCourses: enrolledCourseIds,
+        enrolledBatches: enrolledBatchIds,
+        password: student.password,
+      });
+      summary.newEnrollments++;
+    } else {
+      enrollment.enrolledCourses = [
+        ...new Set(
+          [...enrollment.enrolledCourses, ...enrolledCourseIds].map((id) =>
+            id.toString()
+          )
+        ),
+      ].map((id) => new mongoose.Types.ObjectId(id));
 
-    summary.studentsSaved++;
+      enrollment.enrolledBatches = [
+        ...new Set(
+          [...enrollment.enrolledBatches, ...enrolledBatchIds].map((id) =>
+            id.toString()
+          )
+        ),
+      ].map((id) => new mongoose.Types.ObjectId(id));
 
-    // 2️⃣ Create Enrollment with studentId
-    const enrollmentDoc = await Enrollment.create({
-      studentId: student._id, // ✅ assign studentId
-      fullName: row.fullName || "",
-      email,
-      mobileNo: row.mobileNo || "",
-      password,
-      enrolledCourses,
-      enrolledBatches,
-      designation: row.designation || "",
-      collegeName: row.collegeName || "",
-      isActive: true,
-      enrolledAt: new Date(),
-    });
+      await enrollment.save();
+    }
 
-    summary.enrollmentSaved++;
+    for (const batchId of enrolledBatchIds) {
+      const batch = await Batch.findById(batchId);
+      if (!batch) continue;
 
-    // 3️⃣ Add student to batches
-    for (const batchId of enrolledBatches) {
-      const batchUpdate = await Batch.findByIdAndUpdate(
-        batchId,
-        {
-          $addToSet: {
-            students: {
-              studentId: student._id, // ✅ student._id
-              fullName: student.fullName,
-              email: student.email,
-            },
-            enrolledIds: student._id, // ✅ student._id
-          },
-          $inc: { studentCount: 1 },
-        },
-        { new: true }
-      );
+      if (!batch.students.some((s) => s.studentId.equals(student._id))) {
+        batch.students.push({
+          studentId: student._id,
+          fullName: student.fullName,
+          email: student.email,
+        });
+      }
 
-      if (batchUpdate) summary.addedToBatch++;
+      if (!batch.enrolledIds.includes(enrollment._id)) {
+        batch.enrolledIds.push(enrollment._id);
+      }
+
+      batch.studentCount = batch.students.length;
+      await batch.save();
+      summary.addedToBatch++;
     }
   }
-
-  return sendResponse(
-    res,
-    200,
-    true,
-    "Students imported successfully",
-    summary
-  );
 
   return sendResponse(
     res,
