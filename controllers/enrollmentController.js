@@ -980,6 +980,8 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
     createdStudents: 0,
     newEnrollments: 0,
     addedToBatch: 0,
+    skippedDuplicateStudents: 0,
+    skippedStudents: [],
   };
 
   for (const row of rows) {
@@ -988,7 +990,6 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
 
     let student = await Student.findOne({ email });
 
-    let isNewStudent = false;
     if (!student) {
       const password =
         row.password?.toString().trim() || Math.random().toString(36).slice(-8);
@@ -1005,10 +1006,30 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       });
 
       summary.createdStudents++;
-      isNewStudent = true;
     }
 
     let enrollment = await Enrollment.findOne({ studentId: student._id });
+
+    if (enrollment) {
+      const alreadyHasCourses = enrolledCourseIds.every((courseId) =>
+        enrollment.enrolledCourses.some((c) => c.equals(courseId))
+      );
+
+      const alreadyHasBatches = enrolledBatchIds.every((batchId) =>
+        enrollment.enrolledBatches.some((b) => b.equals(batchId))
+      );
+
+      if (alreadyHasCourses && alreadyHasBatches) {
+        summary.skippedDuplicateStudents++;
+        summary.skippedStudents.push({
+          fullName: student.fullName,
+          email: student.email,
+          mobileNo: student.mobileNo,
+          reason: "Already enrolled in same course and batch",
+        });
+        continue;
+      }
+    }
 
     if (!enrollment) {
       enrollment = await Enrollment.create({
@@ -1022,6 +1043,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
         enrolledBatches: enrolledBatchIds,
         password: student.password,
       });
+
       summary.newEnrollments++;
     } else {
       enrollment.enrolledCourses = [
@@ -1055,7 +1077,7 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
         });
       }
 
-      if (!batch.enrolledIds.includes(enrollment._id)) {
+      if (!batch.enrolledIds.some((id) => id.equals(enrollment._id))) {
         batch.enrolledIds.push(enrollment._id);
       }
 
