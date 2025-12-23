@@ -1132,15 +1132,21 @@ exports.uploadEnrollmentExcel = asyncHandler(async (req, res) => {
       });
       summary.newEnrollments++;
     } else {
-      // Merge new courses
-      enrollment.enrolledCourses = Array.from(
-        new Set([...enrollment.enrolledCourses, ...enrolledCourseIds])
-      );
+      enrollment.enrolledCourses = [
+        ...new Set(
+          [...enrollment.enrolledCourses, ...enrolledCourseIds].map((id) =>
+            id.toString()
+          )
+        ),
+      ].map((id) => new mongoose.Types.ObjectId(id));
 
-      // Merge new batches
-      enrollment.enrolledBatches = Array.from(
-        new Set([...enrollment.enrolledBatches, ...enrolledBatchIds])
-      );
+      enrollment.enrolledBatches = [
+        ...new Set(
+          [...enrollment.enrolledBatches, ...enrolledBatchIds].map((id) =>
+            id.toString()
+          )
+        ),
+      ].map((id) => new mongoose.Types.ObjectId(id));
 
       await enrollment.save();
     }
