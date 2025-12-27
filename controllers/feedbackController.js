@@ -146,3 +146,109 @@ exports.deleteFeedback = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "Feedback deleted successfully", null);
 });
+
+const ExcelJS = require("exceljs");
+
+const mongoose = require("mongoose");
+
+exports.downloadStudentFeedbackExcel = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(studentId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid studentId",
+      });
+    }
+
+    const feedback = await Feedback.findOne({ studentId })
+      .populate("studentId", "fullName")
+      .populate("courseId", "courseName")
+      .populate("batchId", "batchName")
+      .populate("trainerId", "name")
+      .lean();
+
+    if (!feedback) {
+      return res.status(404).json({
+        success: false,
+        message: "No feedback found for student",
+      });
+    }
+
+    const workbook = new ExcelJS.Workbook();
+
+    const answerLabel = {
+      strongly_agree: "Strongly Agree",
+      agree: "Agree",
+      disagree: "Disagree",
+      cant_say: "Can't Say",
+    };
+
+    const summarySheet = workbook.addWorksheet("Feedback Summary");
+
+    summarySheet.columns = [
+      { header: "Field", key: "field", width: 40 },
+      { header: "Details", key: "value", width: 30 },
+    ];
+
+    const totalScore = feedback.questions.reduce(
+      (sum, q) => sum + (q.numericValue || 0),
+      0
+    );
+
+    const avgScore = (totalScore / feedback.questions.length).toFixed(1);
+
+    summarySheet.addRows([
+      {
+        field: "Student Name",
+        value: feedback.studentId?.fullName || "Student",
+      },
+      { field: "Course", value: feedback.courseId?.courseName || "-" },
+      { field: "Batch", value: feedback.batchId?.batchName || "-" },
+      { field: "Trainer", value: feedback.trainerId?.name || "-" },
+      {
+        field: "Feedback Submitted Date",
+        value: new Date(feedback.createdAt).toLocaleDateString("en-IN"),
+      },
+      { field: "Score", value: avgScore },
+
+      {
+        field: feedback.nps?.question || "NPS – Recommendation Score",
+        value: feedback.nps?.score ?? "-",
+      },
+    ]);
+
+    const qaSheet = workbook.addWorksheet("Questions & Answers");
+
+    qaSheet.columns = [
+      { header: "Question", key: "question", width: 55 },
+      { header: "Your Answer", key: "answer", width: 22 },
+    ];
+
+    feedback.questions.forEach((q) => {
+      qaSheet.addRow({
+        question: q.question,
+        answer: answerLabel[q.answer] || q.answer,
+      });
+    });
+
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=student_feedback.xlsx"
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to download student feedback",
+    });
+  }
+};

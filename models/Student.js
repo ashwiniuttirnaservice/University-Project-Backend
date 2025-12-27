@@ -11,7 +11,7 @@ const studentSchema = new mongoose.Schema({
   },
   mobileNo: {
     type: String,
-
+    require: false,
     match: /^[6-9]\d{9}$/,
   },
   dob: {

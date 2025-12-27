@@ -5,6 +5,7 @@ const {
   createFeedback,
   getAllFeedback,
   getAllFeedback1,
+  downloadStudentFeedbackExcel,
   getFeedbackByCourse,
   getFeedbackByBatch,
   getFeedbackByStudent,
@@ -14,7 +15,7 @@ const checkAccess = require("../middleware/checkAccess");
 const roleFilter = require("../middleware/roleFilter");
 
 router.post("/", upload.single("profile"), createFeedback);
-
+router.get("/student-feedback-excel/:studentId", downloadStudentFeedbackExcel);
 router.get(
   "/",
   protect,

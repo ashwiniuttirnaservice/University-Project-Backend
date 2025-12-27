@@ -22,6 +22,7 @@ const EnrollmentSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Course",
+        require: true,
       },
     ],
 
@@ -29,6 +30,7 @@ const EnrollmentSchema = new mongoose.Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Batch",
+        require: true,
       },
     ],
     attendances: [

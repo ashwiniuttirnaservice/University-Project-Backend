@@ -1,49 +1,50 @@
 const Joi = require("joi");
 const mongoose = require("mongoose");
 
-const objectId = (value, helpers) => {
+const objectId = Joi.string().custom((value, helpers) => {
   if (!mongoose.Types.ObjectId.isValid(value)) {
-    return helpers.message(`"${value}" is not a valid ObjectId`);
+    return helpers.message("Invalid ObjectId format");
   }
   return value;
-};
+}, "ObjectId Validation");
 
-const enrollmentSchema = Joi.object({
-  user: Joi.string().custom(objectId, "ObjectId validation").optional(),
-
-  studentId: Joi.string().custom(objectId, "ObjectId validation").optional(),
-
-  course: Joi.string().custom(objectId, "ObjectId validation").optional(),
-
-  enrolledAt: Joi.date().default(Date.now),
-
-  completedContent: Joi.array().items(
-    Joi.string().custom(objectId, "ObjectId validation")
-  ),
-
-  fullName: Joi.string().trim().required().messages({
-    "any.required": "Full name is required",
-  }),
-
-  mobileNo: Joi.string()
+const enrollmentValidation = Joi.object({
+  fullName: Joi.string()
     .trim()
-    .pattern(/^[0-9]{10,15}$/)
+    .pattern(/^[A-Za-z ]+$/)
+    .min(3)
     .required()
     .messages({
-      "string.pattern.base": "Mobile number must be 10 to 15 digits",
-      "any.required": "Mobile number is required",
+      "string.pattern.base": "Full name must contain only alphabets and spaces",
+      "string.min": "Full name must be at least 3 characters long",
+      "any.required": "Full name is required",
     }),
 
-  email: Joi.string().trim().lowercase().email().required().messages({
-    "string.email": "Invalid email format",
-    "any.required": "Email is required",
+  mobileNo: Joi.string()
+    .pattern(/^[6-9]\d{9}$/)
+    .optional()
+    .messages({
+      "string.pattern.base":
+        "Mobile number must be a valid 10-digit Indian number",
+    }),
+
+  email: Joi.string().email({ minDomainSegments: 2 }).optional().messages({
+    "string.email": "Email must be a valid email address",
   }),
 
-  collegeName: Joi.string().trim().allow("").optional(),
+  password: Joi.string().min(6).optional().messages({
+    "string.min": "Password must be at least 6 characters long",
+  }),
+
+  enrolledCourses: Joi.array().items(objectId).min(1).required().messages({
+    "any.required": "Enrolled courses are required",
+    "array.min": "At least one course must be enrolled",
+  }),
+
+  enrolledBatches: Joi.array().items(objectId).min(1).required().messages({
+    "any.required": "Enrolled batches are required",
+    "array.min": "At least one batch must be enrolled",
+  }),
 });
 
-const validateEnrollment = (data) => {
-  return enrollmentSchema.validate(data, { abortEarly: true });
-};
-
-module.exports = validateEnrollment;
+module.exports = enrollmentValidation;

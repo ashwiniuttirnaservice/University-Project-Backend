@@ -74,7 +74,6 @@ exports.registerUser = asyncHandler(async (req, res) => {
     );
   }
 
-  /* ================= ALL OTHER ROLES ================= */
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     return sendError(res, 400, false, "User already exists.");
@@ -86,7 +85,7 @@ exports.registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     mobileNo,
-    role, // admin, student, vendor, future roles
+    role,
   });
 
   await user.save();
