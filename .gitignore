@@ -1,0 +1,25 @@
+/node_modules
+.env
+ecosystem.config.js
+ecosystem.config.cjs
+# edit .gitignore and add:
+uploads/assignment-photo/
+# or for just assignments
+uploads/assignments/
+# uploads/
+uploads/assignment-submissions/
+uploads/course
+uploads/cloudLabs
+uploads/course-notes
+uploads/feedback
+uploads/iqtests
+uploads/prerequisite
+uploads/lectures
+uploads/excel
+uploads/student
+uploads/trainer
+uploads/webinar
+uploads/sponsorship
+uploads/events
+
+app.log

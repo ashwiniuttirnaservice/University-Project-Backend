@@ -1,0 +1,98 @@
+const mongoose = require("mongoose");
+
+const EnrollmentSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+
+    studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Student",
+    },
+    assignmentSubmissions: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Assignment",
+      },
+    ],
+
+    enrolledCourses: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
+        require: true,
+      },
+    ],
+
+    enrolledBatches: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Batch",
+        require: true,
+      },
+    ],
+    attendances: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Attendance",
+      },
+    ],
+
+    coursesInterested: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Course",
+      },
+    ],
+
+    enrolledAt: {
+      type: Date,
+      default: Date.now,
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+
+    fullName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+
+    mobileNo: {
+      type: String,
+      required: false,
+    },
+
+    email: {
+      type: String,
+    },
+    password: {
+      type: String,
+    },
+
+    designation: {
+      type: String,
+      required: false,
+      trim: true,
+    },
+
+    profilePhotoStudent: {
+      type: String,
+      default: "",
+    },
+
+    collegeName: {
+      type: String,
+      required: false,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+module.exports = mongoose.model("Enrollment", EnrollmentSchema);

@@ -1,8 +1,20 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
+require("dotenv").config();
+
+const logger = require("./logger.js");
 
 const connectDB = async () => {
-  await mongoose.connect("mongodb://localhost:27017/CodeDriftLMS");
-  console.log("MongoDB Connected");
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+
+    logger.info("MongoDB Connected");
+  } catch (err) {
+    logger.error(`MongoDB Connection Failed: ${err.message}`);
+    process.exit(1);
+  }
 };
 
-export default connectDB;
+module.exports = connectDB;

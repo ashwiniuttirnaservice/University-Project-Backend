@@ -6,6 +6,8 @@ const sendResponse = (
   _data = null,
   _error = null
 ) => {
+  _statusCode = Number(_statusCode); // FIX: always a valid integer
+
   return _res.status(_statusCode).json({
     statusCode: _statusCode,
     success: _success,
@@ -23,6 +25,8 @@ const sendError = (
   _data = null,
   _error = null
 ) => {
+  _statusCode = Number(_statusCode);
+
   return _res.status(_statusCode).json({
     statusCode: _statusCode,
     success: _success,
@@ -32,4 +36,4 @@ const sendError = (
   });
 };
 
-export { sendResponse, sendError };
+module.exports = { sendResponse, sendError };
