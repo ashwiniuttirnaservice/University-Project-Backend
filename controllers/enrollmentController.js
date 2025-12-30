@@ -377,6 +377,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
+    password,
     collegeName,
     enrolledCourses,
     enrolledBatches,
@@ -392,24 +393,29 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
   if (student) {
     let updated = false;
 
-    if (enrolledCourses && enrolledCourses.length > 0) {
+    if (enrolledCourses?.length) {
       const newCourses = enrolledCourses.filter(
         (course) => !student.enrolledCourses.includes(course)
       );
-      if (newCourses.length > 0) {
+      if (newCourses.length) {
         student.enrolledCourses.push(...newCourses);
         updated = true;
       }
     }
 
-    if (enrolledBatches && enrolledBatches.length > 0) {
+    if (enrolledBatches?.length) {
       const newBatches = enrolledBatches.filter(
         (batch) => !student.enrolledBatches.includes(batch)
       );
-      if (newBatches.length > 0) {
+      if (newBatches.length) {
         student.enrolledBatches.push(...newBatches);
         updated = true;
       }
+    }
+
+    if (!student.password && password) {
+      student.password = String(password);
+      updated = true;
     }
 
     if (!updated) {
@@ -419,10 +425,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
         200,
         true,
         "Student already enrolled in same Training Program(s)/batch(es).",
-        {
-          student,
-          enrollment,
-        }
+        { student, enrollment }
       );
     }
 
@@ -432,6 +435,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     if (enrollment) {
       enrollment.enrolledCourses = student.enrolledCourses;
       enrollment.enrolledBatches = student.enrolledBatches;
+      enrollment.password = student.password;
       await enrollment.save();
     } else {
       enrollment = await Enrollment.create({
@@ -439,6 +443,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
         fullName: student.fullName,
         mobileNo: student.mobileNo,
         email: student.email,
+        password: student.password,
         collegeName: student.collegeName,
         enrolledCourses: student.enrolledCourses,
         enrolledBatches: student.enrolledBatches,
@@ -449,20 +454,17 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
       res,
       200,
       true,
-      "Student Participant  updated successfully.",
-      {
-        student,
-        enrollment,
-      }
+      "Student Participant updated successfully.",
+      { student, enrollment }
     );
   }
 
-  if (!fullName || !email || !enrolledCourses) {
+  if (!fullName || !email || !password || !enrolledCourses?.length) {
     return sendError(
       res,
       400,
       false,
-      "All required fields must be filled for new enrollment."
+      "Full name, email, password and enrolled courses are required."
     );
   }
 
@@ -470,6 +472,7 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
+    password: String(password),
     collegeName,
     enrolledCourses,
     enrolledBatches,
@@ -480,12 +483,13 @@ exports.createEnrollment = asyncHandler(async (req, res) => {
     fullName,
     mobileNo,
     email,
+    password: String(password),
     collegeName,
     enrolledCourses,
     enrolledBatches,
   });
 
-  return sendResponse(res, 201, true, "Participant  created successfully", {
+  return sendResponse(res, 201, true, "Participant created successfully", {
     student,
     enrollment,
   });

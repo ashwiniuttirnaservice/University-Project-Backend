@@ -37,6 +37,7 @@ const meetingRouter = require("./meetingRoutes.js");
 const attendanceRouter = require("./attendanceRoutes.js");
 const reportRouter = require("./reportRoutes.js");
 const ContactinfoRouter = require("./contactInfoRoutes.js");
+const ProjectRouter = require("./projectRoutes.js");
 const indexRouter = express.Router();
 
 indexRouter.get("/", (req, res) => {
@@ -80,4 +81,5 @@ indexRouter.use("/internship-sessions", internshipSessionsRouter);
 indexRouter.use("/sponsorship", SponsorshipRouter);
 indexRouter.use("/hackathon", HackathonRouter);
 indexRouter.use("/contactinfo", ContactinfoRouter);
+indexRouter.use("/projects", ProjectRouter);
 module.exports = indexRouter;

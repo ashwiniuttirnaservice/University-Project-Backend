@@ -5,12 +5,15 @@ const {
   verifyOtp,
   registerStudent,
   sendPasswordEmailAPI,
-  verifyOtpEmail,
+  sendEmailOtp,
+  verifyEmailOtp,
 } = require("../controllers/otpController");
 
 router.post("/send", sendOtp);
 router.post("/verify", verifyOtp);
 router.post("/student/register", registerStudent);
 router.post("/send-email", sendPasswordEmailAPI);
+router.post("/otp-send", sendEmailOtp);
+router.post("/otp-verify", verifyEmailOtp);
 
 module.exports = router;

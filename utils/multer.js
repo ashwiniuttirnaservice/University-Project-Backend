@@ -8,7 +8,8 @@ const getFolderPath = (fieldname) => {
       return "uploads/contact/company-logo/";
     case "trainingPlan":
       return "uploads/course/training-plan/";
-
+    case "courseImage":
+      return "uploads/course/";
     case "profilePhotoTrainer":
       return "uploads/trainer/trainer-profilephoto/";
     case "idProofTrainer":
@@ -56,6 +57,9 @@ const getFolderPath = (fieldname) => {
       return "uploads/excel/";
     case "materialFiles":
       return "uploads/prerequisite/materials/";
+    case "projectSubmission":
+      return "uploads/projects/submissions/";
+
     default:
       throw new Error(`Invalid file field: ${fieldname}`);
   }

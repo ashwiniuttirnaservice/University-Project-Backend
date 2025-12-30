@@ -1,60 +1,45 @@
 const express = require("express");
-const projectRouter = express.Router();
+const router = express.Router();
 
-const upload = require("../middleware/multer");
+const {
+  createProject,
+  getAllProjects,
+  getProjectById,
+  submitProject,
+  reviewSubmission,
+  deactivateProject,
+} = require("../controllers/projectController");
+
 const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
+const upload = require("../utils/multer");
 
-const projectCtrl = require("../controllers/project.controller");
+router.post("/", protect, checkAccess("ADMIN"), createProject);
 
-projectRouter.post(
-  "/",
+router.get("/", protect, checkAccess("ADMIN"), getAllProjects);
+
+router.put(
+  "/:projectId/deactivate",
   protect,
-  checkAccess("project", "create"),
-  projectCtrl.createProject
+  checkAccess("ADMIN"),
+  deactivateProject
 );
 
-projectRouter.get(
-  "/",
-  protect,
-  checkAccess("project", "read"),
-  projectCtrl.getAllProjects
-);
+router.get("/:projectId", protect, getProjectById);
 
-projectRouter.get(
-  "/:projectId",
-  protect,
-  checkAccess("project", "read"),
-  projectCtrl.getProjectById
-);
-
-projectRouter.post(
-  "/:projectId/assign-student",
-  protect,
-  checkAccess("project", "update"),
-  projectCtrl.assignStudent
-);
-
-projectRouter.post(
-  "/:projectId/assign-trainer",
-  protect,
-  checkAccess("project", "update"),
-  projectCtrl.assignTrainer
-);
-
-projectRouter.post(
+router.post(
   "/:projectId/submit",
   protect,
-  checkAccess("project", "create"),
-  upload.single("zipFile"),
-  projectCtrl.submitProject
+  checkAccess("STUDENT"),
+  upload.single("projectSubmission"),
+  submitProject
 );
 
-projectRouter.put(
+router.put(
   "/:projectId/review/:submissionId",
   protect,
-  checkAccess("project", "update"),
-  projectCtrl.reviewSubmission
+  checkAccess("TRAINER", "ADMIN"),
+  reviewSubmission
 );
 
-module.exports = projectRouter;
+module.exports = router;

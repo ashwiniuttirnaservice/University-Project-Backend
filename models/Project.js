@@ -2,13 +2,21 @@ const mongoose = require("mongoose");
 
 const ProjectSchema = new mongoose.Schema(
   {
-    title: { type: String, required: true, trim: true },
-    description: { type: String, trim: true },
-
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
+    title: {
+      type: String,
       required: true,
+      trim: true,
+    },
+
+    description: {
+      type: String,
+      trim: true,
+    },
+
+    batchId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Batch",
+      default: null,
     },
 
     hackathonId: {
@@ -19,16 +27,33 @@ const ProjectSchema = new mongoose.Schema(
 
     assignedStudents: [
       {
-        studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        autoCreated: { type: Boolean, default: false },
-        assignedAt: { type: Date, default: Date.now },
+        studentId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Student",
+          required: true,
+        },
+        autoCreated: {
+          type: Boolean,
+          default: false,
+        },
+        assignedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
 
     assignedTrainers: [
       {
-        trainerId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        assignedAt: { type: Date, default: Date.now },
+        trainerId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Trainer",
+          required: true,
+        },
+        assignedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
 
@@ -36,14 +61,22 @@ const ProjectSchema = new mongoose.Schema(
       {
         studentId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "User",
+          ref: "Student",
           required: true,
         },
 
-        zipFile: { type: String },
-        gitLink: { type: String },
+        zipFile: {
+          type: String,
+        },
 
-        submittedAt: { type: Date, default: Date.now },
+        gitLink: {
+          type: String,
+        },
+
+        submittedAt: {
+          type: Date,
+          default: Date.now,
+        },
 
         reviewStatus: {
           type: String,
@@ -56,8 +89,14 @@ const ProjectSchema = new mongoose.Schema(
           ref: "User",
         },
 
-        reviewedAt: { type: Date },
-        remarks: { type: String, trim: true },
+        reviewedAt: {
+          type: Date,
+        },
+
+        remarks: {
+          type: String,
+          trim: true,
+        },
       },
     ],
 
@@ -73,9 +112,14 @@ const ProjectSchema = new mongoose.Schema(
       default: "Not Started",
     },
 
-    isActive: { type: Boolean, default: true },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+  }
 );
 
 module.exports = mongoose.model("Project", ProjectSchema);

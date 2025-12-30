@@ -28,7 +28,7 @@ const smsModel = {
         sender: "UTRLLP",
         numbers: data.mobile,
         messagetype: "TXT",
-        message: sms.newRegistrationSMS(data), // ✅ correct template
+        message: sms.newRegistrationSMS(data),
         response: "Y",
         apikey: process.env.PINNACLE_API_KEY,
       };

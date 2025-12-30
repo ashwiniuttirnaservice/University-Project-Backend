@@ -11,7 +11,10 @@ const courseSchema = new mongoose.Schema(
       ref: "Branch",
       required: false,
     },
-
+    courseImage: {
+      type: String,
+      default: "",
+    },
     startDate: { type: Date, required: false },
     endDate: { type: Date, required: false },
 
