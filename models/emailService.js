@@ -2,9 +2,8 @@ const nodemailer = require("nodemailer");
 const dotenv = require("dotenv");
 dotenv.config();
 
-// ✔ Create transporter here
 const transporter = nodemailer.createTransport({
-  service: "Gmail",
+  service: "gmail",
   host: "smtp.gmail.com",
   port: 465,
   secure: true,
@@ -14,34 +13,49 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// ✔ Exported function which works 100%
+/* ===============================
+   SEND PASSWORD EMAIL
+================================ */
 exports.sendPasswordEmail = async (email, password) => {
   try {
     const mailOptions = {
-      from: process.env.NODE_MAILER_EID,
+      from: `"CAREERJUPITER" <${process.env.NODE_MAILER_EID}>`,
       to: email,
       subject: "Your LMS Login Password",
       html: `
         <p>Hello,</p>
-        <p>Your LMS login password is: <b>${password}</b></p>
+        <p>Your LMS login password is:</p>
+        <h2>${password}</h2>
         <p>Please login and change your password.</p>
       `,
     };
 
-    console.log(mailOptions, "=mail options");
-    console.log(
-      {
-        user: process.env.NODE_MAILER_EID,
-        pass: process.env.NODE_MAILER_KEY,
-      },
-      "=auth data"
-    );
-
     await transporter.sendMail(mailOptions);
     console.log("Password email sent to:", email);
   } catch (error) {
-    console.log(error, "=error email transporter...");
-    console.error("Email send error:", error.message);
+    console.error("Password email error:", error.message);
     throw new Error("Email sending failed");
+  }
+};
+
+/* ===============================
+   SEND OTP EMAIL
+================================ */
+exports.sendOtpEmail = async (email, otp) => {
+  try {
+    const mailOptions = {
+      from: `"CAREERJUPITER" <${process.env.NODE_MAILER_EID}>`,
+      to: email,
+      subject: "OTP Verification - CAREERJUPITER",
+      html: `
+        Your OTP for UTTIRNA portal login verification is ${otp}. Do not share this code with anyone. It is valid for 10 minutes. UTRLLP
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+    console.log("OTP email sent to:", email);
+  } catch (error) {
+    console.error("OTP email error:", error.message);
+    throw new Error("OTP email sending failed");
   }
 };

@@ -11,7 +11,7 @@ const JWT_SECRET = process.env.JWT_SECRET || "supersecretkey";
 const mongoose = require("mongoose");
 
 const { sendPasswordEmail } = require("../models/emailService.js");
-
+const { sendOtpEmail } = require("../models/emailService");
 const generateOtp = () =>
   Math.floor(100000 + Math.random() * 900000).toString();
 
@@ -22,15 +22,21 @@ exports.sendOtp = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Mobile number is required");
   }
 
-  const existingStudent = await Student.findOne({ mobileNo });
-  if (!existingStudent) {
-    return sendError(res, 404, false, "Mobile number not found in our records");
+  let student = await Student.findOne({ mobileNo });
+  if (!student) {
+    student = await Student.create({
+      mobileNo,
+      role: "student",
+      status: "Registered",
+      isActive: true,
+    });
   }
 
   const otp = generateOtp();
   const reference_id = crypto.randomBytes(8).toString("hex");
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
+  console.log(otp);
   await Otp.create({
     mobileNo,
     otp,
@@ -49,7 +55,7 @@ exports.sendOtp = asyncHandler(async (req, res) => {
 
   return sendResponse(res, 200, true, "OTP sent successfully", {
     reference_id,
-    studentId: existingStudent._id,
+    studentId: student._id,
   });
 });
 
@@ -131,7 +137,7 @@ function generateSixDigitPassword() {
 }
 
 const password = generateSixDigitPassword();
-console.log(password);
+// console.log(password);
 exports.sendPasswordEmailAPI = asyncHandler(async (req, res) => {
   const { email, fullName, mobileNo, selectedProgram } = req.body;
   if (!email) return sendError(res, 400, false, "Email is required");
@@ -171,5 +177,95 @@ exports.sendPasswordEmailAPI = asyncHandler(async (req, res) => {
   return sendResponse(res, 200, true, "Password sent successfully", {
     studentId: student._id,
     isNewStudent: !student,
+  });
+});
+
+exports.sendEmailOtp = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return sendError(res, 400, false, "Email is required");
+  }
+
+  let student = await Student.findOne({ email });
+  if (!student) {
+    student = await Student.create({
+      email,
+      role: "student",
+      status: "Registered",
+      isActive: true,
+    });
+  }
+
+  const otp = generateOtp();
+  const reference_id = crypto.randomBytes(8).toString("hex");
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+  await Otp.create({
+    email,
+    otp,
+    reference_id,
+    expiresAt,
+  });
+
+  console.log(otp);
+  try {
+    await sendOtpEmail(email, otp);
+  } catch (err) {
+    console.error("Email sending failed:", err.message);
+  }
+
+  return sendResponse(res, 200, true, "OTP sent successfully", {
+    reference_id,
+    studentId: student._id,
+  });
+});
+
+exports.verifyEmailOtp = asyncHandler(async (req, res) => {
+  const { reference_id, otp } = req.body;
+
+  if (!reference_id || !otp) {
+    return sendError(res, 400, false, "Reference ID and OTP are required");
+  }
+
+  const otpRecord = await Otp.findOne({ reference_id });
+
+  if (!otpRecord) {
+    return sendError(res, 404, false, "Invalid reference ID");
+  }
+
+  if (otpRecord.is_verified) {
+    return sendError(res, 400, false, "OTP already verified");
+  }
+
+  if (otpRecord.expiresAt < new Date()) {
+    return sendError(res, 400, false, "OTP expired");
+  }
+
+  if (String(otp) !== String(otpRecord.otp)) {
+    return sendError(res, 400, false, "Invalid OTP");
+  }
+
+  otpRecord.is_verified = true;
+  await otpRecord.save();
+
+  const student = await Student.findOne({ email: otpRecord.email });
+
+  if (!student) {
+    return sendError(res, 404, false, "Student not found");
+  }
+
+  const tokenPayload = {
+    studentId: student._id,
+    role: "student",
+  };
+
+  const token = jwt.sign(tokenPayload, JWT_SECRET, { expiresIn: "7d" });
+
+  return sendResponse(res, 200, true, "Email OTP verified successfully", {
+    email: otpRecord.email,
+    studentId: student._id,
+    role: "student",
+    token,
   });
 });

@@ -19,7 +19,11 @@ courseRouter.post(
   "/",
   protect,
   checkAccess("course", "create"),
-  upload.single("trainingPlan"),
+  upload.fields([
+    { name: "courseImage", maxCount: 1 },
+    { name: "trainingPlan", maxCount: 1 },
+  ]),
+
   createCourse
 );
 

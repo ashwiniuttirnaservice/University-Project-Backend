@@ -5,6 +5,9 @@ const { protect } = require("../middleware/authMiddleware");
 const checkAccess = require("../middleware/checkAccess");
 const upload = require("../utils/multer");
 
+const validateRequest = require("../validations/validateMiddleware.js");
+const studentValidationSchema = require("../validations/studentValidation");
+
 const {
   registerCandidate,
   registerStudent,
@@ -16,19 +19,17 @@ const {
 
 studentRouter.post(
   "/candidate",
-  // protect,
-  // checkAccess("student", "create"),
+  validateRequest(studentValidationSchema),
   registerCandidate
 );
 
 studentRouter.post(
   "/register",
-  // protect,
-  // checkAccess("student", "create"),
   upload.fields([
     { name: "profilePhotoStudent", maxCount: 1 },
     { name: "idProofStudent", maxCount: 1 },
   ]),
+  validateRequest(studentValidationSchema),
   registerStudent
 );
 
@@ -41,18 +42,17 @@ studentRouter.get(
 
 studentRouter.get(
   "/:studentId",
-  protect,
-  checkAccess("student", "read"),
+
   getStudentById
 );
 
 studentRouter.put(
   "/update/:studentId",
-
   upload.fields([
     { name: "profilePhotoStudent", maxCount: 1 },
     { name: "idProofStudent", maxCount: 1 },
   ]),
+  validateRequest(studentValidationSchema),
   updateStudent
 );
 

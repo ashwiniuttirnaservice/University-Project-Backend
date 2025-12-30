@@ -1,40 +1,56 @@
 const mongoose = require("mongoose");
 const Project = require("../models/Project");
+const Batch = require("../models/Batch");
 const asyncHandler = require("../middleware/asyncHandler");
 const { sendResponse, sendError } = require("../utils/apiResponse");
 
 exports.createProject = asyncHandler(async (req, res) => {
-  const { title, description, hackathonId } = req.body;
+  const { title, description, batchId, hackathonId } = req.body;
 
   if (!title) {
     return sendError(res, 400, false, "Project title is required");
   }
 
+  let assignedStudents = [];
+  let assignedTrainers = [];
+
+  if (batchId) {
+    if (!mongoose.Types.ObjectId.isValid(batchId)) {
+      return sendError(res, 400, false, "Invalid Batch ID");
+    }
+
+    const batch = await Batch.findById(batchId);
+    if (!batch) {
+      return sendError(res, 404, false, "Batch not found");
+    }
+
+    assignedStudents = (batch.enrolledIds || []).map((id) => ({
+      studentId: id,
+      autoCreated: true,
+      assignedAt: new Date(),
+    }));
+
+    assignedTrainers = (batch.trainer || []).map((id) => ({
+      trainerId: id,
+      assignedAt: new Date(),
+    }));
+  }
+
   const project = await Project.create({
     title,
     description,
+    batchId: batchId || null,
     hackathonId: hackathonId || null,
-    createdBy: req.user._id,
+    assignedStudents,
+    assignedTrainers,
   });
 
-  return sendResponse(res, 201, true, "Project created", project);
+  return sendResponse(res, 201, true, "Project created successfully", project);
 });
 
 exports.getAllProjects = asyncHandler(async (req, res) => {
   const projects = await Project.aggregate([
-    {
-      $match: { isActive: true },
-    },
-
-    {
-      $lookup: {
-        from: "users",
-        localField: "createdBy",
-        foreignField: "_id",
-        as: "createdBy",
-      },
-    },
-    { $unwind: "$createdBy" },
+    { $match: { isActive: true } },
 
     {
       $lookup: {
@@ -47,7 +63,6 @@ exports.getAllProjects = asyncHandler(async (req, res) => {
 
     {
       $addFields: {
-        createdByName: "$createdBy.name",
         hackathonName: { $arrayElemAt: ["$hackathon.title", 0] },
       },
     },
@@ -55,7 +70,13 @@ exports.getAllProjects = asyncHandler(async (req, res) => {
     { $sort: { createdAt: -1 } },
   ]);
 
-  return sendResponse(res, 200, true, "Projects fetched", projects);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Projects fetched successfully",
+    projects
+  );
 });
 
 exports.getProjectById = asyncHandler(async (req, res) => {
@@ -65,33 +86,17 @@ exports.getProjectById = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid Project ID");
   }
 
-  const project = await Project.aggregate([
-    { $match: { _id: new mongoose.Types.ObjectId(projectId) } },
+  const project = await Project.findById(projectId)
+    .populate("assignedStudents.studentId", "name email")
+    .populate("assignedTrainers.trainerId", "name email")
+    .populate("submissions.studentId", "name email")
+    .populate("submissions.reviewedBy", "name");
 
-    {
-      $lookup: {
-        from: "users",
-        localField: "assignedStudents.studentId",
-        foreignField: "_id",
-        as: "students",
-      },
-    },
-
-    {
-      $lookup: {
-        from: "users",
-        localField: "assignedTrainers.trainerId",
-        foreignField: "_id",
-        as: "trainers",
-      },
-    },
-  ]);
-
-  if (project.length === 0) {
+  if (!project) {
     return sendError(res, 404, false, "Project not found");
   }
 
-  return sendResponse(res, 200, true, "Project fetched", project[0]);
+  return sendResponse(res, 200, true, "Project fetched successfully", project);
 });
 
 exports.assignStudent = asyncHandler(async (req, res) => {
@@ -102,7 +107,16 @@ exports.assignStudent = asyncHandler(async (req, res) => {
     return sendError(res, 400, false, "Invalid Student ID");
   }
 
-  const project = await Project.findByIdAndUpdate(
+  const project = await Project.findOne({
+    _id: projectId,
+    "assignedStudents.studentId": studentId,
+  });
+
+  if (project) {
+    return sendError(res, 400, false, "Student already assigned");
+  }
+
+  const updated = await Project.findByIdAndUpdate(
     projectId,
     {
       $push: {
@@ -116,14 +130,27 @@ exports.assignStudent = asyncHandler(async (req, res) => {
     { new: true }
   );
 
-  return sendResponse(res, 200, true, "Student assigned", project);
+  return sendResponse(res, 200, true, "Student assigned successfully", updated);
 });
 
 exports.assignTrainer = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
   const { trainerId } = req.body;
 
-  const project = await Project.findByIdAndUpdate(
+  if (!mongoose.Types.ObjectId.isValid(trainerId)) {
+    return sendError(res, 400, false, "Invalid Trainer ID");
+  }
+
+  const exists = await Project.findOne({
+    _id: projectId,
+    "assignedTrainers.trainerId": trainerId,
+  });
+
+  if (exists) {
+    return sendError(res, 400, false, "Trainer already assigned");
+  }
+
+  const updated = await Project.findByIdAndUpdate(
     projectId,
     {
       $push: {
@@ -133,34 +160,55 @@ exports.assignTrainer = asyncHandler(async (req, res) => {
     { new: true }
   );
 
-  return sendResponse(res, 200, true, "Trainer assigned", project);
+  return sendResponse(res, 200, true, "Trainer assigned successfully", updated);
 });
 
 exports.submitProject = asyncHandler(async (req, res) => {
   const { projectId } = req.params;
   const { gitLink } = req.body;
 
-  const zipFile = req.file ? req.file.path : null;
+  if (!gitLink && !req.file) {
+    return sendError(res, 400, false, "Git link or ZIP file required");
+  }
+
+  const alreadySubmitted = await Project.findOne({
+    _id: projectId,
+    "submissions.studentId": req.user._id,
+  });
+
+  if (alreadySubmitted) {
+    return sendError(res, 400, false, "You already submitted this project");
+  }
 
   const submission = {
     studentId: req.user._id,
-    gitLink,
-    zipFile,
+    gitLink: gitLink || null,
+    zipFile: req.file ? req.file.path : null,
     submittedAt: new Date(),
   };
 
   const project = await Project.findByIdAndUpdate(
     projectId,
-    { $push: { submissions: submission } },
+    { $push: { submissions: submission }, $set: { status: "Submitted" } },
     { new: true }
   );
 
-  return sendResponse(res, 200, true, "Project submitted", project);
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Project submitted successfully",
+    project
+  );
 });
 
 exports.reviewSubmission = asyncHandler(async (req, res) => {
   const { projectId, submissionId } = req.params;
   const { reviewStatus, remarks } = req.body;
+
+  if (!["approved", "rejected", "pending"].includes(reviewStatus)) {
+    return sendError(res, 400, false, "Invalid review status");
+  }
 
   const updated = await Project.findOneAndUpdate(
     {
@@ -170,13 +218,50 @@ exports.reviewSubmission = asyncHandler(async (req, res) => {
     {
       $set: {
         "submissions.$.reviewStatus": reviewStatus,
-        "submissions.$.remarks": remarks,
+        "submissions.$.remarks": remarks || "",
         "submissions.$.reviewedBy": req.user._id,
         "submissions.$.reviewedAt": new Date(),
+        status: "Evaluated",
       },
     },
     { new: true }
   );
 
-  return sendResponse(res, 200, true, "Submission reviewed", updated);
+  if (!updated) {
+    return sendError(res, 404, false, "Submission not found");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Submission reviewed successfully",
+    updated
+  );
+});
+
+exports.deactivateProject = asyncHandler(async (req, res) => {
+  const { projectId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    return sendError(res, 400, false, "Invalid Project ID");
+  }
+
+  const project = await Project.findByIdAndUpdate(
+    projectId,
+    { isActive: false },
+    { new: true }
+  );
+
+  if (!project) {
+    return sendError(res, 404, false, "Project not found");
+  }
+
+  return sendResponse(
+    res,
+    200,
+    true,
+    "Project deactivated successfully",
+    project
+  );
 });

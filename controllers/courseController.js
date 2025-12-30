@@ -44,10 +44,9 @@ exports.createCourse = asyncHandler(async (req, res) => {
   benefits = parseJSON(benefits);
   keyFeatures = parseJSON(keyFeatures);
   features = parseJSON(features);
-  trainer = parseJSON(trainer); // trainer = ["trainer1Id", "trainer2Id"]
+  trainer = parseJSON(trainer);
 
   let trainingPlan = null;
-
   if (req.file) {
     trainingPlan = {
       folderName: req.file.destination,
@@ -57,7 +56,8 @@ exports.createCourse = asyncHandler(async (req, res) => {
     };
   }
 
-  // 1️⃣ Create course
+  const courseImage = req.files?.courseImage?.[0]?.filename || "";
+
   const course = await Course.create({
     title,
     description,
@@ -71,6 +71,7 @@ exports.createCourse = asyncHandler(async (req, res) => {
     keyFeatures,
     features,
     fees,
+    courseImage,
     startDate,
     endDate,
     trainer,
@@ -79,11 +80,10 @@ exports.createCourse = asyncHandler(async (req, res) => {
     trainingPlan,
   });
 
-  // 2️⃣ Add course ID to each trainer
-  if (trainer && trainer.length > 0) {
+  if (trainer?.length) {
     await Trainer.updateMany(
       { _id: { $in: trainer } },
-      { $addToSet: { courses: course._id } } // Prevent duplicates
+      { $addToSet: { courses: course._id } }
     );
   }
 
