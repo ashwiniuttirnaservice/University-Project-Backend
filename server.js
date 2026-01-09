@@ -4,27 +4,17 @@ const cors = require("cors");
 const path = require("path");
 const connectDB = require("./config/db.js");
 const cookieParser = require("cookie-parser");
+const logger = require("./config/logger.js");
+
+dotenv.config();
+const app = express();
 const PORT = process.env.PORT || 5001;
 
-const logger = require("./config/logger.js");
-dotenv.config();
-
-const app = express();
 connectDB();
+
 app.use(cookieParser());
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
-
-const allowedOrigins = [
-  "https://amravatiuniversity.codedrift.co",
-  "https://api.amtuniversity.codedrift.co",
-  "http://localhost:6174",
-  "http://localhost:6194",
-  "http://localhost:6184",
-  "http://localhost:5001",
-  "http://localhost:5005",
-  "http://localhost:6021",
-];
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -49,22 +39,6 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// const corsOptions = {
-//   origin: function (origin, callback) {
-//     if (!origin) return callback(null, true);
-
-//     // if (allowedOrigins.includes(origin)) {
-//     if (origin.includes("codedrift.co")) {
-//       callback(null, true);
-//     } else {
-//       callback(new Error("Not allowed by CORS"));
-//     }
-//   },
-//   credentials: true,
-//   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-//   allowedHeaders: ["Content-Type", "Authorization"],
-//   optionsSuccessStatus: 200,
-// };
 app.use((req, res, next) => {
   logger.info(`API HIT -> ${req.method} ${req.originalUrl}`);
 
@@ -80,7 +54,6 @@ app.use((req, res, next) => {
         `API DONE -> ${req.method} ${req.originalUrl} | Status: ${res.statusCode}`
       );
     }
-
     return oldJson.call(this, body);
   };
 
@@ -94,6 +67,7 @@ app.use("/api", indexRouter);
 
 app.use((err, req, res, next) => {
   logger.error(`Global Error Handler: ${err.stack}`);
+
   res.status(err.statusCode || 500).json({
     success: false,
     message: err.message || "Internal Server Error",
