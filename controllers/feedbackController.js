@@ -52,7 +52,7 @@ exports.createFeedback = asyncHandler(async (req, res) => {
 
     const totalScore = feedback.questions.reduce(
       (sum, q) => sum + (q.numericValue ?? 0),
-      0
+      0,
     );
 
     const averageScore =
@@ -194,7 +194,7 @@ exports.downloadStudentFeedbackExcel = async (req, res) => {
 
     const totalScore = feedback.questions.reduce(
       (sum, q) => sum + (q.numericValue || 0),
-      0
+      0,
     );
 
     const avgScore = (totalScore / feedback.questions.length).toFixed(1);
@@ -235,11 +235,11 @@ exports.downloadStudentFeedbackExcel = async (req, res) => {
 
     res.setHeader(
       "Content-Type",
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     );
     res.setHeader(
       "Content-Disposition",
-      "attachment; filename=student_feedback.xlsx"
+      "attachment; filename=student_feedback.xlsx",
     );
 
     await workbook.xlsx.write(res);
@@ -252,3 +252,30 @@ exports.downloadStudentFeedbackExcel = async (req, res) => {
     });
   }
 };
+
+exports.submitFeedback = asyncHandler(async (req, res, next) => {
+  const { fullName, collegeName, trainerId, values, description } = req.body;
+
+  const feedbackData = {
+    fullName,
+    collegeName,
+    trainerId,
+    questions: values,
+    suggestions: description,
+    status: 1,
+  };
+
+  const feedback = await Feedback.create(feedbackData);
+
+  if (!feedback) {
+    return sendError(res, 400, false, "Feedback save karta aale nahi");
+  }
+
+  return sendResponse(
+    res,
+    201,
+    true,
+    "Feedback यशस्वीरीत्या जमा झाले!",
+    feedback,
+  );
+});

@@ -4,6 +4,7 @@ const upload = require("../utils/multer");
 const {
   createFeedback,
   getAllFeedback,
+  submitFeedback,
   getAllFeedback1,
   downloadStudentFeedbackExcel,
   getFeedbackByCourse,
@@ -15,13 +16,14 @@ const checkAccess = require("../middleware/checkAccess");
 const roleFilter = require("../middleware/roleFilter");
 
 router.post("/", upload.single("profile"), createFeedback);
+router.post("/submit", submitFeedback);
 router.get("/student-feedback-excel/:studentId", downloadStudentFeedbackExcel);
 router.get(
   "/",
   protect,
   roleFilter,
   checkAccess("feedback", "read"),
-  getAllFeedback
+  getAllFeedback,
 );
 router.get("/all", getAllFeedback1);
 
