@@ -27,13 +27,6 @@ courseRouter.post(
   createCourse,
 );
 
-courseRouter.post(
-  "/:id/clone",
-  protect,
-  checkAccess("course", "create"),
-  cloneCourse,
-);
-
 courseRouter.get(
   "/all",
 
@@ -41,6 +34,13 @@ courseRouter.get(
 );
 
 courseRouter.get("/all-course", getAllCourse1);
+
+courseRouter.post(
+  "/:id/clone",
+  protect,
+  checkAccess("course", "create"),
+  cloneCourse,
+);
 
 courseRouter.get("/:id", getCourseById);
 
