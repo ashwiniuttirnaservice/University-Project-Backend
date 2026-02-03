@@ -24,22 +24,20 @@ courseRouter.post(
     { name: "trainingPlan", maxCount: 1 },
   ]),
 
-  createCourse
+  createCourse,
 );
 
 courseRouter.post(
   "/:id/clone",
   protect,
   checkAccess("course", "create"),
-  cloneCourse
+  cloneCourse,
 );
 
 courseRouter.get(
   "/all",
-  protect,
-  roleFilter,
-  checkAccess("course", "read"),
-  getAllCourse
+
+  getAllCourse,
 );
 
 courseRouter.get("/all-course", getAllCourse1);
@@ -51,14 +49,14 @@ courseRouter.put(
   protect,
   checkAccess("course", "update"),
   upload.single("trainingPlan"),
-  updateCourse
+  updateCourse,
 );
 
 courseRouter.delete(
   "/:id",
   protect,
   checkAccess("course", "delete"),
-  deleteCourse
+  deleteCourse,
 );
 
 module.exports = courseRouter;

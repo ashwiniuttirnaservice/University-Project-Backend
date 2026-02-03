@@ -6,13 +6,13 @@ const responseSchema = new mongoose.Schema(
 
     answer: {
       type: String,
-      enum: ["agree", "disagree", "cant_say", "strongly_agree"],
+
       default: "",
     },
 
     numericValue: { type: Number },
   },
-  { _id: false }
+  { _id: false },
 );
 
 responseSchema.pre("validate", function (next) {
@@ -43,7 +43,7 @@ const npsSchema = new mongoose.Schema(
       max: 10,
     },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const feedbackSchema = new mongoose.Schema(
@@ -76,7 +76,7 @@ const feedbackSchema = new mongoose.Schema(
     fullName: { type: String, trim: true },
     email: { type: String, trim: true },
     mobileNo: { type: String, trim: true },
-
+    collegeName: { type: String, trim: true },
     questions: [responseSchema],
 
     suggestions: { type: String, trim: true },
@@ -86,7 +86,6 @@ const feedbackSchema = new mongoose.Schema(
     profile: { type: String, trim: true },
     status: {
       type: Number,
-      enum: [0, 1],
       default: 0,
     },
 
@@ -94,7 +93,7 @@ const feedbackSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("Feedback", feedbackSchema);
